@@ -52,6 +52,32 @@ body:
     validations:
       required: true
 
+  - type: textarea
+    id: report
+    attributes:
+      label: Generated reproduction report
+      description: Paste the unedited JSON emitted by `python3 labs/reproduce.py <experiment-id>`. For Native or non-Reference experiments, explain why this reporter does not apply instead of fabricating a report.
+      render: json
+    validations:
+      required: true
+
+  - type: input
+    id: report_sha256
+    attributes:
+      label: Report SHA-256
+      description: Copy `report_sha256` from the generated report so reviewers can detect edits.
+      placeholder: 64 lowercase hexadecimal characters
+    validations:
+      required: true
+
+  - type: textarea
+    id: affiliation
+    attributes:
+      label: Affiliation and conflicts of interest
+      description: State any relevant vendor, upstream, employer, funding, or project relationship. Write `None` when none applies.
+    validations:
+      required: true
+
   - type: checkboxes
     id: safety
     attributes:
@@ -60,4 +86,8 @@ body:
         - label: I reviewed all text and linked artifacts for secrets, personal paths, private source, and unredacted data.
           required: true
         - label: I did not record or publish hidden chain-of-thought.
+          required: true
+        - label: I ran this reproduction in my own environment and am not submitting it on behalf of the Inside Coding Agents maintainer.
+          required: true
+        - label: I understand a Controlled Reference Harness report does not establish any vendor Agent's Native behavior.
           required: true

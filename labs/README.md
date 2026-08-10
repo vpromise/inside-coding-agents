@@ -29,6 +29,18 @@ python3 -m unittest discover -s labs/tests -v
 
 `CONTROLLED_EXPERIMENT_IDS` in `labs/tests/test_runner.py` pins the complete ten-experiment set. The test suite rebuilds all 40 artifacts in memory and checks them byte-for-byte without a model or network call.
 
+## Independent reproduction report
+
+From a clean public checkout, generate and verify a report that excludes Git remotes, usernames, absolute paths, environment values, and untracked filenames:
+
+```bash
+python3 labs/reproduce.py reference-tool-roundtrip-v1 \
+  --output reproduction-report.json
+python3 labs/reproduce.py --verify-report reproduction-report.json
+```
+
+The reporter requires no dependency install, provider account, network request, or model call. Only `outcome=reproduced` with `submission_ready=true` passes its technical gate; the human submitter must separately attest independence and affiliations. This report covers the local Reference Harness only and is never Native evidence about a vendor Agent. See [Reproducing experiments](../REPRODUCING.md).
+
 ## Experiment rules
 
 - Define the question, variables, metrics, and outputs before the run.

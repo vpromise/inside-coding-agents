@@ -52,6 +52,7 @@ The same material is useful as a beginner's coding-agent tutorial, an engineer's
 - pinned public-source maps for Codex, OpenCode, Grok Build, Pi, and Reasonix;
 - a clean-room, official-document snapshot for Claude Code, including subagents and experimental Agent Teams;
 - 10 controlled experiments, 20 reproduced traces, structured results, and readable reports;
+- a zero-model-call independent reproduction reporter, bilingual runbook, integrity-checked JSON report, and public submission form;
 - a bilingual, searchable website with Architecture Compare, 78-record Evidence Explorer, Agent timelines, structural Snapshot Diff, interactive Architecture Atlas, and generic data-driven routes;
 - an automatic 90-day snapshot freshness gate that runs in CI every week without rewriting research claims;
 - automated axe WCAG A/AA scans across 14 representative route families, reviewed desktop/mobile screenshot regression, and Lighthouse category budgets;
@@ -74,6 +75,10 @@ python -m curriculum.lessons.s01_agent_loop.demo
 
 # Check the committed experiment without modifying files.
 python labs/runner.py reference-tool-roundtrip-v1 --check
+
+# Generate a public-safe independent reproduction report from this clean commit.
+python labs/reproduce.py reference-tool-roundtrip-v1 \
+  --output reproduction-report.json
 
 # Validate schemas, evidence links, graph references, digests, and traces.
 python scripts/validate_registry.py
@@ -178,7 +183,7 @@ Yes. Start with a versioned profile, attach atomic claims to public evidence, st
 
 ## Contributing and security
 
-Corrections with stronger evidence, independent reproductions, new mechanisms, runnable lessons, accessibility improvements, and technically reviewed translations are welcome. Read the [contribution guide](CONTRIBUTING.md) before opening a pull request.
+Corrections with stronger evidence, independent reproductions, new mechanisms, runnable lessons, accessibility improvements, and technically reviewed translations are welcome. Read the [contribution guide](CONTRIBUTING.md) or follow the [independent reproduction runbook](REPRODUCING.md) before opening a pull request or reproduction report.
 
 Do not publish credentials, private source, personal data, unredacted native traces, or exploitable security details. Report vulnerabilities through the private process in [SECURITY.md](SECURITY.md).
 

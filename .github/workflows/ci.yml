@@ -50,6 +50,9 @@ jobs:
       - name: Rebuild experiment artifacts in memory
         run: python labs/runner.py reference-tool-roundtrip-v1 --check
 
+      - name: Verify the independent reproduction reporter
+        run: python labs/reproduce.py reference-tool-roundtrip-v1 > /dev/null
+
       - name: Validate schemas, graph, digests, traces, and links
         run: python scripts/validate_registry.py
 

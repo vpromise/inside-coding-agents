@@ -49,6 +49,12 @@ Popularity is not a substitute for versioning or evidence review.
 
 A `complete` Experiment must reference an inspectable Result and every declared Trace with consistent provenance.
 
+## Independent reproduction
+
+Start with [REPRODUCING.md](REPRODUCING.md) and a clean public checkout. The reporter rebuilds a complete Controlled Reference Harness experiment without network or model calls and emits a public-safe JSON record with a full commit, input/artifact digests, environment family, and integrity hash.
+
+Submit the unedited report through the Experiment reproduction issue form. State whether you ran it in your own environment, disclose relevant affiliations, and preserve `failed` or `not-comparable` outcomes. Maintainer reruns, CI, synthetic fixtures, and AI agents acting for the maintainer do not satisfy the independent-participant requirement. A Controlled Reference Harness report is never Native vendor-Agent evidence.
+
 ## Development setup
 
 Python 3.12+ and Node.js 22.13+ match the continuous-integration environment.

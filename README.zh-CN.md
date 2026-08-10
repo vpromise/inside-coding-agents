@@ -52,6 +52,7 @@ Inside Coding Agents 是一个开源、双语的教程、架构图谱和实验�
 - Codex、OpenCode、Grok Build、Pi、Reasonix 的固定 commit 源码地图；
 - Claude Code 基于官方文档的 clean-room Snapshot，包括 subagent 与实验性 Agent Teams；
 - 10 项受控实验、20 条 reproduced Trace、结构化 Result 与可读报告；
+- 0 模型调用的独立复现 reporter、双语运行指南、带完整性校验的 JSON 报告与公开提交表单；
 - Architecture Compare、78 条 Evidence Explorer、Agent Timeline、结构化 Snapshot Diff、可搜索 Architecture Atlas、双语全文搜索和交互式 Trace Player；
 - 每周自动运行的 90 天 Snapshot freshness 门禁；它只要求人工复核，不自动改写研究 Claim；
 - 覆盖 14 类代表性路由的 axe WCAG A/AA 扫描、经过审核的桌面/移动端截图回归与 Lighthouse 类别预算；
@@ -74,6 +75,10 @@ python -m curriculum.lessons.s01_agent_loop.demo
 
 # 只检查已提交实验，不修改文件。
 python labs/runner.py reference-tool-roundtrip-v1 --check
+
+# 从当前干净 commit 生成公开安全的独立复现报告。
+python labs/reproduce.py reference-tool-roundtrip-v1 \
+  --output reproduction-report.json
 
 # 校验 Schema、证据链接、图谱引用、digest 和 trace。
 python scripts/validate_registry.py
@@ -178,7 +183,7 @@ Agent Harness 是模型外围负责控制循环、消息、工具、状态、上
 
 ## 贡献与安全
 
-我们欢迎有更强证据的纠错、独立复现、新 Mechanism、可运行课程、无障碍改进和经过技术审校的翻译。提交 PR 前请阅读[贡献指南](CONTRIBUTING.md)。
+我们欢迎有更强证据的纠错、独立复现、新 Mechanism、可运行课程、无障碍改进和经过技术审校的翻译。提交 PR 前请阅读[贡献指南](CONTRIBUTING.md)；提交复现记录可直接使用[独立复现指南](REPRODUCING.zh-CN.md)。
 
 不要公开凭证、私人源码、个人数据、未脱敏的原生 Trace 或可直接利用的安全细节。漏洞请通过 [SECURITY.md](SECURITY.md) 中的私有流程报告。
 
