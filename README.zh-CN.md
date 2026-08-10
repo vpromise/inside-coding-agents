@@ -45,12 +45,12 @@ Inside Coding Agents 是一个开源、双语的教程、架构图谱和实验�
 ### 当前公开预览已包含
 
 - 13 篇可运行的双语长文教程，从 Agent Loop、Context 一直推进到 Approval、Sandbox/Network、Project Trust 与 scoped Git Rollback；
-- 20 个跨 Agent Mechanism；
+- 20 个跨 Agent Mechanism，其中 Context Budget、Compaction、Memory、Permissions、OS Sandbox、Checkpoint/Rollback 已补齐中英双语 L0–L4 深度正文；
 - 5 个 Agent Profile、9 个不可变 Snapshot 和 30 条已审查 Claim；
 - Codex、Pi、Reasonix 的固定 commit 源码地图；
 - Claude Code 基于官方文档的 clean-room Snapshot；
 - 1 项受控实验、2 条 reproduced Trace 和结构化 Result；
-- 数据驱动路由、双语全文搜索和交互式 Trace Player；
+- 可搜索筛选的 Architecture Atlas、机制依赖图、证据感知 Agent 矩阵、数据驱动路由、双语全文搜索和交互式 Trace Player；
 - Schema、内容图谱、digest、trace、链接、发布安全和网站构建校验。
 
 ## 快速开始

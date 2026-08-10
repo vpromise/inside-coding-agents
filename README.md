@@ -45,12 +45,12 @@ The same material is useful as a beginner's coding-agent tutorial, an engineer's
 ### Included in the current public preview
 
 - 13 runnable bilingual long-form tutorials, progressing through agent loops, context, approval, sandbox and network policy, project trust, and scoped Git rollback;
-- 20 cross-agent mechanism records;
+- 20 cross-agent mechanism records, with bilingual L0–L4 deep dives for context budget, compaction, memory, permissions, OS sandboxing, and checkpoint/rollback;
 - 5 Agent profiles, 9 immutable snapshots, and 30 reviewed claims;
 - pinned public-source maps for Codex, Pi, and Reasonix;
 - a clean-room, official-document snapshot for Claude Code;
 - 1 controlled experiment, 2 reproduced traces, and a structured result;
-- a bilingual, searchable website with generic data-driven routes;
+- a bilingual, searchable website with an interactive Architecture Atlas, dependency graphs, evidence-aware Agent matrices, and generic data-driven routes;
 - JSON Schema, graph, digest, trace, link, safety, and web-build validation.
 
 ## Quick start

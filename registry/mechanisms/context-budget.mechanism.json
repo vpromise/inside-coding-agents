@@ -10,5 +10,5 @@
   "agent_implementations": [],
   "experiments": [],
   "open_questions": ["Which budget decisions should be replayable across tokenizers?"],
-  "reader_layer_status": {"L0": "partial", "L1": "complete", "L2": "partial", "L3": "missing", "L4": "missing"}
+  "reader_layer_status": {"L0": "complete", "L1": "complete", "L2": "complete", "L3": "complete", "L4": "complete"}
 }

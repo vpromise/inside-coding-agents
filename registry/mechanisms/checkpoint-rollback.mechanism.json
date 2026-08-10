@@ -14,5 +14,5 @@
     "Which non-filesystem effects need compensating actions rather than Git rollback?",
     "How should concurrent agents detect that a reviewed diff became stale?"
   ],
-  "reader_layer_status": {"L0": "complete", "L1": "complete", "L2": "partial", "L3": "partial", "L4": "missing"}
+  "reader_layer_status": {"L0": "complete", "L1": "complete", "L2": "complete", "L3": "complete", "L4": "complete"}
 }

@@ -33,5 +33,5 @@
     "How should a harness expose information loss and compaction lineage to users?",
     "Which cache optimizations conflict with the most faithful context projection?"
   ],
-  "reader_layer_status": {"L0": "complete", "L1": "complete", "L2": "partial", "L3": "partial", "L4": "partial"}
+  "reader_layer_status": {"L0": "complete", "L1": "complete", "L2": "complete", "L3": "complete", "L4": "complete"}
 }

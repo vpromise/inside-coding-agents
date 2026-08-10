@@ -40,5 +40,5 @@
     "How should approval caches be scoped and revoked?",
     "How can headless execution fail closed without making automation unusable?"
   ],
-  "reader_layer_status": {"L0": "complete", "L1": "complete", "L2": "complete", "L3": "partial", "L4": "partial"}
+  "reader_layer_status": {"L0": "complete", "L1": "complete", "L2": "complete", "L3": "complete", "L4": "complete"}
 }

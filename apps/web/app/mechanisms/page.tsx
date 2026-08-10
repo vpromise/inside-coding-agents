@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { LocalizedText } from "../components/LocaleProvider";
-import { content } from "../lib/content";
+import { MechanismAtlas, type AtlasMechanism } from "../components/MechanismAtlas";
+import { claimsForMechanism, content } from "../lib/content";
 
 export const metadata: Metadata = {
   title: "Mechanism Atlas",
@@ -10,6 +10,29 @@ export const metadata: Metadata = {
 
 export default function MechanismsPage() {
   const categories = [...new Set(content.mechanisms.map((mechanism) => mechanism.category))];
+  const mechanisms: AtlasMechanism[] = content.mechanisms.map((mechanism) => ({
+    id: mechanism.id,
+    title: mechanism.title,
+    summary: mechanism.summary,
+    category: mechanism.category,
+    status: mechanism.status,
+    prerequisites: mechanism.prerequisites,
+    dependents: content.mechanisms
+      .filter((candidate) => candidate.prerequisites.includes(mechanism.id))
+      .map((candidate) => candidate.id),
+    lessonCount: mechanism.reference_lessons.length,
+    snapshotCount: mechanism.agent_implementations.length,
+    claimCount: claimsForMechanism(mechanism.id).length,
+    experimentCount: mechanism.experiments.length,
+    hasArticle: Boolean(mechanism.content["zh-CN"] && mechanism.content.en),
+    layers: {
+      L0: mechanism.reader_layer_status?.L0 ?? "missing",
+      L1: mechanism.reader_layer_status?.L1 ?? "missing",
+      L2: mechanism.reader_layer_status?.L2 ?? "missing",
+      L3: mechanism.reader_layer_status?.L3 ?? "missing",
+      L4: mechanism.reader_layer_status?.L4 ?? "missing",
+    },
+  }));
   return (
     <main className="page-shell interior-page">
       <header className="interior-hero">
@@ -24,21 +47,7 @@ export default function MechanismsPage() {
         </div>
       </header>
 
-      <section className="mechanism-index" aria-label="Mechanism list">
-        {content.mechanisms.map((mechanism) => (
-          <article className="mechanism-index__item" key={mechanism.id}>
-            <div><span>{mechanism.category}</span><span>{mechanism.status}</span></div>
-            <h2>{mechanism.title}</h2>
-            <p>{mechanism.summary}</p>
-            <div className="tag-row">
-              <span>{mechanism.reference_lessons.length} lessons</span>
-              <span>{mechanism.agent_implementations.length} snapshots</span>
-              <span>{mechanism.experiments.length} experiments</span>
-            </div>
-            <Link className="text-link" href={`/mechanisms/${mechanism.id}`}><LocalizedText zh="查看机制" en="View mechanism" /> <span>→</span></Link>
-          </article>
-        ))}
-      </section>
+      <MechanismAtlas mechanisms={mechanisms} />
     </main>
   );
 }

@@ -14,5 +14,5 @@
     "How should sandbox profiles represent child processes, IPC, devices, and inherited descriptors?",
     "Which observable tests distinguish policy simulation from active kernel enforcement?"
   ],
-  "reader_layer_status": {"L0": "complete", "L1": "complete", "L2": "partial", "L3": "partial", "L4": "missing"}
+  "reader_layer_status": {"L0": "complete", "L1": "complete", "L2": "complete", "L3": "complete", "L4": "complete"}
 }

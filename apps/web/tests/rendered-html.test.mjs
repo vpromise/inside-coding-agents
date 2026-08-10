@@ -91,6 +91,38 @@ test("renders a long-form lesson with rich reading primitives and runnable sourc
   assert.match(html, /python3 -m curriculum\.golden verify s01-agent-loop/);
 });
 
+test("renders an interactive Architecture Atlas and deep mechanism dossiers", async () => {
+  const atlasResponse = await render("/mechanisms");
+  assert.equal(atlasResponse.status, 200);
+  const atlasHtml = await atlasResponse.text();
+  assert.match(atlasHtml, /id="mechanism-search"/);
+  assert.match(atlasHtml, /ARCHITECTURE ATLAS · [\s\S]*20[\s\S]*20/);
+  assert.match(atlasHtml, /href="\/mechanisms\/context-budget"/);
+  assert.match(atlasHtml, /href="\/mechanisms\/checkpoint-rollback"/);
+  assert.match(atlasHtml, /L0/);
+  assert.match(atlasHtml, /bilingual/);
+
+  const gapResponse = await render("/mechanisms/context-budget");
+  assert.equal(gapResponse.status, 200);
+  const gapHtml = await gapResponse.text();
+  assert.match(gapHtml, /DEPENDENCY GRAPH · READER PATH/);
+  assert.match(gapHtml, /id="definition"/);
+  assert.match(gapHtml, /id="failure-modes"/);
+  assert.match(gapHtml, /id="research"/);
+  assert.match(gapHtml, /UNKNOWN · EVIDENCE GAP/);
+  assert.match(gapHtml, /Formal experiment · not registered/);
+  assert.match(gapHtml, /href="\/learn\/context-budget#source"/);
+  assert.match(gapHtml, /href="\/lab\/traces\/run-s06-context-budget-golden"/);
+
+  const mappedResponse = await render("/mechanisms/context-compaction");
+  assert.equal(mappedResponse.status, 200);
+  const mappedHtml = await mappedResponse.text();
+  assert.match(mappedHtml, /codex-2026-08-10-source/);
+  assert.match(mappedHtml, /pi-2026-08-10-source/);
+  assert.match(mappedHtml, /reasonix-2026-08-10-source/);
+  assert.match(mappedHtml, /Codex pre- and mid-turn compaction routing|run_pre_sampling_compact/);
+});
+
 test("renders a cross-entity bilingual search index", async () => {
   const generated = JSON.parse(
     await readFile(new URL("../app/data/content.generated.json", import.meta.url), "utf8"),
