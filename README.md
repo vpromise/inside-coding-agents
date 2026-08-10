@@ -38,6 +38,8 @@ The same material is useful as a beginner's coding-agent tutorial, an engineer's
 | Academy | How do I build a coding agent from zero? | [Run the thirteen lessons](curriculum/README.md) |
 | Mechanisms | What design problems do all agent harnesses share? | [Browse 20 mechanisms](content/mechanisms/README.md) |
 | Agent Atlas | How does a specific agent implement those mechanisms? | [Inspect versioned profiles](content/agents/README.md) |
+| Architecture Compare | Where do agent harness designs align or remain unknown? | [Compare evidence by mechanism](https://vpromise.github.io/inside-coding-agents/compare/) |
+| Evidence Explorer | Which primary source supports a specific claim? | [Filter 51 evidence records](https://vpromise.github.io/inside-coding-agents/evidence/) |
 | Experiment Lab | Which observations can be reproduced under fixed conditions? | [Replay 10 controlled experiments](labs/README.md) |
 | Registry | Where are claims, evidence, schemas, and stable IDs stored? | [Read the data model](registry/README.md) |
 | Web | How does the shared graph become a bilingual, searchable site? | [Run the interface](apps/web/README.md) |
@@ -50,7 +52,8 @@ The same material is useful as a beginner's coding-agent tutorial, an engineer's
 - pinned public-source maps for Codex, Pi, and Reasonix;
 - a clean-room, official-document snapshot for Claude Code;
 - 10 controlled experiments, 20 reproduced traces, structured results, and readable reports;
-- a bilingual, searchable website with an interactive Architecture Atlas, dependency graphs, evidence-aware Agent matrices, and generic data-driven routes;
+- a bilingual, searchable website with Architecture Compare, 51-record Evidence Explorer, Agent timelines, structural Snapshot Diff, interactive Architecture Atlas, and generic data-driven routes;
+- an automatic 90-day snapshot freshness gate that runs in CI every week without rewriting research claims;
 - JSON Schema, graph, digest, trace, link, safety, and web-build validation.
 
 ## Quick start

@@ -22,6 +22,10 @@ export default function AgentsPage() {
           <span><strong>{content.claims.length}</strong> claims</span>
           <span><strong>9</strong> dimensions</span>
         </div>
+        <div className="hero-inline-links">
+          <Link className="text-link" href="/compare"><LocalizedText zh="横向比较机制" en="Compare mechanisms" /> →</Link>
+          <Link className="text-link" href="/evidence"><LocalizedText zh="检索全部证据" en="Explore all evidence" /> →</Link>
+        </div>
       </header>
 
       <section className="atlas-grid" aria-label="Agent list">

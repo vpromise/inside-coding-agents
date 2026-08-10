@@ -49,9 +49,17 @@ test("renders every vertical-slice route", async () => {
     "/mechanisms",
     ...generated.mechanisms.map((mechanism) => `/mechanisms/${mechanism.id}`),
     "/agents",
+    "/compare",
+    "/evidence",
     ...generated.agents.flatMap((agent) => [
       `/agents/${agent.id}`,
+      `/agents/${agent.id}/timeline`,
       ...agent.snapshots.map((snapshot) => `/agents/${agent.id}/${snapshot.id}`),
+      ...agent.snapshots.flatMap((snapshot, index) =>
+        agent.snapshots.slice(index + 1).map((next) =>
+          `/agents/${agent.id}/diff/${snapshot.id}__${next.id}`
+        )
+      ),
     ]),
     "/lab",
     "/search",
@@ -121,6 +129,38 @@ test("renders an interactive Architecture Atlas and deep mechanism dossiers", as
   assert.match(mappedHtml, /pi-2026-08-10-source/);
   assert.match(mappedHtml, /reasonix-2026-08-10-source/);
   assert.match(mappedHtml, /Codex pre- and mid-turn compaction routing|run_pre_sampling_compact/);
+});
+
+test("renders evidence-aware Compare, Timeline, and structural Snapshot Diff views", async () => {
+  const compareResponse = await render("/compare");
+  assert.equal(compareResponse.status, 200);
+  const compareHtml = await compareResponse.text();
+  assert.match(compareHtml, /id="compare-search"/);
+  assert.match(compareHtml, /Not a leaderboard/);
+  assert.match(compareHtml, /href="\/agents\/codex\/codex-2026-08-10-source#codex-source-auto-compaction"/);
+
+  const evidenceResponse = await render("/evidence");
+  assert.equal(evidenceResponse.status, 200);
+  const evidenceHtml = await evidenceResponse.text();
+  assert.match(evidenceHtml, /id="evidence-search"/);
+  assert.match(evidenceHtml, /51 Evidence records/);
+  assert.match(evidenceHtml, /run_pre_sampling_compact|codex-source-auto-compaction/);
+
+  const timelineResponse = await render("/agents/codex/timeline");
+  assert.equal(timelineResponse.status, 200);
+  const timelineHtml = await timelineResponse.text();
+  assert.match(timelineHtml, /SNAPSHOT TIMELINE/);
+  assert.match(timelineHtml, /2026-11-08/);
+  assert.match(timelineHtml, /codex-2026-08-10-cli__codex-2026-08-10-source/);
+
+  const diffResponse = await render(
+    "/agents/codex/diff/codex-2026-08-10-cli__codex-2026-08-10-source",
+  );
+  assert.equal(diffResponse.status, 200);
+  const diffHtml = await diffResponse.text();
+  assert.match(diffHtml, /STRUCTURAL, NOT SEMANTIC/);
+  assert.match(diffHtml, /Both records were observed on the same day/);
+  assert.match(diffHtml, /Behavior change is not inferred/);
 });
 
 test("renders a cross-entity bilingual search index", async () => {

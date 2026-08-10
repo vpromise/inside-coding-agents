@@ -38,6 +38,8 @@ Inside Coding Agents 是一个开源、双语的教程、架构图谱和实验�
 | Academy | 如何从零构建一个 Coding Agent？ | [运行 13 节课程](curriculum/README.md) |
 | Mechanisms | 不同 Agent Harness 共同面对哪些设计问题？ | [浏览 20 个机制](content/mechanisms/README.md) |
 | Agent Atlas | 某个 Agent 如何实现这些机制？ | [查看版本化档案](content/agents/README.md) |
+| Architecture Compare | 不同 Agent 的 Harness 设计在哪里相同或仍是 unknown？ | [按机制比较证据](https://vpromise.github.io/inside-coding-agents/compare/) |
+| Evidence Explorer | 某条 Claim 由哪个原始来源支持？ | [筛选 51 条 Evidence](https://vpromise.github.io/inside-coding-agents/evidence/) |
 | Experiment Lab | 哪些观察可以在固定条件下复现？ | [回放 10 项受控实验](labs/README.md) |
 | Registry | Claim、Evidence、Schema 和稳定 ID 存在哪里？ | [了解数据模型](registry/README.md) |
 | Web | 内容图谱如何生成双语、可搜索的网站？ | [运行网页](apps/web/README.md) |
@@ -50,7 +52,8 @@ Inside Coding Agents 是一个开源、双语的教程、架构图谱和实验�
 - Codex、Pi、Reasonix 的固定 commit 源码地图；
 - Claude Code 基于官方文档的 clean-room Snapshot；
 - 10 项受控实验、20 条 reproduced Trace、结构化 Result 与可读报告；
-- 可搜索筛选的 Architecture Atlas、机制依赖图、证据感知 Agent 矩阵、数据驱动路由、双语全文搜索和交互式 Trace Player；
+- Architecture Compare、51 条 Evidence Explorer、Agent Timeline、结构化 Snapshot Diff、可搜索 Architecture Atlas、双语全文搜索和交互式 Trace Player；
+- 每周自动运行的 90 天 Snapshot freshness 门禁；它只要求人工复核，不自动改写研究 Claim；
 - Schema、内容图谱、digest、trace、链接、发布安全和网站构建校验。
 
 ## 快速开始

@@ -8,7 +8,9 @@ import { LanguageSwitch, useLocale } from "./LocaleProvider";
 const navigation = [
   { href: "/learn", zh: "学习", en: "Learn" },
   { href: "/mechanisms", zh: "机制", en: "Mechanisms" },
+  { href: "/compare", zh: "比较", en: "Compare" },
   { href: "/agents", zh: "图谱", en: "Agents" },
+  { href: "/evidence", zh: "证据", en: "Evidence" },
   { href: "/lab", zh: "实验", en: "Lab" },
   { href: "/search", zh: "搜索", en: "Search" },
 ];
@@ -54,9 +56,9 @@ export function SiteHeader() {
         </nav>
         <div className="site-header__tools">
           <LanguageSwitch className="language-switch--header" />
-          <span className="header-status" aria-label={text("v0.1 构建状态", "v0.1 build status")}>
+          <span className="header-status" aria-label={text("v0.2 预览状态", "v0.2 preview status")}>
             <span className="status-dot" aria-hidden="true" />
-            v0.1 preview
+            v0.2 preview
           </span>
           <button
             aria-controls="primary-navigation"

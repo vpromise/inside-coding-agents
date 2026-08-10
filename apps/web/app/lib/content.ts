@@ -48,7 +48,7 @@ export interface AgentSnapshot {
   observed_at: string;
   surface: string;
   version: string;
-  freshness: string;
+  freshness: "current" | "needs-review" | "stale" | "historical";
   docs_captured_at?: string;
   source_ref?: SourceReference;
   environment?: Record<string, string>;

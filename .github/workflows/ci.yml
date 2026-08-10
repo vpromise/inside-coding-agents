@@ -5,6 +5,8 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+  schedule:
+    - cron: "17 5 * * 1"
 
 permissions:
   contents: read
@@ -35,6 +37,9 @@ jobs:
 
       - name: Test repository safety rules
         run: python -m unittest discover -s scripts/tests -v
+
+      - name: Check snapshot freshness window
+        run: python scripts/check_freshness.py
 
       - name: Test reference curriculum
         run: python -m unittest discover -s curriculum/tests -v

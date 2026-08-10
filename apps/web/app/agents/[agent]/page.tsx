@@ -34,6 +34,10 @@ export default async function AgentPage({ params }: { params: Promise<{ agent: s
             <span>{agent.source_availability} source</span>
             <span>{agent.lifecycle}</span>
           </div>
+          <div className="hero-inline-links">
+            <Link className="text-link" href={`/agents/${agent.id}/timeline`}><LocalizedText zh="查看 Snapshot Timeline" en="View Snapshot Timeline" /> →</Link>
+            <Link className="text-link" href="/compare"><LocalizedText zh="进入 Architecture Compare" en="Open Architecture Compare" /> →</Link>
+          </div>
         </div>
       </header>
 
@@ -48,6 +52,7 @@ export default async function AgentPage({ params }: { params: Promise<{ agent: s
               <div><dt>Latest</dt><dd>{latest?.observed_at ?? "missing"}</dd></div>
             </dl>
             <a href={agent.homepage} target="_blank" rel="noreferrer"><LocalizedText zh="打开上游主页" en="Open upstream homepage" /> ↗</a>
+            <Link href={`/agents/${agent.id}/timeline`}><LocalizedText zh="打开 Timeline" en="Open timeline" /> →</Link>
           </aside>
           <BilingualArticle zh={agent.overview_content["zh-CN"]} en={agent.overview_content.en} />
         </div>

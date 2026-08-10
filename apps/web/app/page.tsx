@@ -46,6 +46,9 @@ export default function Home() {
             <Link className="button button--ghost" href="/mechanisms/agent-loop">
               <LocalizedText zh="探索 Harness 全景" en="Explore the harness map" />
             </Link>
+            <Link className="button button--ghost" href="/compare">
+              <LocalizedText zh="比较 Agent 架构" en="Compare agent architectures" />
+            </Link>
           </div>
           <div className="hero__proof" aria-label="Vertical slice status">
             <span><strong>{curriculum.lessons.length}</strong> <LocalizedText zh="可运行课程" en="runnable lessons" /></span>

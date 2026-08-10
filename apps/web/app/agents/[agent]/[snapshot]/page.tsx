@@ -76,6 +76,8 @@ export default async function SnapshotPage({ params }: { params: Promise<{ agent
             <div><dt>Evidence</dt><dd>{evidenceKinds.join(" · ") || "missing"}</dd></div>
           </dl>
           <Link href={`/agents/${agent.id}`}><LocalizedText zh="返回 Agent 档案" en="Back to agent profile" /> →</Link>
+          <Link href={`/agents/${agent.id}/timeline`}><LocalizedText zh="查看 Snapshot Timeline" en="View Snapshot Timeline" /> →</Link>
+          <Link href="/evidence"><LocalizedText zh="在 Evidence Explorer 中筛选" en="Filter in Evidence Explorer" /> →</Link>
         </aside>
         {snapshot.analysis_content["zh-CN"] && snapshot.analysis_content.en ? (
           <BilingualArticle zh={snapshot.analysis_content["zh-CN"]} en={snapshot.analysis_content.en} />

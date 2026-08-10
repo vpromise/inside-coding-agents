@@ -17,13 +17,21 @@ const expectedRoutes = [
   "learn",
   "mechanisms",
   "agents",
+  "compare",
+  "evidence",
   "lab",
   "search",
   ...content.curriculum.lessons.map((lesson) => `learn/${lesson.slug}`),
   ...content.mechanisms.map((mechanism) => `mechanisms/${mechanism.id}`),
   ...content.agents.flatMap((agent) => [
     `agents/${agent.id}`,
+    `agents/${agent.id}/timeline`,
     ...agent.snapshots.map((snapshot) => `agents/${agent.id}/${snapshot.id}`),
+    ...agent.snapshots.flatMap((snapshot, index) =>
+      agent.snapshots.slice(index + 1).map((next) =>
+        `agents/${agent.id}/diff/${snapshot.id}__${next.id}`
+      )
+    ),
   ]),
   ...content.experiments.map((experiment) => `lab/experiments/${experiment.id}`),
   ...content.traces.map((trace) => `lab/traces/${trace.id}`),
@@ -41,7 +49,7 @@ async function collectFiles(directory) {
 }
 
 test("GitHub Pages export contains every content route with repository-safe URLs", async () => {
-  assert.equal(expectedRoutes.length, 97, "the route inventory changed; review the export contract");
+  assert.equal(expectedRoutes.length, 109, "the route inventory changed; review the export contract");
   assert.equal(new Set(expectedRoutes).size, expectedRoutes.length, "route inventory contains duplicates");
 
   for (const route of expectedRoutes) {
