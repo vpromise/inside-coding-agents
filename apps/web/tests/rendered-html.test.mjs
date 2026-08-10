@@ -143,7 +143,7 @@ test("renders evidence-aware Compare, Timeline, and structural Snapshot Diff vie
   assert.equal(evidenceResponse.status, 200);
   const evidenceHtml = await evidenceResponse.text();
   assert.match(evidenceHtml, /id="evidence-search"/);
-  assert.match(evidenceHtml, /51 Evidence records/);
+  assert.match(evidenceHtml, /78 Evidence records/);
   assert.match(evidenceHtml, /run_pre_sampling_compact|codex-source-auto-compaction/);
 
   const timelineResponse = await render("/agents/codex/timeline");
@@ -192,8 +192,8 @@ test("generated content resolves the shared source graph", async () => {
   );
   assert.equal(generated.curriculum.lessons.length, 13);
   assert.equal(generated.mechanisms.length, 20);
-  assert.equal(generated.agents.length, 5);
-  assert.equal(generated.claims.length, 30);
+  assert.equal(generated.agents.length, 7);
+  assert.equal(generated.claims.length, 49);
   assert.equal(generated.experiments.length, 10);
   assert.equal(generated.traces.length, 34);
 

@@ -1,0 +1,24 @@
+{
+  "schema_version": "0.1.0",
+  "id": "opencode-source-context-compaction",
+  "agent_id": "opencode",
+  "snapshot_id": "opencode-2026-08-10-source",
+  "mechanism_id": "context-compaction",
+  "surface": "cli",
+  "statement": "OpenCode's pinned compaction service measures context pressure, constructs a summary turn, preserves recent context, and separately truncates oversized historical tool output before model input construction.",
+  "display_text": {
+    "zh-CN": "固定版本的 OpenCode compaction service 会衡量 context 压力、构造 summary turn、保留近期上下文，并在构造模型输入前单独截断过大的历史工具输出。",
+    "en": "OpenCode's pinned compaction service measures context pressure, constructs a summary turn, preserves recent context, and separately truncates oversized historical tool output."
+  },
+  "status": "reviewed",
+  "evidence": [{
+    "type": "source",
+    "title": "OpenCode session compaction",
+    "source_url": "https://github.com/anomalyco/opencode/blob/941e71dbbb94ea5b32226c2845585992dadb361f/packages/opencode/src/session/compaction.ts",
+    "captured_at": "2026-08-10",
+    "locator": "overflow checks, compaction task, and tool-output pruning",
+    "commit": "941e71dbbb94ea5b32226c2845585992dadb361f"
+  }],
+  "reviewed_at": "2026-08-10",
+  "reviewers": ["foundation-maintainers"]
+}

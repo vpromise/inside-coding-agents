@@ -31,6 +31,18 @@
       "snapshot_id": "claude-code-2026-08-10-docs",
       "coverage": "partial",
       "claim_ids": ["claude-code-doc-hooks"]
+    },
+    {
+      "agent_id": "opencode",
+      "snapshot_id": "opencode-2026-08-10-source",
+      "coverage": "substantial",
+      "claim_ids": ["opencode-source-extension-runtime"]
+    },
+    {
+      "agent_id": "grok-build",
+      "snapshot_id": "grok-build-2026-08-10-source",
+      "coverage": "substantial",
+      "claim_ids": ["grok-build-source-extension-runtime"]
     }
   ],
   "experiments": [],

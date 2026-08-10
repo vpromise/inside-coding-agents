@@ -1,0 +1,25 @@
+{
+  "schema_version": "0.1.0",
+  "id": "opencode-source-subagent-sessions",
+  "agent_id": "opencode",
+  "snapshot_id": "opencode-2026-08-10-source",
+  "mechanism_id": "subagent-orchestration",
+  "surface": "cli",
+  "statement": "OpenCode's pinned task tool enforces a nesting limit, derives child permissions from the parent and selected Agent, creates a child session linked by parentID, and supports foreground or background task execution with explicit session metadata.",
+  "display_text": {
+    "zh-CN": "固定版本的 OpenCode task tool 会限制嵌套深度，从父会话与所选 Agent 派生子权限，通过 parentID 建立 child session，并用显式 session metadata 支持前台或后台任务。",
+    "en": "OpenCode's pinned task tool limits nesting, derives child permissions, creates parent-linked child sessions, and supports foreground or background tasks with explicit metadata."
+  },
+  "status": "reviewed",
+  "evidence": [{
+    "type": "source",
+    "title": "OpenCode task tool",
+    "source_url": "https://github.com/anomalyco/opencode/blob/941e71dbbb94ea5b32226c2845585992dadb361f/packages/opencode/src/tool/task.ts",
+    "captured_at": "2026-08-10",
+    "locator": "ancestry depth check, child permission derivation, and Session.create",
+    "commit": "941e71dbbb94ea5b32226c2845585992dadb361f"
+  }],
+  "reviewed_at": "2026-08-10",
+  "reviewers": ["foundation-maintainers"],
+  "notes": "A child session is a context boundary, not automatically a filesystem or process isolation boundary."
+}

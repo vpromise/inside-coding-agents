@@ -15,7 +15,7 @@
 
 Inside Coding Agents is an open-source, bilingual textbook, architecture atlas, and laboratory for understanding **coding agents** and the **agent harness** around an LLM. It turns agent loops, tool calling, context management, workspace access, instruction discovery, sandboxing, permissions, subagents, protocols, extensions, retries, and traces into runnable lessons and inspectable evidence.
 
-Study how systems such as **Codex, Claude Code, Pi, and Reasonix** approach shared engineering problems. Then run the provider-neutral reference harness and reproduce the same concepts without an API key.
+Study how systems such as **Codex, Claude Code, OpenCode, Grok Build, Pi, and Reasonix** approach shared engineering problems. Then run the provider-neutral reference harness and reproduce the same concepts without an API key.
 
 > This is an independent educational and research project. Product names belong to their respective owners; inclusion does not imply affiliation or endorsement.
 
@@ -39,7 +39,7 @@ The same material is useful as a beginner's coding-agent tutorial, an engineer's
 | Mechanisms | What design problems do all agent harnesses share? | [Browse 20 mechanisms](content/mechanisms/README.md) |
 | Agent Atlas | How does a specific agent implement those mechanisms? | [Inspect versioned profiles](content/agents/README.md) |
 | Architecture Compare | Where do agent harness designs align or remain unknown? | [Compare evidence by mechanism](https://vpromise.github.io/inside-coding-agents/compare/) |
-| Evidence Explorer | Which primary source supports a specific claim? | [Filter 51 evidence records](https://vpromise.github.io/inside-coding-agents/evidence/) |
+| Evidence Explorer | Which primary source supports a specific claim? | [Filter 78 evidence records](https://vpromise.github.io/inside-coding-agents/evidence/) |
 | Experiment Lab | Which observations can be reproduced under fixed conditions? | [Replay 10 controlled experiments](labs/README.md) |
 | Registry | Where are claims, evidence, schemas, and stable IDs stored? | [Read the data model](registry/README.md) |
 | Web | How does the shared graph become a bilingual, searchable site? | [Run the interface](apps/web/README.md) |
@@ -48,11 +48,11 @@ The same material is useful as a beginner's coding-agent tutorial, an engineer's
 
 - 13 runnable bilingual long-form tutorials, progressing through agent loops, context, approval, sandbox and network policy, project trust, and scoped Git rollback;
 - 20 cross-agent mechanism records, with bilingual L0–L4 deep dives for context budget, compaction, memory, permissions, OS sandboxing, and checkpoint/rollback;
-- 5 Agent profiles, 9 immutable snapshots, and 30 reviewed claims;
-- pinned public-source maps for Codex, Pi, and Reasonix;
-- a clean-room, official-document snapshot for Claude Code;
+- 7 Agent profiles, 11 immutable snapshots, and 49 reviewed claims;
+- pinned public-source maps for Codex, OpenCode, Grok Build, Pi, and Reasonix;
+- a clean-room, official-document snapshot for Claude Code, including subagents and experimental Agent Teams;
 - 10 controlled experiments, 20 reproduced traces, structured results, and readable reports;
-- a bilingual, searchable website with Architecture Compare, 51-record Evidence Explorer, Agent timelines, structural Snapshot Diff, interactive Architecture Atlas, and generic data-driven routes;
+- a bilingual, searchable website with Architecture Compare, 78-record Evidence Explorer, Agent timelines, structural Snapshot Diff, interactive Architecture Atlas, and generic data-driven routes;
 - an automatic 90-day snapshot freshness gate that runs in CI every week without rewriting research claims;
 - JSON Schema, graph, digest, trace, link, safety, and web-build validation.
 
@@ -108,8 +108,10 @@ The Atlas is a versioned evidence index, not a popularity ranking or benchmark l
 
 | Agent | Evidence surface | Snapshots | Reviewed claims |
 | --- | --- | ---: | ---: |
-| Claude Code | Official documentation; clean-room boundary | 1 | 3 |
+| Claude Code | Official documentation; clean-room boundary | 1 | 4 |
 | Codex | Pinned public source and official documentation | 3 | 9 |
+| Grok Build | Pinned public source and official documentation | 1 | 9 |
+| OpenCode | Pinned public source and official documentation | 1 | 9 |
 | Pi | Pinned public source | 2 | 8 |
 | Reasonix | Pinned public source | 2 | 9 |
 | Reference Harness | Repository source and controlled reproduction | 1 | 1 |

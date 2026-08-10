@@ -1,0 +1,74 @@
+{
+  "schema_version": "0.1.0",
+  "id": "grok-build",
+  "name": "Grok Build",
+  "summary": "SpaceXAI's open-source Rust coding agent with TUI, headless, and ACP surfaces; this Tier B profile maps a pinned repository sync while keeping runtime and sandbox claims explicitly bounded.",
+  "coverage_tier": "B",
+  "source_availability": "open",
+  "homepage": "https://docs.x.ai/build/overview",
+  "upstream": {
+    "documentation": "https://docs.x.ai/build/overview",
+    "release_feed": "https://x.ai/build/changelog",
+    "repositories": [
+      {
+        "component": "source-sync",
+        "url": "https://github.com/xai-org/grok-build",
+        "default_branch": "main"
+      }
+    ]
+  },
+  "licenses": [
+    {
+      "component": "first-party-source",
+      "spdx": "Apache-2.0",
+      "url": "https://github.com/xai-org/grok-build/blob/75e73f3d6ac0350d211f12ae7d57c2c0aad72576/LICENSE"
+    }
+  ],
+  "surfaces": ["cli", "tui", "server", "acp"],
+  "model_strategy": ["first-party", "openai-compatible"],
+  "lifecycle": "active",
+  "tags": ["coding-agent", "rust", "acp", "sandbox", "subagents", "plugins"],
+  "stewards": ["foundation-maintainers"],
+  "snapshots": [
+    {
+      "id": "grok-build-2026-08-10-source",
+      "observed_at": "2026-08-10",
+      "surface": "cli",
+      "version": "1.0.0@75e73f3",
+      "freshness": "current",
+      "docs_captured_at": "2026-08-10",
+      "source_ref": {
+        "repository": "https://github.com/xai-org/grok-build",
+        "commit": "75e73f3d6ac0350d211f12ae7d57c2c0aad72576",
+        "paths": [
+          "SOURCE_REV",
+          "crates/codegen/xai-grok-shell/src/session/acp_session_impl/run_loop.rs",
+          "crates/codegen/xai-grok-agent/src/agent.rs",
+          "crates/codegen/xai-grok-agent/src/compaction.rs",
+          "crates/codegen/xai-grok-tools/src/bridge.rs",
+          "crates/codegen/xai-grok-workspace/src/permission/resolution.rs",
+          "crates/codegen/xai-grok-workspace/src/permission/policy.rs",
+          "crates/codegen/xai-grok-sandbox/src/lib.rs",
+          "crates/codegen/xai-grok-sampler/src/retry.rs",
+          "crates/codegen/xai-grok-hooks/src/event.rs",
+          "crates/codegen/xai-grok-hooks/src/dispatcher.rs",
+          "crates/codegen/xai-grok-subagent-resolution/src/lib.rs",
+          "crates/codegen/xai-grok-shell/src/extensions/task.rs",
+          "crates/codegen/xai-acp-lib/src/lib.rs",
+          "crates/codegen/xai-file-utils/src/events/log.rs",
+          "crates/codegen/xai-file-utils/src/events/tracker.rs",
+          "crates/codegen/xai-file-utils/src/events/types.rs"
+        ]
+      },
+      "environment": {
+        "os": "source-inspection-only",
+        "runtime": "Rust source sync; released CLI not executed",
+        "permission_mode": "source-mapped-configurable",
+        "sandbox_mode": "source-mapped-with-platform-fallback",
+        "network_mode": "not-executed"
+      },
+      "claims_path": "registry/claims/grok-build-source-agent-loop.claim.json",
+      "notes": "Pinned public repository commit 75e73f3; SOURCE_REV records upstream monorepo revision a61c32b12a2b400f212221cd8762e05f9b36828d. Sandbox claims preserve the source-visible unsupported/apply-failure fallback and do not imply universal fail-closed enforcement."
+    }
+  ]
+}

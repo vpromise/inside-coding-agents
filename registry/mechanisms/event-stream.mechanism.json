@@ -25,6 +25,18 @@
       "snapshot_id": "reasonix-2026-08-10-source",
       "coverage": "substantial",
       "claim_ids": ["reasonix-source-event-log"]
+    },
+    {
+      "agent_id": "opencode",
+      "snapshot_id": "opencode-2026-08-10-source",
+      "coverage": "substantial",
+      "claim_ids": ["opencode-source-event-bridge"]
+    },
+    {
+      "agent_id": "grok-build",
+      "snapshot_id": "grok-build-2026-08-10-source",
+      "coverage": "substantial",
+      "claim_ids": ["grok-build-source-event-log"]
     }
   ],
   "experiments": ["reference-stream-normalization-v1"],

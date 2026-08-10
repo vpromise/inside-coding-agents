@@ -1,0 +1,35 @@
+{
+  "schema_version": "0.1.0",
+  "id": "grok-build-source-execution-policy",
+  "agent_id": "grok-build",
+  "snapshot_id": "grok-build-2026-08-10-source",
+  "mechanism_id": "execution-policy",
+  "surface": "cli",
+  "statement": "Grok Build's pinned source resolves semantic allow, ask, and deny policy separately from OS sandbox activation; the sandbox manager exposes requested and active state, uses platform backends where supported, and can explicitly continue without sandboxing when unsupported or application fails.",
+  "display_text": {
+    "zh-CN": "固定版本的 Grok Build 源码把语义层 allow、ask、deny policy 与 OS sandbox 激活分开处理；sandbox manager 暴露 requested/active 状态，在支持的平台使用系统 backend，并在不支持或应用失败时明确可能继续无 sandbox 运行。",
+    "en": "Grok Build's pinned source separates semantic allow/ask/deny policy from OS sandbox activation; the manager exposes requested and active state, uses supported platform backends, and may explicitly continue unsandboxed when unsupported or application fails."
+  },
+  "status": "reviewed",
+  "evidence": [
+    {
+      "type": "source",
+      "title": "Grok Build permission resolution",
+      "source_url": "https://github.com/xai-org/grok-build/blob/75e73f3d6ac0350d211f12ae7d57c2c0aad72576/crates/codegen/xai-grok-workspace/src/permission/resolution.rs",
+      "captured_at": "2026-08-10",
+      "locator": "permission decision resolution and deny precedence",
+      "commit": "75e73f3d6ac0350d211f12ae7d57c2c0aad72576"
+    },
+    {
+      "type": "source",
+      "title": "Grok Build sandbox manager",
+      "source_url": "https://github.com/xai-org/grok-build/blob/75e73f3d6ac0350d211f12ae7d57c2c0aad72576/crates/codegen/xai-grok-sandbox/src/lib.rs",
+      "captured_at": "2026-08-10",
+      "locator": "SandboxManager state and apply fallback",
+      "commit": "75e73f3d6ac0350d211f12ae7d57c2c0aad72576"
+    }
+  ],
+  "reviewed_at": "2026-08-10",
+  "reviewers": ["foundation-maintainers"],
+  "notes": "This deliberately rejects a universal fail-closed interpretation. Effective isolation is platform- and run-dependent and requires Native verification."
+}

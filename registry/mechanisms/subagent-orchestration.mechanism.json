@@ -31,7 +31,20 @@
       "agent_id": "claude-code",
       "snapshot_id": "claude-code-2026-08-10-docs",
       "coverage": "partial",
-      "claim_ids": ["claude-code-doc-subagents"]
+      "claim_ids": ["claude-code-doc-subagents", "claude-code-doc-agent-teams"],
+      "notes": "Official docs distinguish one-way subagent delegation from experimental peer-capable Agent Teams and state that teammates do not receive automatic worktree isolation."
+    },
+    {
+      "agent_id": "opencode",
+      "snapshot_id": "opencode-2026-08-10-source",
+      "coverage": "substantial",
+      "claim_ids": ["opencode-source-subagent-sessions"]
+    },
+    {
+      "agent_id": "grok-build",
+      "snapshot_id": "grok-build-2026-08-10-source",
+      "coverage": "substantial",
+      "claim_ids": ["grok-build-source-subagent-runtime"]
     }
   ],
   "experiments": [],

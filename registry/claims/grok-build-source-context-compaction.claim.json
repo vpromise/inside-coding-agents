@@ -1,0 +1,34 @@
+{
+  "schema_version": "0.1.0",
+  "id": "grok-build-source-context-compaction",
+  "agent_id": "grok-build",
+  "snapshot_id": "grok-build-2026-08-10-source",
+  "mechanism_id": "context-compaction",
+  "surface": "cli",
+  "statement": "Grok Build's pinned Agent source uses a configurable compaction policy with context thresholds, optional model and memory-flush settings, wall-clock limits, and an optional two-pass mode; automatic compaction is triggered from measured context pressure.",
+  "display_text": {
+    "zh-CN": "固定版本的 Grok Build Agent 使用可配置 compaction policy，包括 context threshold、可选 model 与 memory flush、wall-clock limit 及可选 two-pass mode；自动 compaction 由实测 context 压力触发。",
+    "en": "Grok Build's pinned Agent uses a configurable compaction policy with context thresholds, optional model and memory-flush settings, wall-clock limits, and an optional two-pass mode."
+  },
+  "status": "reviewed",
+  "evidence": [
+    {
+      "type": "source",
+      "title": "Grok Build compaction policy",
+      "source_url": "https://github.com/xai-org/grok-build/blob/75e73f3d6ac0350d211f12ae7d57c2c0aad72576/crates/codegen/xai-grok-agent/src/compaction.rs",
+      "captured_at": "2026-08-10",
+      "locator": "CompactionPolicy and builder methods",
+      "commit": "75e73f3d6ac0350d211f12ae7d57c2c0aad72576"
+    },
+    {
+      "type": "source",
+      "title": "Grok Build Agent compaction trigger",
+      "source_url": "https://github.com/xai-org/grok-build/blob/75e73f3d6ac0350d211f12ae7d57c2c0aad72576/crates/codegen/xai-grok-agent/src/agent.rs",
+      "captured_at": "2026-08-10",
+      "locator": "should_auto_compact and context threshold",
+      "commit": "75e73f3d6ac0350d211f12ae7d57c2c0aad72576"
+    }
+  ],
+  "reviewed_at": "2026-08-10",
+  "reviewers": ["foundation-maintainers"]
+}

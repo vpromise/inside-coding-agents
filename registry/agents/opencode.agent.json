@@ -1,0 +1,70 @@
+{
+  "schema_version": "0.1.0",
+  "id": "opencode",
+  "name": "OpenCode",
+  "summary": "An open-source, multi-provider coding agent with terminal, desktop, server, and ACP surfaces; this Tier B profile maps a pinned source revision without claiming Native runtime verification.",
+  "coverage_tier": "B",
+  "source_availability": "open",
+  "homepage": "https://opencode.ai/",
+  "upstream": {
+    "documentation": "https://opencode.ai/docs/",
+    "release_feed": "https://github.com/anomalyco/opencode/releases",
+    "repositories": [
+      {
+        "component": "monorepo",
+        "url": "https://github.com/anomalyco/opencode",
+        "default_branch": "dev"
+      }
+    ]
+  },
+  "licenses": [
+    {
+      "component": "monorepo",
+      "spdx": "MIT",
+      "url": "https://github.com/anomalyco/opencode/blob/941e71dbbb94ea5b32226c2845585992dadb361f/LICENSE"
+    }
+  ],
+  "surfaces": ["cli", "tui", "desktop", "server", "acp"],
+  "model_strategy": ["multi-provider", "openai-compatible", "local-models"],
+  "lifecycle": "active",
+  "tags": ["coding-agent", "typescript", "client-server", "permissions", "plugins", "mcp"],
+  "stewards": ["foundation-maintainers"],
+  "snapshots": [
+    {
+      "id": "opencode-2026-08-10-source",
+      "observed_at": "2026-08-10",
+      "surface": "cli",
+      "version": "1.18.16@941e71d",
+      "freshness": "current",
+      "docs_captured_at": "2026-08-10",
+      "source_ref": {
+        "repository": "https://github.com/anomalyco/opencode",
+        "commit": "941e71dbbb94ea5b32226c2845585992dadb361f",
+        "paths": [
+          "packages/opencode/src/session/prompt.ts",
+          "packages/opencode/src/session/compaction.ts",
+          "packages/opencode/src/session/retry.ts",
+          "packages/opencode/src/tool/registry.ts",
+          "packages/opencode/src/tool/task.ts",
+          "packages/opencode/src/permission/index.ts",
+          "packages/opencode/src/plugin/loader.ts",
+          "packages/opencode/src/mcp/index.ts",
+          "packages/opencode/src/skill/discovery.ts",
+          "packages/opencode/src/server/server.ts",
+          "packages/opencode/src/cli/cmd/serve.ts",
+          "packages/opencode/src/cli/tui/worker.ts",
+          "packages/opencode/src/event-v2-bridge.ts"
+        ]
+      },
+      "environment": {
+        "os": "source-inspection-only",
+        "runtime": "TypeScript/Bun monorepo; released CLI not executed",
+        "permission_mode": "source-mapped-configurable",
+        "sandbox_mode": "not-verified",
+        "network_mode": "not-executed"
+      },
+      "claims_path": "registry/claims/opencode-source-agent-loop.claim.json",
+      "notes": "Clean source inspection pinned to OpenCode package version 1.18.16 and one immutable commit. The profile separates semantic permission rules from OS isolation and remains Tier B until a reviewed Native experiment exists."
+    }
+  ]
+}

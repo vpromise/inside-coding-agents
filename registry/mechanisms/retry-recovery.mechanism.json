@@ -13,6 +13,18 @@
       "snapshot_id": "reasonix-2026-08-10-source",
       "coverage": "partial",
       "claim_ids": ["reasonix-source-retry-recovery"]
+    },
+    {
+      "agent_id": "opencode",
+      "snapshot_id": "opencode-2026-08-10-source",
+      "coverage": "substantial",
+      "claim_ids": ["opencode-source-retry-policy"]
+    },
+    {
+      "agent_id": "grok-build",
+      "snapshot_id": "grok-build-2026-08-10-source",
+      "coverage": "substantial",
+      "claim_ids": ["grok-build-source-retry-policy"]
     }
   ],
   "experiments": [],

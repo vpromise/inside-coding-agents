@@ -1487,14 +1487,14 @@
           "claims_path": "registry/claims/claude-code-doc-execution-policy.claim.json",
           "notes": "Official-documentation snapshot aligned with public distribution tag v2.1.226. No claim in this snapshot asserts the closed core's file layout, hidden prompts, or internal state machine.",
           "analysis_content": {
-            "zh-CN": "# Claude Code clean-room 文档快照\n\n这个 snapshot 的强项是产品契约，弱项是内部实现可见性。所有结论来自官方文档，观察日期为 2026-08-10；公开 distribution tag `v2.1.226` 只用于版本对齐，不能被当作 product core 源码。\n\n## 1. Loop — unknown\n\n官方材料确认 Claude Code 是 agentic terminal workflow，但本 snapshot 不声明内部 sampling loop、tool-result continuation、termination enum 或 retry scheduler。后续只能用官方 structured output 或授权黑盒实验描述外部行为。\n\n## 2. Context — partial\n\nsubagent 文档确认 child 使用独立 context window，并描述 auto-compaction、resume 与 startup loading。它不公开主 context reducer 的算法、摘要 prompt 或持久化格式，因此这些保持 unknown。\n\n## 3. Tools — partial\n\n文档公开 tool permission rule syntax、subagent tool allow/deny 与 MCP scope。它支持 capability contract，却不能证明内部 registry、validator 或 dispatcher 的代码结构。\n\n## 4. Safety — documented product contract\n\npermissions 决定 tool/file/domain 是否可访问；sandbox 为 Bash 与 child processes 提供 OS-level filesystem/network enforcement。官方建议同时使用，两者不是替代关系。deny、ask、managed precedence 与 sandbox boundary 的细节必须绑定文档日期。对应 Claim：`claude-code-doc-execution-policy`。\n\n## 5. Reliability — unknown\n\n文档包含错误与 troubleshooting 页面，但本项目还没有版本固定的 retry、partial tool call、crash recovery 或 resume 实验，不能断言内部策略。\n\n## 6. Extensibility — documented product contract\n\nhooks 覆盖 PreToolUse、PostToolUse、PermissionRequest、SessionStart/End、Stop 等 lifecycle。PreToolUse deny 可以在 permission-mode check 前阻止调用，而 allow 不能越过更严格的 deny rule。hook 并发与 merge precedence 是需要实验的失败面。对应 Claim：`claude-code-doc-hooks`。\n\n## 7. Orchestration — documented product contract\n\nsubagent 有独立 context、prompt、tools、model、permission mode、hooks、skills、max turns/depth 与可选 worktree isolation。文档还区分 foreground/background、resume 与 teams，但本 snapshot 不推断 scheduler 实现。对应 Claim：`claude-code-doc-subagents`。\n\n## 8. Interfaces — partial\n\n已知 surface 包括 CLI/TUI、IDE integration 与 Agent SDK。尚未建立版本固定的 protocol Claim，因此不会把 UI 行为写成稳定 wire contract。\n\n## 9. Observability — unknown\n\ntranscript、hook JSON 与 programmatic output 能提供可观察事件，但本项目尚未采集 Native trace，也不知道内部 authoritative event store。页面只展示 evidence ledger，不模拟内部 event bus。\n\n## Tier B 的完成方式\n\n闭源研究不是等待源码，而是把证据边界做得更严格：每个 Claim 绑定官方页面与抓取日期；动态文档变化触发 stale；实验只记录公开输出；不提取隐藏 prompt、chain-of-thought 或私人 telemetry；任何关于“内部为何如此”的解释都标记 inference。\n",
-            "en": "# Claude Code clean-room documentation snapshot\n\nThis snapshot is strong on product contracts and weak on implementation visibility. Every claim comes from official documentation observed on 2026-08-10. Public distribution tag `v2.1.226` aligns the time boundary; it is not product-core source.\n\n## 1. Loop — unknown\n\nOfficial material establishes an agentic terminal workflow, but this snapshot does not assert an internal sampling loop, tool-result continuation mechanism, termination enum, or retry scheduler. Future work can describe external behavior only through official structured output or authorized black-box experiments.\n\n## 2. Context — partial\n\nSubagent documentation establishes separate child context windows and describes auto-compaction, resume, and startup loading. It does not publish the main context reducer algorithm, summary prompt, or persistence format; those remain unknown.\n\n## 3. Tools — partial\n\nDocumentation publishes permission-rule syntax, subagent tool allow/deny controls, and MCP scope. That supports a capability contract, not a claim about internal registry, validator, or dispatcher code.\n\n## 4. Safety — documented product contract\n\nPermissions decide whether tools, files, and domains may be accessed; sandboxing provides OS-level filesystem/network enforcement for Bash and child processes. Official guidance recommends both rather than treating one as a substitute. Deny, ask, managed precedence, and sandbox details remain bound to the documentation date. Claim: `claude-code-doc-execution-policy`.\n\n## 5. Reliability — unknown\n\nOfficial error and troubleshooting pages exist, but this project has no version-pinned experiments for retry, partial tool calls, crash recovery, or resume. Internal policy is not asserted.\n\n## 6. Extensibility — documented product contract\n\nHooks cover lifecycle points including PreToolUse, PostToolUse, PermissionRequest, SessionStart/End, and Stop. A PreToolUse deny can block before permission-mode checks, while allow cannot override stricter deny rules. Concurrent hooks and merge precedence are experiment-worthy failure surfaces. Claim: `claude-code-doc-hooks`.\n\n## 7. Orchestration — documented product contract\n\nSubagents have separate context, prompts, tools, models, permission modes, hooks, skills, turn/depth limits, and optional worktree isolation. Documentation also distinguishes foreground/background execution, resume, and teams; this snapshot does not infer scheduler implementation. Claim: `claude-code-doc-subagents`.\n\n## 8. Interfaces — partial\n\nKnown surfaces include CLI/TUI, IDE integration, and Agent SDK. No version-pinned protocol claim exists yet, so UI behavior is not presented as a stable wire contract.\n\n## 9. Observability — unknown\n\nTranscripts, hook JSON, and programmatic output expose observable events, but this project has not captured a native trace and does not know the authoritative internal event store. The page shows an evidence ledger rather than simulating an internal event bus.\n\n## Completing Tier B well\n\nClosed-source research does not wait for source; it uses stricter boundaries. Every claim binds to an official page and capture date, dynamic documentation changes trigger staleness, experiments record only public output, hidden prompts/chain-of-thought/private telemetry are excluded, and explanations of internal causes are labeled as inference.\n"
+            "zh-CN": "# Claude Code clean-room 文档快照\n\n这个 snapshot 的强项是产品契约，弱项是内部实现可见性。所有结论来自官方文档，观察日期为 2026-08-10；公开 distribution tag `v2.1.226` 只用于版本对齐，不能被当作 product core 源码。\n\n## 1. Loop — unknown\n\n官方材料确认 Claude Code 是 agentic terminal workflow，但本 snapshot 不声明内部 sampling loop、tool-result continuation、termination enum 或 retry scheduler。后续只能用官方 structured output 或授权黑盒实验描述外部行为。\n\n## 2. Context — partial\n\nsubagent 文档确认 child 使用独立 context window，并描述 auto-compaction、resume 与 startup loading。它不公开主 context reducer 的算法、摘要 prompt 或持久化格式，因此这些保持 unknown。\n\n## 3. Tools — partial\n\n文档公开 tool permission rule syntax、subagent tool allow/deny 与 MCP scope。它支持 capability contract，却不能证明内部 registry、validator 或 dispatcher 的代码结构。\n\n## 4. Safety — documented product contract\n\npermissions 决定 tool/file/domain 是否可访问；sandbox 为 Bash 与 child processes 提供 OS-level filesystem/network enforcement。官方建议同时使用，两者不是替代关系。deny、ask、managed precedence 与 sandbox boundary 的细节必须绑定文档日期。对应 Claim：`claude-code-doc-execution-policy`。\n\n## 5. Reliability — unknown\n\n文档包含错误与 troubleshooting 页面，但本项目还没有版本固定的 retry、partial tool call、crash recovery 或 resume 实验，不能断言内部策略。\n\n## 6. Extensibility — documented product contract\n\nhooks 覆盖 PreToolUse、PostToolUse、PermissionRequest、SessionStart/End、Stop 等 lifecycle。PreToolUse deny 可以在 permission-mode check 前阻止调用，而 allow 不能越过更严格的 deny rule。hook 并发与 merge precedence 是需要实验的失败面。对应 Claim：`claude-code-doc-hooks`。\n\n## 7. Orchestration — documented product contract\n\nsubagent 有独立 context、prompt、tools、model、permission mode、hooks、skills、max turns/depth 与可选 worktree isolation。文档还区分 foreground/background 与 resume。对应 Claim：`claude-code-doc-subagents`。\n\nAgent Teams 是另一份实验性合同：lead 协调拥有独立 context window 的 teammate，共享 task list，并允许 teammate 直接互发消息。它不同于单向隔离的 subagent delegation，也不同于显式 worktree mode；teammate 不会自动获得 workspace isolation。本次观察到的文档版本还描述了无需旧式 setup-tool lifecycle 的直接 teammate spawning。这里记录公开合同，不推断内部 scheduler。对应 Claim：`claude-code-doc-agent-teams`。\n\n## 8. Interfaces — partial\n\n已知 surface 包括 CLI/TUI、IDE integration 与 Agent SDK。尚未建立版本固定的 protocol Claim，因此不会把 UI 行为写成稳定 wire contract。\n\n## 9. Observability — unknown\n\ntranscript、hook JSON 与 programmatic output 能提供可观察事件，但本项目尚未采集 Native trace，也不知道内部 authoritative event store。页面只展示 evidence ledger，不模拟内部 event bus。\n\n## Tier B 的完成方式\n\n闭源研究不是等待源码，而是把证据边界做得更严格：每个 Claim 绑定官方页面与抓取日期；动态文档变化触发 stale；实验只记录公开输出；不提取隐藏 prompt、chain-of-thought 或私人 telemetry；任何关于“内部为何如此”的解释都标记 inference。\n",
+            "en": "# Claude Code clean-room documentation snapshot\n\nThis snapshot is strong on product contracts and weak on implementation visibility. Every claim comes from official documentation observed on 2026-08-10. Public distribution tag `v2.1.226` aligns the time boundary; it is not product-core source.\n\n## 1. Loop — unknown\n\nOfficial material establishes an agentic terminal workflow, but this snapshot does not assert an internal sampling loop, tool-result continuation mechanism, termination enum, or retry scheduler. Future work can describe external behavior only through official structured output or authorized black-box experiments.\n\n## 2. Context — partial\n\nSubagent documentation establishes separate child context windows and describes auto-compaction, resume, and startup loading. It does not publish the main context reducer algorithm, summary prompt, or persistence format; those remain unknown.\n\n## 3. Tools — partial\n\nDocumentation publishes permission-rule syntax, subagent tool allow/deny controls, and MCP scope. That supports a capability contract, not a claim about internal registry, validator, or dispatcher code.\n\n## 4. Safety — documented product contract\n\nPermissions decide whether tools, files, and domains may be accessed; sandboxing provides OS-level filesystem/network enforcement for Bash and child processes. Official guidance recommends both rather than treating one as a substitute. Deny, ask, managed precedence, and sandbox details remain bound to the documentation date. Claim: `claude-code-doc-execution-policy`.\n\n## 5. Reliability — unknown\n\nOfficial error and troubleshooting pages exist, but this project has no version-pinned experiments for retry, partial tool calls, crash recovery, or resume. Internal policy is not asserted.\n\n## 6. Extensibility — documented product contract\n\nHooks cover lifecycle points including PreToolUse, PostToolUse, PermissionRequest, SessionStart/End, and Stop. A PreToolUse deny can block before permission-mode checks, while allow cannot override stricter deny rules. Concurrent hooks and merge precedence are experiment-worthy failure surfaces. Claim: `claude-code-doc-hooks`.\n\n## 7. Orchestration — documented product contract\n\nSubagents have separate context, prompts, tools, models, permission modes, hooks, skills, turn/depth limits, and optional worktree isolation. Documentation also distinguishes foreground/background execution and resume. Claim: `claude-code-doc-subagents`.\n\nAgent Teams is a separate experimental contract: a lead coordinates teammates with independent context windows, a shared task list, and direct messages between teammates. Unlike isolated subagent delegation, team members can coordinate laterally; unlike an explicit worktree mode, teammates do not receive automatic workspace isolation. The documentation version observed here also describes direct teammate spawning without the earlier setup-tool lifecycle. This snapshot records the public contract without inferring an internal scheduler. Claim: `claude-code-doc-agent-teams`.\n\n## 8. Interfaces — partial\n\nKnown surfaces include CLI/TUI, IDE integration, and Agent SDK. No version-pinned protocol claim exists yet, so UI behavior is not presented as a stable wire contract.\n\n## 9. Observability — unknown\n\nTranscripts, hook JSON, and programmatic output expose observable events, but this project has not captured a native trace and does not know the authoritative internal event store. The page shows an evidence ledger rather than simulating an internal event bus.\n\n## Completing Tier B well\n\nClosed-source research does not wait for source; it uses stricter boundaries. Every claim binds to an official page and capture date, dynamic documentation changes trigger staleness, experiments record only public output, hidden prompts/chain-of-thought/private telemetry are excluded, and explanations of internal causes are labeled as inference.\n"
           }
         }
       ],
       "overview_content": {
-        "zh-CN": "# Claude Code\n\nClaude Code 的 product core 未在其公开 distribution repository 中提供，因此本项目采用 Tier B clean-room 边界：只整理官方文档、正式 changelog、公开 examples/plugins 与授权环境中的可观察行为，不猜测内部文件、隐藏 prompt 或状态机。\n\n- 当前 coverage：Tier B，official-doc；\n- 文档观察边界：2026-08-10，公开 distribution tag `v2.1.226`；\n- 已结构化：permissions + sandbox、lifecycle hooks、subagent capability/isolation；\n- 明确 unknown：内部 loop、context reducer、tool dispatcher、retry scheduler、event storage 和隐藏 protocol；\n- 仍缺：脱敏 Native trace、版本固定的黑盒实验与 docs change monitor。\n\nTier B 不是“低质量”标签，而是证据类型不同：公开行为可以被精确描述，但不能从界面或文档倒推出闭源实现。\n",
-        "en": "# Claude Code\n\nClaude Code's product core is not published in its public distribution repository, so this project uses a Tier B clean-room boundary: official documentation, formal changelogs, public examples/plugins, and behavior observable in an authorized environment are allowed; guesses about internal files, hidden prompts, or state machines are not.\n\n- Current coverage: Tier B, official documentation.\n- Documentation boundary: observed 2026-08-10 and aligned with public distribution tag `v2.1.226`.\n- Structured coverage: permissions plus sandboxing, lifecycle hooks, and subagent capabilities/isolation.\n- Explicitly unknown: internal loop, context reducer, tool dispatcher, retry scheduler, event storage, and hidden protocols.\n- Missing: a redacted native trace, version-pinned black-box experiments, and a documentation change monitor.\n\nTier B is not a low-quality label; it records a different evidence boundary. Public behavior can be described precisely, but UI and documentation cannot establish a closed-source implementation.\n"
+        "zh-CN": "# Claude Code\n\nClaude Code 的 product core 未在其公开 distribution repository 中提供，因此本项目采用 Tier B clean-room 边界：只整理官方文档、正式 changelog、公开 examples/plugins 与授权环境中的可观察行为，不猜测内部文件、隐藏 prompt 或状态机。\n\n- 当前 coverage：Tier B，official-doc；\n- 文档观察边界：2026-08-10，公开 distribution tag `v2.1.226`；\n- 已结构化：permissions + sandbox、lifecycle hooks、subagent capability/isolation，以及实验性 Agent Teams coordination contract；\n- 明确 unknown：内部 loop、context reducer、tool dispatcher、retry scheduler、event storage 和隐藏 protocol；\n- 仍缺：脱敏 Native trace、版本固定的黑盒实验与 docs change monitor。\n\nTier B 不是“低质量”标签，而是证据类型不同：公开行为可以被精确描述，但不能从界面或文档倒推出闭源实现。\n\nAgent Teams 与普通 subagent 被分开记录。官方文档描述了拥有独立 context window、共享 task list 并可直接互发消息的 teammate，同时明确 teammate 不会自动获得 worktree 隔离。这些是产品合同事实；scheduler 内部实现与实际 workspace isolation 仍为 unknown。\n",
+        "en": "# Claude Code\n\nClaude Code's product core is not published in its public distribution repository, so this project uses a Tier B clean-room boundary: official documentation, formal changelogs, public examples/plugins, and behavior observable in an authorized environment are allowed; guesses about internal files, hidden prompts, or state machines are not.\n\n- Current coverage: Tier B, official documentation.\n- Documentation boundary: observed 2026-08-10 and aligned with public distribution tag `v2.1.226`.\n- Structured coverage: permissions plus sandboxing, lifecycle hooks, subagent capabilities/isolation, and the experimental Agent Teams coordination contract.\n- Explicitly unknown: internal loop, context reducer, tool dispatcher, retry scheduler, event storage, and hidden protocols.\n- Missing: a redacted native trace, version-pinned black-box experiments, and a documentation change monitor.\n\nTier B is not a low-quality label; it records a different evidence boundary. Public behavior can be described precisely, but UI and documentation cannot establish a closed-source implementation.\n\nAgent Teams is kept distinct from ordinary subagents. Official documentation describes teammates with independent context windows, a shared task list, and direct peer messaging, while also warning that teammates do not receive automatic worktree isolation. Those are product-contract facts; scheduler internals and effective workspace isolation remain unknown.\n"
       }
     },
     {
@@ -1632,6 +1632,202 @@
       "overview_content": {
         "zh-CN": "# Codex\n\n本页只描述稳定身份和 snapshot 导航。Codex 有多个产品 surface；Registry 把 CLI 官方文档、开源 CLI core 与 App Server 分成独立 snapshot，不把桌面、IDE、cloud 或源码观察混入同一结论。\n\n- 当前 coverage：Tier B，partial；\n- Snapshot：CLI docs、CLI source、App Server source；\n- Evidence：official-doc + pinned source；\n- 已覆盖：loop、tools、context compaction、execution policy、hooks/plugins、subagents、event model、App Server；\n- 仍缺：脱敏 Native trace、正式实验、真实 OS sandbox 观察和外部复现，因此不能标为 Tier A。\n",
         "en": "# Codex\n\nThis page contains stable identity and snapshot navigation only. Codex has several product surfaces; the Registry separates CLI documentation, the open CLI core, and App Server into distinct snapshots instead of mixing desktop, IDE, cloud, and source observations into one claim boundary.\n\n- Current coverage: Tier B, partial.\n- Snapshots: CLI docs, CLI source, and App Server source.\n- Evidence: official documentation plus pinned source.\n- Covered: loop, tools, context compaction, execution policy, hooks/plugins, subagents, event model, and App Server.\n- Missing: a redacted native trace, formal experiment, observed OS-sandbox behavior, and external reproduction. The profile therefore remains Tier B.\n"
+      }
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "grok-build",
+      "name": "Grok Build",
+      "summary": "SpaceXAI's open-source Rust coding agent with TUI, headless, and ACP surfaces; this Tier B profile maps a pinned repository sync while keeping runtime and sandbox claims explicitly bounded.",
+      "coverage_tier": "B",
+      "source_availability": "open",
+      "homepage": "https://docs.x.ai/build/overview",
+      "upstream": {
+        "documentation": "https://docs.x.ai/build/overview",
+        "release_feed": "https://x.ai/build/changelog",
+        "repositories": [
+          {
+            "component": "source-sync",
+            "url": "https://github.com/xai-org/grok-build",
+            "default_branch": "main"
+          }
+        ]
+      },
+      "licenses": [
+        {
+          "component": "first-party-source",
+          "spdx": "Apache-2.0",
+          "url": "https://github.com/xai-org/grok-build/blob/75e73f3d6ac0350d211f12ae7d57c2c0aad72576/LICENSE"
+        }
+      ],
+      "surfaces": [
+        "cli",
+        "tui",
+        "server",
+        "acp"
+      ],
+      "model_strategy": [
+        "first-party",
+        "openai-compatible"
+      ],
+      "lifecycle": "active",
+      "tags": [
+        "coding-agent",
+        "rust",
+        "acp",
+        "sandbox",
+        "subagents",
+        "plugins"
+      ],
+      "stewards": [
+        "foundation-maintainers"
+      ],
+      "snapshots": [
+        {
+          "id": "grok-build-2026-08-10-source",
+          "observed_at": "2026-08-10",
+          "surface": "cli",
+          "version": "1.0.0@75e73f3",
+          "freshness": "current",
+          "docs_captured_at": "2026-08-10",
+          "source_ref": {
+            "repository": "https://github.com/xai-org/grok-build",
+            "commit": "75e73f3d6ac0350d211f12ae7d57c2c0aad72576",
+            "paths": [
+              "SOURCE_REV",
+              "crates/codegen/xai-grok-shell/src/session/acp_session_impl/run_loop.rs",
+              "crates/codegen/xai-grok-agent/src/agent.rs",
+              "crates/codegen/xai-grok-agent/src/compaction.rs",
+              "crates/codegen/xai-grok-tools/src/bridge.rs",
+              "crates/codegen/xai-grok-workspace/src/permission/resolution.rs",
+              "crates/codegen/xai-grok-workspace/src/permission/policy.rs",
+              "crates/codegen/xai-grok-sandbox/src/lib.rs",
+              "crates/codegen/xai-grok-sampler/src/retry.rs",
+              "crates/codegen/xai-grok-hooks/src/event.rs",
+              "crates/codegen/xai-grok-hooks/src/dispatcher.rs",
+              "crates/codegen/xai-grok-subagent-resolution/src/lib.rs",
+              "crates/codegen/xai-grok-shell/src/extensions/task.rs",
+              "crates/codegen/xai-acp-lib/src/lib.rs",
+              "crates/codegen/xai-file-utils/src/events/log.rs",
+              "crates/codegen/xai-file-utils/src/events/tracker.rs",
+              "crates/codegen/xai-file-utils/src/events/types.rs"
+            ]
+          },
+          "environment": {
+            "os": "source-inspection-only",
+            "runtime": "Rust source sync; released CLI not executed",
+            "permission_mode": "source-mapped-configurable",
+            "sandbox_mode": "source-mapped-with-platform-fallback",
+            "network_mode": "not-executed"
+          },
+          "claims_path": "registry/claims/grok-build-source-agent-loop.claim.json",
+          "notes": "Pinned public repository commit 75e73f3; SOURCE_REV records upstream monorepo revision a61c32b12a2b400f212221cd8762e05f9b36828d. Sandbox claims preserve the source-visible unsupported/apply-failure fallback and do not imply universal fail-closed enforcement.",
+          "analysis_content": {
+            "zh-CN": "# Grok Build 源码地图\n\n本分析固定在公开 repository commit `75e73f3`，其中 `SOURCE_REV` 指向 monorepo revision `a61c32b…`。我们没有执行 released CLI。Repository sync、package version、installed binary 与 hosted service 是不同版本身份，不能被静默等同。\n\n```text\nTUI / headless / ACP\n        │\n        ▼\n   session actor + turn\n   ├─ Agent / sampler / retry\n   ├─ ToolBridge + permission\n   ├─ sandbox manager + workspace\n   ├─ child sessions + hooks\n   └─ ACP updates + JSONL events\n```\n\n## 1. Loop\n\nSession run loop 复用 command、turn event、cancellation 与 child work。Turn 发出 start record，驱动 sampler output、分派 tool call，并投影 terminal outcome。这层 actor boundary 避免 TUI 成为权威状态机。Claim：`grok-build-source-agent-loop`。\n\n## 2. Context\n\n`CompactionPolicy` 暴露 context threshold、可选 compaction model、memory flush、wall-clock limit 与可选 two-pass behavior。Agent 会在 auto-compaction 前检查实测 context 压力。配置是显式的，但源码无法证明真实任务中的 summary quality 或信息损失。Claim：`grok-build-source-context-compaction`。\n\n## 3. Tools\n\n`ToolBridge` 持有 finalised registry，并向 Agent 提供 tool definition。Built-in 与 MCP-backed tool 进入共同 dispatch boundary，降低每个 client 自建执行路径的风险。Typed registration 不能替代 permission、sandbox、timeout 与 result redaction。Claim：`grok-build-source-tool-bridge`。\n\n## 4. Safety\n\n语义 permission resolution 与 OS sandbox activation 是两套机制。Deny precedence 可阻止请求，sandbox profile 则尝试平台 enforcement。被审核的 manager 记录 requested 与 active 状态，但其 unsupported 和 application-failure path 会警告后继续无 sandbox 运行。因此绝不能把“sandbox requested”写成“sandbox active”。Claim：`grok-build-source-execution-policy`。\n\n## 5. Reliability\n\nSampler retry module 返回显式 decision，而不是把 sleep 分散在 call site。它可以遵守 retry-after、使用指数 jitter、移除有问题的 image input、重建 client，或在 context/fatal error 时停止。这是可检查 policy，不证明对带 side effect 的 turn 进行 replay 在语义上安全。Claim：`grok-build-source-retry-policy`。\n\n## 6. Extensibility\n\nPlugin、skill、MCP tool 与 hook 覆盖不同扩展层。Hook event 包括 session 和 tool lifecycle point；pre-tool dispatch 可在执行前 gate 或修改工作。扩展会同时影响 capability 与 policy，因此 run manifest 应记录 loaded extension set，不能只记录 base binary。Claim：`grok-build-source-extension-runtime`。\n\n## 7. Orchestration\n\nSubagent resolution 分离 definition、context、override 与 resume identity。Task extension 创建 child session identity，并携带 isolation/worktree metadata。这比 inline prompt convention 更强，但 metadata 仍需要 enforcement evidence：名字里有 worktree 或 isolation 并不能自行证明隔离有效。Claim：`grok-build-source-subagent-runtime`。\n\n## 8. Interfaces\n\nACP library 提供 line-oriented JSON-RPC channel、message type 与 normalization。Shell 把 session activity 投影为面向外部 client 的 ACP update。稳定协议支持 editor integration 与独立 client，同时也带来 compatibility、cancellation、ordering 与 backpressure 义务。Claim：`grok-build-source-acp-interface`。\n\n## 9. Observability\n\nFile-event utility append 带版本的 JSONL record，tracker 发出 turn、tool、permission 与 terminal lifecycle event。这能支持 replay 与 audit tooling，但 append-oriented 源码无法证明每个 deployment 的 retention、crash durability、access control 或 public-safe redaction。Claim：`grok-build-source-event-log`。\n\n## 证据边界与下一项实验\n\n下一项安全实验应在 disposable fixture 中预注册只读 headless run：使用 streaming JSON、显式 tool deny/allow、关闭 subagent 与 memory、限制 turn，并请求 strict sandbox。Capture 必须另行记录 sandbox 是否真正 active。Raw output 保持私有，只有经审核与脱敏的 normalization 才可能成为证据。在此之前，九项映射都保持 Tier B 源码证据。\n",
+            "en": "# Grok Build source map\n\nThis analysis is pinned to public repository commit `75e73f3`, whose `SOURCE_REV` points to monorepo revision `a61c32b…`. The released CLI was not executed. Repository sync, package version, installed binary, and hosted service are separate version identities and must not be silently equated.\n\n```text\nTUI / headless / ACP\n        │\n        ▼\n   session actor + turn\n   ├─ Agent / sampler / retry\n   ├─ ToolBridge + permission\n   ├─ sandbox manager + workspace\n   ├─ child sessions + hooks\n   └─ ACP updates + JSONL events\n```\n\n## 1. Loop\n\nThe session run loop multiplexes commands, turn events, cancellation, and child work. A turn emits a start record, drives sampler output, dispatches tool calls, and projects terminal outcomes. This actor boundary prevents the TUI from becoming the authoritative state machine. Claim: `grok-build-source-agent-loop`.\n\n## 2. Context\n\n`CompactionPolicy` exposes context threshold, optional compaction model, memory flush, wall-clock limit, and optional two-pass behavior. The Agent checks measured context pressure before auto-compacting. These knobs make budget policy explicit, but source alone cannot establish summary quality or loss under real tasks. Claim: `grok-build-source-context-compaction`.\n\n## 3. Tools\n\n`ToolBridge` owns a finalized registry and presents tool definitions to the Agent. Built-in and MCP-backed tools enter a common dispatch boundary, reducing the risk that each client invents its own execution path. Typed registration does not replace permission, sandbox, timeout, or result redaction. Claim: `grok-build-source-tool-bridge`.\n\n## 4. Safety\n\nSemantic permission resolution and OS sandbox activation are separate. Deny precedence can prevent a request, while sandbox profiles attempt platform enforcement. The reviewed manager records requested versus active state, but its unsupported and application-failure paths warn and continue without sandboxing. Therefore “sandbox requested” must never be reported as “sandbox active.” Claim: `grok-build-source-execution-policy`.\n\n## 5. Reliability\n\nThe sampler's retry module returns explicit decisions instead of scattering sleeps across call sites. It can honor retry-after, apply exponential jitter, strip problematic image input, rebuild a client, or stop on context/fatal errors. This is inspectable policy, not proof that replay is semantically safe for side-effecting turns. Claim: `grok-build-source-retry-policy`.\n\n## 6. Extensibility\n\nPlugins, skills, MCP tools, and hooks cover different extension layers. Hook events include session and tool lifecycle points; pre-tool dispatch can gate or modify work before execution. Because extensions can influence capability and policy, a run manifest must record the loaded extension set rather than identifying only the base binary. Claim: `grok-build-source-extension-runtime`.\n\n## 7. Orchestration\n\nSubagent resolution separates definitions, context, overrides, and resume identity. The task extension creates child session identity and carries isolation/worktree metadata. This is stronger than an inline prompt convention, but metadata still needs enforcement evidence: a named worktree or isolation mode is not proof by itself. Claim: `grok-build-source-subagent-runtime`.\n\n## 8. Interfaces\n\nThe ACP library supplies line-oriented JSON-RPC channels, message types, and normalization. The shell projects session activity into ACP updates for external clients. A stable protocol surface enables editor integration and independent clients, while also creating compatibility, cancellation, ordering, and backpressure obligations. Claim: `grok-build-source-acp-interface`.\n\n## 9. Observability\n\nFile-event utilities append versioned JSONL records, and the tracker emits turn, tool, permission, and terminal lifecycle events. This supports replay and audit tooling, but append-oriented source code does not establish retention, crash durability, access control, or public-safe redaction in every deployment. Claim: `grok-build-source-event-log`.\n\n## Evidence boundary and next experiment\n\nThe next safe experiment is a pre-registered, read-only headless run against a disposable fixture using streaming JSON, explicit tool deny/allow controls, disabled subagents and memory, a turn cap, and a requested strict sandbox. Capture must separately record whether the sandbox became active. Raw output stays private; only a reviewed redacted normalization can become evidence. Until then, all nine mappings remain Tier B source evidence.\n"
+          }
+        }
+      ],
+      "overview_content": {
+        "zh-CN": "# Grok Build\n\nGrok Build 是一个很强的系统型 Harness 研究对象：公开 Rust repository 包含 Agent runtime、terminal UI、headless entry point、ACP transport、tool registry、workspace layer、permission、sandbox backend、hook、plugin、skill、subagent、retry logic 与 event file。它的边界让我们可以分别比较语义 policy、kernel enforcement、protocol projection 与 durable observability，而不把它们假装成同一个机制。\n\n- 当前覆盖：Tier B，源码支撑。\n- 版本边界：CLI crate `1.0.0`，repository commit `75e73f3`。\n- 来源边界：该 repository 是公开 source sync；`SOURCE_REV` 记录 monorepo revision `a61c32b…`。\n- 研究价值：actor-style session control、typed tool bridge、ACP、独立 child session、plugin/hook gate、可配置 compaction 与显式 sandbox state。\n- 关键限制：源码中存在 unsupported/apply-failure 后继续无 sandbox 运行的路径。因此 effective isolation 必须逐次 run 记录，不能仅由 `--sandbox` 请求推断。\n- 尚缺：released binary version 校验、经审核的 Native streaming-JSON Trace、平台相关 sandbox 实验、ACP interoperability 复现与外部 reviewer。\n\nRepository 展现的是分层设计，而不是单体循环。Session actor 接收 command 与异步 event；turn 驱动 sampling 和 tool call；ToolBridge 投影 finalised registry；workspace policy 解析 permission；独立 sandbox manager 尝试平台 enforcement；file-event utility 持久化可观察生命周期记录。\n\n这种分离给 Harness 构建者一个非常重要的结论：\n\n```text\npermission decision ≠ sandbox requested ≠ sandbox active ≠ effect contained\n```\n\nDeny rule 可以在执行前拦截调用。Sandbox profile 可以请求 OS 限制。Active backend 决定这些限制是否真的存在。Tool semantics 与外部 side effect 仍决定哪些影响可能逃逸或不可逆。Grok Build snapshot 会把这四个问题同时展示。\n\n## 可以从 Grok Build 学什么\n\n对入门读者，这个 repository 展示了 production-shaped coding Agent 如何拆分为 turn control、model sampling、tool dispatch、permission、isolation、event projection 与 UI/protocol client。对深入研究者，pure retry decision、tool 前的 hook gate、subagent resume identity、带 schema version 的 JSONL event 与 ACP normalization 更值得追踪。\n\n九项已审核机制映射是源码事实，不是产品认证。本 snapshot 没有进行模型调用，也没有执行 released CLI。只有预注册的 Native run 固化实际 binary、flag、active isolation state、可观察 event stream 与限制后，才有条件从 Tier B 继续升级。\n",
+        "en": "# Grok Build\n\nGrok Build is a strong systems-oriented harness study target: the public Rust repository includes the Agent runtime, terminal UI, headless entry points, ACP transport, tool registry, workspace layer, permissions, sandbox backends, hooks, plugins, skills, subagents, retry logic, and event files. Its boundaries make it possible to compare semantic policy, kernel enforcement, protocol projection, and durable observability without pretending they are one mechanism.\n\n- Current coverage: Tier B, source-backed.\n- Version boundary: CLI crate `1.0.0` at repository commit `75e73f3`.\n- Provenance boundary: the repository is a public sync; `SOURCE_REV` records monorepo revision `a61c32b…`.\n- Research value: actor-style session control, typed tool bridge, ACP, independent child sessions, plugin/hook gates, configurable compaction, and explicit sandbox state.\n- Critical limitation: source inspection found an unsupported/apply-failure path that can continue without sandboxing. Effective isolation must therefore be recorded per run, not inferred from a `--sandbox` request.\n- Missing: released-binary version verification, a reviewed Native streaming-JSON trace, platform-specific sandbox experiments, ACP interoperability reproduction, and an external reviewer.\n\nThe repository shows a layered design rather than one monolithic loop. A session actor receives commands and asynchronous events; a turn drives sampling and tool calls; a ToolBridge projects a finalized registry; workspace policy resolves permission; a separate sandbox manager attempts platform enforcement; and file-event utilities persist observable lifecycle records.\n\nThat separation produces a particularly important lesson for harness builders:\n\n```text\npermission decision ≠ sandbox requested ≠ sandbox active ≠ effect contained\n```\n\nA deny rule can block a call before execution. A sandbox profile can ask for OS restrictions. The active backend determines whether those restrictions exist. Tool semantics and external side effects still determine what can escape or remain irreversible. The Grok Build snapshot keeps all four questions visible.\n\n## What to learn from Grok Build\n\nFor newcomers, the repository demonstrates how a production-shaped coding Agent decomposes into turn control, model sampling, tool dispatch, permission, isolation, event projection, and UI/protocol clients. For advanced readers, the valuable details are pure retry decisions, hook gates before tools, resume identity for subagents, schema-versioned JSONL events, and ACP normalization.\n\nThe nine reviewed mechanism mappings are source facts, not a product certification. No model call or released CLI execution was made for this snapshot. Tier B remains the honest level until a pre-registered Native run establishes the exact binary, flags, active isolation state, observable event stream, and limitations.\n"
+      }
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "opencode",
+      "name": "OpenCode",
+      "summary": "An open-source, multi-provider coding agent with terminal, desktop, server, and ACP surfaces; this Tier B profile maps a pinned source revision without claiming Native runtime verification.",
+      "coverage_tier": "B",
+      "source_availability": "open",
+      "homepage": "https://opencode.ai/",
+      "upstream": {
+        "documentation": "https://opencode.ai/docs/",
+        "release_feed": "https://github.com/anomalyco/opencode/releases",
+        "repositories": [
+          {
+            "component": "monorepo",
+            "url": "https://github.com/anomalyco/opencode",
+            "default_branch": "dev"
+          }
+        ]
+      },
+      "licenses": [
+        {
+          "component": "monorepo",
+          "spdx": "MIT",
+          "url": "https://github.com/anomalyco/opencode/blob/941e71dbbb94ea5b32226c2845585992dadb361f/LICENSE"
+        }
+      ],
+      "surfaces": [
+        "cli",
+        "tui",
+        "desktop",
+        "server",
+        "acp"
+      ],
+      "model_strategy": [
+        "multi-provider",
+        "openai-compatible",
+        "local-models"
+      ],
+      "lifecycle": "active",
+      "tags": [
+        "coding-agent",
+        "typescript",
+        "client-server",
+        "permissions",
+        "plugins",
+        "mcp"
+      ],
+      "stewards": [
+        "foundation-maintainers"
+      ],
+      "snapshots": [
+        {
+          "id": "opencode-2026-08-10-source",
+          "observed_at": "2026-08-10",
+          "surface": "cli",
+          "version": "1.18.16@941e71d",
+          "freshness": "current",
+          "docs_captured_at": "2026-08-10",
+          "source_ref": {
+            "repository": "https://github.com/anomalyco/opencode",
+            "commit": "941e71dbbb94ea5b32226c2845585992dadb361f",
+            "paths": [
+              "packages/opencode/src/session/prompt.ts",
+              "packages/opencode/src/session/compaction.ts",
+              "packages/opencode/src/session/retry.ts",
+              "packages/opencode/src/tool/registry.ts",
+              "packages/opencode/src/tool/task.ts",
+              "packages/opencode/src/permission/index.ts",
+              "packages/opencode/src/plugin/loader.ts",
+              "packages/opencode/src/mcp/index.ts",
+              "packages/opencode/src/skill/discovery.ts",
+              "packages/opencode/src/server/server.ts",
+              "packages/opencode/src/cli/cmd/serve.ts",
+              "packages/opencode/src/cli/tui/worker.ts",
+              "packages/opencode/src/event-v2-bridge.ts"
+            ]
+          },
+          "environment": {
+            "os": "source-inspection-only",
+            "runtime": "TypeScript/Bun monorepo; released CLI not executed",
+            "permission_mode": "source-mapped-configurable",
+            "sandbox_mode": "not-verified",
+            "network_mode": "not-executed"
+          },
+          "claims_path": "registry/claims/opencode-source-agent-loop.claim.json",
+          "notes": "Clean source inspection pinned to OpenCode package version 1.18.16 and one immutable commit. The profile separates semantic permission rules from OS isolation and remains Tier B until a reviewed Native experiment exists.",
+          "analysis_content": {
+            "zh-CN": "# OpenCode 源码地图\n\n本分析固定在 OpenCode package `1.18.16`、commit `941e71d`。它描述的是该 revision 的公开 monorepo，不声称每个 installed binary、desktop release 或 hosted service 都使用同一 commit。\n\n```text\nclient / TUI / desktop / ACP\n          │\n          ▼\n      HTTP server + event bridge\n          │\n          ▼\n      session prompt loop\n      ├─ Agent + model adapter\n      ├─ permission-filtered tool registry\n      ├─ compaction + retry\n      ├─ child task sessions\n      └─ durable/public events\n```\n\n## 1. Loop\n\nPrompt service 拥有重复处理循环。它加载当前消息投影，处理待执行的 subtask 与 compaction，解析 Agent 和模型配置，组装工具，调用 processor，再检查显式完成条件。产生 tool call 的 turn 可以继续，而不会被误当作最终输出。Claim：`opencode-source-agent-loop`。\n\n## 2. Context\n\nCompaction 是一等 session operation，而不是 UI 的文本缩写。Service 对照 model limit 检查压力，建立 summary turn，保留近期 tail，并可清理更早的 tool output。完整 session history 与较小的 model-visible projection 因此被分开。Claim：`opencode-source-context-compaction`。\n\n## 3. Tools\n\nRegistry 汇合 built-in tool、custom tool file、plugin contribution 与 MCP definition。解析过程带入 Agent/model context 和 permission visibility；执行过程验证输入，并用 truncation 与 metadata 包装输出。关键 invariant 是 tool identity、permission、handler 和 result 能跨层关联。Claim：`opencode-source-tool-registry`。\n\n## 4. Safety\n\nPermission rule 使用 wildcard matching 与 last-match precedence。未解析的操作默认 `ask`；deny 可立即失败，reply 则区分单次与持续批准。这是语义层 capability decision。被审核的文件无法证明 hostile subprocess 周围存在 kernel enforcement，因此 OS-sandbox 维度仍为 unknown。Claim：`opencode-source-execution-policy`。\n\n## 5. Reliability\n\nRetry module 分类 Provider error、部分 HTTP failure、overload signal 与 retry header。Context overflow 不会被悄悄当作瞬时错误重放，retry delay 也被显式计算。这只映射 policy code，不证明在 fault injection 下恢复成功。Claim：`opencode-source-retry-policy`。\n\n## 6. Extensibility\n\nPlugin、skill、custom tool 与 MCP 是不同 acquisition path，最终都会影响 prompt 或 tool resolution。MCP 支持配置 transport；skill discovery 加载 `SKILL.md`；plugin 可在进程内增加行为。Capability 与 attack surface 会同时扩大。Claim：`opencode-source-extension-runtime`。\n\n## 7. Orchestration\n\nTask tool 遍历 ancestry 以执行 depth boundary，派生 child permission，并创建带 parent link 的 session。前台与后台执行共享显式 task/session identity。Context separation 可从源码确认，但不能据此推断 filesystem 或 process isolation。Claim：`opencode-source-subagent-sessions`。\n\n## 8. Interfaces\n\nHTTP server 是可复用 Harness surface。TUI worker 可提供 embedded fetch path，并通过 RPC 转发 global event，让 UI rendering 与 session ownership 分离。Protocol 与 event compatibility 因而成为产品架构的一部分。Claim：`opencode-source-client-server`。\n\n## 9. Observability\n\nEvent bridge 为事件补充 project/directory location 与 aggregate identity，分配 durable sequence/version metadata，再通过 global bus 发布公共事件。消费者仍需要 schema compatibility、resume、redaction 与 retention policy；仅有 sequence 字段并不能解决这些问题。Claim：`opencode-source-event-bridge`。\n\n## 证据边界与下一项实验\n\n九条 claim 都是固定在单一 commit 的静态源码观察。下一步应在 disposable fixture 中预注册只读 Native run，使用官方文档中的 structured JSON output，最小化工具权限并默认禁止发布。只有完成 capture、normalize、redaction、review 和外部复现后，OpenCode 才具备从 Tier B 继续升级的条件。\n",
+            "en": "# OpenCode source map\n\nThis analysis is pinned to OpenCode package `1.18.16` at commit `941e71d`. It describes the public monorepo at that revision. It does not claim that every installed binary, desktop release, or hosted service uses the same commit.\n\n```text\nclient / TUI / desktop / ACP\n          │\n          ▼\n      HTTP server + event bridge\n          │\n          ▼\n      session prompt loop\n      ├─ Agent + model adapter\n      ├─ permission-filtered tool registry\n      ├─ compaction + retry\n      ├─ child task sessions\n      └─ durable/public events\n```\n\n## 1. Loop\n\nThe prompt service owns a repeated processing loop. It loads the current message projection, handles pending subtask and compaction work, resolves Agent and model configuration, assembles tools, invokes the processor, and checks explicit completion conditions. A tool-producing turn can continue instead of being mistaken for final output. Claim: `opencode-source-agent-loop`.\n\n## 2. Context\n\nCompaction is a first-class session operation, not a UI text shortcut. The service checks pressure against model limits, creates a summary turn, keeps a recent tail, and can prune older tool output. This separates full session history from the smaller model-visible projection. Claim: `opencode-source-context-compaction`.\n\n## 3. Tools\n\nThe registry converges built-in tools, custom tool files, plugin contributions, and MCP definitions. Resolution applies Agent/model context and permission visibility; execution validates input and wraps output with truncation and metadata. The useful invariant is that tool identity, permission, handler, and result remain correlated across layers. Claim: `opencode-source-tool-registry`.\n\n## 4. Safety\n\nPermission rules use wildcard matching and last-match precedence. An unresolved operation defaults to `ask`; deny can fail immediately, while replies distinguish one-time and persistent approval. This is a semantic capability decision. The reviewed files do not prove kernel enforcement around a hostile subprocess, so the OS-sandbox dimension remains unknown. Claim: `opencode-source-execution-policy`.\n\n## 5. Reliability\n\nThe retry module classifies provider errors, selected HTTP failures, overload signals, and retry headers. Context overflow is not silently replayed as a transient error, and retry delay is calculated explicitly. This maps policy code, not successful recovery under injected faults. Claim: `opencode-source-retry-policy`.\n\n## 6. Extensibility\n\nPlugins, skills, custom tools, and MCP are different acquisition paths that eventually affect prompt or tool resolution. MCP supports configured transports; skill discovery loads `SKILL.md` resources; plugins can add behavior in-process. Their presence expands capability and attack surface together. Claim: `opencode-source-extension-runtime`.\n\n## 7. Orchestration\n\nThe task tool walks ancestry to enforce a depth boundary, derives child permission, and creates a session linked to its parent. Foreground and background execution share explicit task/session identity. Context separation is visible; filesystem or process isolation is not implied. Claim: `opencode-source-subagent-sessions`.\n\n## 8. Interfaces\n\nThe HTTP server is a reusable harness surface. The TUI worker can provide an embedded fetch path and forward global events over RPC, keeping UI rendering separate from session ownership. This makes protocol and event compatibility part of the product architecture. Claim: `opencode-source-client-server`.\n\n## 9. Observability\n\nThe event bridge enriches events with project/directory location and aggregate identity, assigns durable sequence/version metadata, and republishes a public event through the global bus. Consumers still need schema compatibility, resume, redaction, and retention policy; a sequence field alone does not solve those. Claim: `opencode-source-event-bridge`.\n\n## Evidence boundary and next experiment\n\nAll nine claims are static source observations pinned to one commit. The next safe step is a pre-registered read-only Native run using documented structured JSON output in a disposable fixture, with tool access minimized and publication disabled by default. Until that trace is captured, normalized, redacted, reviewed, and externally reproduced, OpenCode remains Tier B.\n"
+          }
+        }
+      ],
+      "overview_content": {
+        "zh-CN": "# OpenCode\n\nOpenCode 很适合作为 Harness 研究对象，因为它把终端 UI、桌面客户端、headless server、面向 SDK 的协议、模型 adapter、权限、工具、session 与扩展放在同一个开放 monorepo 中。它并不是简单的“CLI 调一次模型”：多个 client 投影同一套由 server 拥有的 session 系统，event 与 tool boundary 也被不同产品表面复用。\n\n- 当前覆盖：Tier B，源码支撑。\n- 版本边界：package `1.18.16`，commit `941e71d`。\n- 研究价值：client/server 组合、多 Provider 适配、permission-filtered tool、durable event、child session、plugin、skill 与 MCP。\n- 关键安全边界：本 snapshot 审核的是语义层授权服务；它不能证明存在 OS sandbox，也不能证明 filesystem、process 与 network 被普遍隔离。\n- 尚缺：installed version 校验、经审核的 Native JSON event Trace、对抗性 permission 实验与外部复现。\n\n源码反复体现一种设计：关键行为由围绕 session 的 service 表达，而不是藏在 TUI 内。Prompt loop 读取持久消息、解析当前 Agent 和可见工具、调用 processor、发布生命周期事件，并在显式终止条件满足前持续运行。TUI 与其他 client 消费这套系统，而不是分别实现自己的循环。\n\n这层分离让 OpenCode 很适合用来比较三类常被混淆的合同：\n\n1. **模型合同**——把 Provider-specific streaming 与 tool call 变成稳定内部消息。\n2. **Harness 合同**——由 session、permission、compaction、retry、tool 与 child task 拥有控制流。\n3. **Client 合同**——HTTP、event stream、TUI worker RPC、desktop 与 ACP 投影可观察状态。\n\n本次 snapshot 映射了九类机制，但仍保持 Tier B。源码覆盖不等于运行时证据：它不能证明 hosted 或 installed surface 正在运行哪个 revision，不能证明当时启用了什么配置，也不能证明 permission prompt 真的出现，或外层 sandbox 确实限制了 tool process。\n\n## 可以从 OpenCode 学什么\n\n对入门读者，OpenCode 提供了一条清晰的 tool-call 路径：模型输出经过 registry resolution、permission evaluation、handler execution、result normalization、event publication，再进入下一轮模型请求。对深入研究者，更值得追问的是 durable ordering 在哪一层分配、child session 如何继承 capability、多种扩展系统怎样汇入一个 registry，以及哪些保证实际上位于语义 policy 之外。\n\n因此这个 profile 会同时展示源码事实与 unknown。“Substantial”只表示固定版本源码足以解释该机制，不表示本项目已经认证产品安全性，或完成端到端行为复现。\n",
+        "en": "# OpenCode\n\nOpenCode is valuable as a harness study target because its terminal UI, desktop client, headless server, SDK-facing protocol, model adapters, permissions, tools, sessions, and extensions live in one open monorepo. The architecture is not merely “a CLI that calls a model”: clients project one server-owned session system, and the same event and tool boundaries support several surfaces.\n\n- Current coverage: Tier B, source-backed.\n- Version boundary: package `1.18.16` at commit `941e71d`.\n- Research value: client/server composition, multi-provider adaptation, permission-filtered tools, durable events, child sessions, plugins, skills, and MCP.\n- Important safety boundary: the reviewed permission service is semantic authorization. This snapshot does not establish an OS sandbox or universal filesystem, process, and network isolation.\n- Missing: an installed-version check, a reviewed Native JSON-event trace, adversarial permission experiments, and external reproduction.\n\nThe source shows a recurring design pattern: important behavior is expressed as services around a session rather than hidden inside the terminal UI. A prompt loop reads persisted messages, resolves the active Agent and available tools, invokes a processor, publishes lifecycle events, and repeats until an explicit terminal condition. The TUI and other clients consume this system instead of implementing independent loops.\n\nThat separation makes OpenCode especially useful for comparing three contracts that are often blurred together:\n\n1. **Model contract** — provider-specific streaming and tool calls become stable internal messages.\n2. **Harness contract** — sessions, permissions, compaction, retries, tools, and child tasks own control flow.\n3. **Client contract** — HTTP, event streams, TUI worker RPC, desktop, and ACP surfaces project observable state.\n\nThe reviewed snapshot maps nine mechanism categories, but it remains Tier B. Source coverage is not runtime evidence: it does not prove which revision a hosted or installed surface is running, which configuration was active, whether a permission prompt was actually presented, or whether an outer sandbox constrained a tool process.\n\n## What to learn from OpenCode\n\nFor newcomers, OpenCode is a concrete example of how a tool call travels from model output through registry resolution, permission evaluation, handler execution, result normalization, event publication, and the next model turn. For experienced readers, the interesting questions are where durable ordering is assigned, how child sessions inherit capability, how multiple extension systems converge on one registry, and which guarantees live outside the repository's semantic policy layer.\n\nThe profile therefore presents source facts and unknowns together. “Substantial” means the pinned source exposes enough structure to explain a mechanism; it does not mean the project has certified the product's security or reproduced its behavior end to end.\n"
       }
     },
     {
@@ -1948,6 +2144,34 @@
     }
   ],
   "claims": [
+    {
+      "schema_version": "0.1.0",
+      "id": "claude-code-doc-agent-teams",
+      "agent_id": "claude-code",
+      "snapshot_id": "claude-code-2026-08-10-docs",
+      "mechanism_id": "subagent-orchestration",
+      "surface": "cli",
+      "statement": "Claude Code's official Agent Teams documentation describes an experimental lead-and-teammates model with independent context windows, a shared task list, and direct teammate messaging; it also states that teammates do not receive automatic worktree isolation.",
+      "display_text": {
+        "zh-CN": "Claude Code 官方 Agent Teams 文档描述了一种实验性的 lead-and-teammates 模型：每个 teammate 拥有独立 context window，共享 task list，并可直接互发消息；文档同时说明 teammate 不会自动获得 worktree 隔离。",
+        "en": "Claude Code's official Agent Teams documentation describes experimental lead-and-teammate coordination with independent context windows, a shared task list, direct messaging, and no automatic worktree isolation."
+      },
+      "status": "reviewed",
+      "evidence": [
+        {
+          "type": "official-doc",
+          "title": "Claude Code Agent Teams",
+          "source_url": "https://code.claude.com/docs/en/agent-teams",
+          "captured_at": "2026-08-10",
+          "locator": "How agent teams work, comparison with subagents, enablement, and limitations"
+        }
+      ],
+      "reviewed_at": "2026-08-10",
+      "reviewers": [
+        "foundation-maintainers"
+      ],
+      "notes": "This is an official product-contract claim for an experimental feature, not a claim about closed-core implementation details or effective workspace isolation."
+    },
     {
       "schema_version": "0.1.0",
       "id": "claude-code-doc-execution-policy",
@@ -2347,6 +2571,587 @@
           "captured_at": "2026-08-10",
           "locator": "ToolRegistry registration and lookup",
           "commit": "89a335ed50258dc9dc5b3d7f410db61b431244f9"
+        }
+      ],
+      "reviewed_at": "2026-08-10",
+      "reviewers": [
+        "foundation-maintainers"
+      ]
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "grok-build-source-acp-interface",
+      "agent_id": "grok-build",
+      "snapshot_id": "grok-build-2026-08-10-source",
+      "mechanism_id": "client-server-protocol",
+      "surface": "cli",
+      "statement": "Grok Build's pinned ACP library implements line-oriented JSON-RPC message transport and normalization, while the shell exposes a session interface that projects Agent activity into ACP session updates for editor or process clients.",
+      "display_text": {
+        "zh-CN": "固定版本的 Grok Build ACP library 实现 line-oriented JSON-RPC 消息传输与规范化；shell 则暴露 session interface，把 Agent activity 投影为面向 editor 或 process client 的 ACP session update。",
+        "en": "Grok Build's pinned ACP library implements line-oriented JSON-RPC transport and normalization, and the shell projects Agent activity into ACP session updates for editor or process clients."
+      },
+      "status": "reviewed",
+      "evidence": [
+        {
+          "type": "source",
+          "title": "Grok Build ACP library",
+          "source_url": "https://github.com/xai-org/grok-build/blob/75e73f3d6ac0350d211f12ae7d57c2c0aad72576/crates/codegen/xai-acp-lib/src/lib.rs",
+          "captured_at": "2026-08-10",
+          "locator": "ACP channel, message, normalization, and line-reader modules",
+          "commit": "75e73f3d6ac0350d211f12ae7d57c2c0aad72576"
+        }
+      ],
+      "reviewed_at": "2026-08-10",
+      "reviewers": [
+        "foundation-maintainers"
+      ],
+      "notes": "This is a source-level interface mapping; interoperability was not exercised against an external ACP client."
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "grok-build-source-agent-loop",
+      "agent_id": "grok-build",
+      "snapshot_id": "grok-build-2026-08-10-source",
+      "mechanism_id": "agent-loop",
+      "surface": "cli",
+      "statement": "Grok Build's pinned session actor multiplexes commands and asynchronous events, starts an explicit turn, streams sampler output, dispatches observed tool calls, and emits turn lifecycle updates until the turn completes, fails, or is cancelled.",
+      "display_text": {
+        "zh-CN": "固定版本的 Grok Build session actor 会复用 command 与异步 event 通道，显式启动 turn、流式处理 sampler output、分派观察到的 tool call，并持续发送 turn 生命周期更新，直到完成、失败或取消。",
+        "en": "Grok Build's pinned session actor multiplexes commands and asynchronous events, explicitly starts turns, streams sampler output, dispatches tool calls, and emits lifecycle updates through completion, failure, or cancellation."
+      },
+      "status": "reviewed",
+      "evidence": [
+        {
+          "type": "source",
+          "title": "Grok Build session run loop",
+          "source_url": "https://github.com/xai-org/grok-build/blob/75e73f3d6ac0350d211f12ae7d57c2c0aad72576/crates/codegen/xai-grok-shell/src/session/acp_session_impl/run_loop.rs",
+          "captured_at": "2026-08-10",
+          "locator": "session actor run loop and turn event dispatch",
+          "commit": "75e73f3d6ac0350d211f12ae7d57c2c0aad72576"
+        }
+      ],
+      "reviewed_at": "2026-08-10",
+      "reviewers": [
+        "foundation-maintainers"
+      ],
+      "notes": "Static source mapping only; no Grok model request was made."
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "grok-build-source-context-compaction",
+      "agent_id": "grok-build",
+      "snapshot_id": "grok-build-2026-08-10-source",
+      "mechanism_id": "context-compaction",
+      "surface": "cli",
+      "statement": "Grok Build's pinned Agent source uses a configurable compaction policy with context thresholds, optional model and memory-flush settings, wall-clock limits, and an optional two-pass mode; automatic compaction is triggered from measured context pressure.",
+      "display_text": {
+        "zh-CN": "固定版本的 Grok Build Agent 使用可配置 compaction policy，包括 context threshold、可选 model 与 memory flush、wall-clock limit 及可选 two-pass mode；自动 compaction 由实测 context 压力触发。",
+        "en": "Grok Build's pinned Agent uses a configurable compaction policy with context thresholds, optional model and memory-flush settings, wall-clock limits, and an optional two-pass mode."
+      },
+      "status": "reviewed",
+      "evidence": [
+        {
+          "type": "source",
+          "title": "Grok Build compaction policy",
+          "source_url": "https://github.com/xai-org/grok-build/blob/75e73f3d6ac0350d211f12ae7d57c2c0aad72576/crates/codegen/xai-grok-agent/src/compaction.rs",
+          "captured_at": "2026-08-10",
+          "locator": "CompactionPolicy and builder methods",
+          "commit": "75e73f3d6ac0350d211f12ae7d57c2c0aad72576"
+        },
+        {
+          "type": "source",
+          "title": "Grok Build Agent compaction trigger",
+          "source_url": "https://github.com/xai-org/grok-build/blob/75e73f3d6ac0350d211f12ae7d57c2c0aad72576/crates/codegen/xai-grok-agent/src/agent.rs",
+          "captured_at": "2026-08-10",
+          "locator": "should_auto_compact and context threshold",
+          "commit": "75e73f3d6ac0350d211f12ae7d57c2c0aad72576"
+        }
+      ],
+      "reviewed_at": "2026-08-10",
+      "reviewers": [
+        "foundation-maintainers"
+      ]
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "grok-build-source-event-log",
+      "agent_id": "grok-build",
+      "snapshot_id": "grok-build-2026-08-10-source",
+      "mechanism_id": "event-stream",
+      "surface": "cli",
+      "statement": "Grok Build's pinned file-event utilities write versioned session events as append-oriented JSONL, while an event tracker emits turn, tool, permission, and terminal lifecycle records with stable typed payloads.",
+      "display_text": {
+        "zh-CN": "固定版本的 Grok Build file-event utility 以 append-oriented JSONL 写入带版本的 session event；event tracker 则发送 turn、tool、permission 与 terminal 生命周期记录，并使用稳定的 typed payload。",
+        "en": "Grok Build's pinned file-event utilities write versioned session events as append-oriented JSONL, and the tracker emits typed turn, tool, permission, and terminal lifecycle records."
+      },
+      "status": "reviewed",
+      "evidence": [
+        {
+          "type": "source",
+          "title": "Grok Build event log",
+          "source_url": "https://github.com/xai-org/grok-build/blob/75e73f3d6ac0350d211f12ae7d57c2c0aad72576/crates/codegen/xai-file-utils/src/events/log.rs",
+          "captured_at": "2026-08-10",
+          "locator": "JSONL event writer",
+          "commit": "75e73f3d6ac0350d211f12ae7d57c2c0aad72576"
+        },
+        {
+          "type": "source",
+          "title": "Grok Build event tracker",
+          "source_url": "https://github.com/xai-org/grok-build/blob/75e73f3d6ac0350d211f12ae7d57c2c0aad72576/crates/codegen/xai-file-utils/src/events/tracker.rs",
+          "captured_at": "2026-08-10",
+          "locator": "turn, tool, permission, and terminal event emission",
+          "commit": "75e73f3d6ac0350d211f12ae7d57c2c0aad72576"
+        }
+      ],
+      "reviewed_at": "2026-08-10",
+      "reviewers": [
+        "foundation-maintainers"
+      ],
+      "notes": "Source-visible append behavior does not establish deployment-wide retention, durability, or redaction policy."
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "grok-build-source-execution-policy",
+      "agent_id": "grok-build",
+      "snapshot_id": "grok-build-2026-08-10-source",
+      "mechanism_id": "execution-policy",
+      "surface": "cli",
+      "statement": "Grok Build's pinned source resolves semantic allow, ask, and deny policy separately from OS sandbox activation; the sandbox manager exposes requested and active state, uses platform backends where supported, and can explicitly continue without sandboxing when unsupported or application fails.",
+      "display_text": {
+        "zh-CN": "固定版本的 Grok Build 源码把语义层 allow、ask、deny policy 与 OS sandbox 激活分开处理；sandbox manager 暴露 requested/active 状态，在支持的平台使用系统 backend，并在不支持或应用失败时明确可能继续无 sandbox 运行。",
+        "en": "Grok Build's pinned source separates semantic allow/ask/deny policy from OS sandbox activation; the manager exposes requested and active state, uses supported platform backends, and may explicitly continue unsandboxed when unsupported or application fails."
+      },
+      "status": "reviewed",
+      "evidence": [
+        {
+          "type": "source",
+          "title": "Grok Build permission resolution",
+          "source_url": "https://github.com/xai-org/grok-build/blob/75e73f3d6ac0350d211f12ae7d57c2c0aad72576/crates/codegen/xai-grok-workspace/src/permission/resolution.rs",
+          "captured_at": "2026-08-10",
+          "locator": "permission decision resolution and deny precedence",
+          "commit": "75e73f3d6ac0350d211f12ae7d57c2c0aad72576"
+        },
+        {
+          "type": "source",
+          "title": "Grok Build sandbox manager",
+          "source_url": "https://github.com/xai-org/grok-build/blob/75e73f3d6ac0350d211f12ae7d57c2c0aad72576/crates/codegen/xai-grok-sandbox/src/lib.rs",
+          "captured_at": "2026-08-10",
+          "locator": "SandboxManager state and apply fallback",
+          "commit": "75e73f3d6ac0350d211f12ae7d57c2c0aad72576"
+        }
+      ],
+      "reviewed_at": "2026-08-10",
+      "reviewers": [
+        "foundation-maintainers"
+      ],
+      "notes": "This deliberately rejects a universal fail-closed interpretation. Effective isolation is platform- and run-dependent and requires Native verification."
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "grok-build-source-extension-runtime",
+      "agent_id": "grok-build",
+      "snapshot_id": "grok-build-2026-08-10-source",
+      "mechanism_id": "extension-runtime",
+      "surface": "cli",
+      "statement": "Grok Build's pinned extension surface includes plugins, prompt skills, MCP tools, and lifecycle hooks; hook dispatch distinguishes observational events from pre-tool gates that may modify or block an operation.",
+      "display_text": {
+        "zh-CN": "固定版本的 Grok Build 扩展面包括 plugin、prompt skill、MCP tool 与 lifecycle hook；hook dispatch 会区分观察性事件和可修改或阻止操作的 pre-tool gate。",
+        "en": "Grok Build's pinned extension surface includes plugins, prompt skills, MCP tools, and lifecycle hooks, with pre-tool gates able to modify or block operations."
+      },
+      "status": "reviewed",
+      "evidence": [
+        {
+          "type": "source",
+          "title": "Grok Build hook events",
+          "source_url": "https://github.com/xai-org/grok-build/blob/75e73f3d6ac0350d211f12ae7d57c2c0aad72576/crates/codegen/xai-grok-hooks/src/event.rs",
+          "captured_at": "2026-08-10",
+          "locator": "session, tool, prompt, and subagent hook event types",
+          "commit": "75e73f3d6ac0350d211f12ae7d57c2c0aad72576"
+        },
+        {
+          "type": "source",
+          "title": "Grok Build hook dispatcher",
+          "source_url": "https://github.com/xai-org/grok-build/blob/75e73f3d6ac0350d211f12ae7d57c2c0aad72576/crates/codegen/xai-grok-hooks/src/dispatcher.rs",
+          "captured_at": "2026-08-10",
+          "locator": "pre-tool gate and post-event dispatch",
+          "commit": "75e73f3d6ac0350d211f12ae7d57c2c0aad72576"
+        }
+      ],
+      "reviewed_at": "2026-08-10",
+      "reviewers": [
+        "foundation-maintainers"
+      ],
+      "notes": "Extension capability does not imply that third-party extension code is isolated or trustworthy."
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "grok-build-source-retry-policy",
+      "agent_id": "grok-build",
+      "snapshot_id": "grok-build-2026-08-10-source",
+      "mechanism_id": "retry-recovery",
+      "surface": "cli",
+      "statement": "Grok Build's pinned sampler retry module returns explicit retry decisions for rate limits, transient server failures, context limits, image fallback, and client rebuilds, using retry-after or exponential jitter while keeping fatal outcomes non-retryable.",
+      "display_text": {
+        "zh-CN": "固定版本的 Grok Build sampler retry module 会针对 rate limit、瞬时 server failure、context limit、image fallback 与 client rebuild 返回显式 retry decision，使用 retry-after 或指数 jitter，并保持 fatal outcome 不重试。",
+        "en": "Grok Build's pinned sampler retry module produces explicit decisions for rate limits, transient failures, context limits, image fallback, and client rebuilds, using retry-after or exponential jitter while leaving fatal outcomes non-retryable."
+      },
+      "status": "reviewed",
+      "evidence": [
+        {
+          "type": "source",
+          "title": "Grok Build sampler retry decisions",
+          "source_url": "https://github.com/xai-org/grok-build/blob/75e73f3d6ac0350d211f12ae7d57c2c0aad72576/crates/codegen/xai-grok-sampler/src/retry.rs",
+          "captured_at": "2026-08-10",
+          "locator": "RetryDecision and error classification",
+          "commit": "75e73f3d6ac0350d211f12ae7d57c2c0aad72576"
+        }
+      ],
+      "reviewed_at": "2026-08-10",
+      "reviewers": [
+        "foundation-maintainers"
+      ],
+      "notes": "No live provider failure was injected for this snapshot."
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "grok-build-source-subagent-runtime",
+      "agent_id": "grok-build",
+      "snapshot_id": "grok-build-2026-08-10-source",
+      "mechanism_id": "subagent-orchestration",
+      "surface": "cli",
+      "statement": "Grok Build's pinned source resolves named subagent definitions and resume identity, while its task extension launches child work with separate session identity and explicit isolation or worktree metadata rather than treating delegation as an inline prompt macro.",
+      "display_text": {
+        "zh-CN": "固定版本的 Grok Build 源码会解析具名 subagent definition 与 resume identity；其 task extension 以独立 session identity 及显式 isolation/worktree metadata 启动子任务，而不是把委派当作内联 prompt macro。",
+        "en": "Grok Build's pinned source resolves named subagents and resume identity, while task execution uses separate child session identity and explicit isolation or worktree metadata rather than an inline prompt macro."
+      },
+      "status": "reviewed",
+      "evidence": [
+        {
+          "type": "source",
+          "title": "Grok Build subagent resolution",
+          "source_url": "https://github.com/xai-org/grok-build/blob/75e73f3d6ac0350d211f12ae7d57c2c0aad72576/crates/codegen/xai-grok-subagent-resolution/src/lib.rs",
+          "captured_at": "2026-08-10",
+          "locator": "definition, context, override, and resume modules",
+          "commit": "75e73f3d6ac0350d211f12ae7d57c2c0aad72576"
+        },
+        {
+          "type": "source",
+          "title": "Grok Build task extension",
+          "source_url": "https://github.com/xai-org/grok-build/blob/75e73f3d6ac0350d211f12ae7d57c2c0aad72576/crates/codegen/xai-grok-shell/src/extensions/task.rs",
+          "captured_at": "2026-08-10",
+          "locator": "child session launch and isolation metadata",
+          "commit": "75e73f3d6ac0350d211f12ae7d57c2c0aad72576"
+        }
+      ],
+      "reviewed_at": "2026-08-10",
+      "reviewers": [
+        "foundation-maintainers"
+      ],
+      "notes": "Metadata describing isolation is not itself proof of effective filesystem or process isolation."
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "grok-build-source-tool-bridge",
+      "agent_id": "grok-build",
+      "snapshot_id": "grok-build-2026-08-10-source",
+      "mechanism_id": "tool-dispatch",
+      "surface": "cli",
+      "statement": "Grok Build's pinned ToolBridge owns a finalized tool registry, exposes model-facing definitions, supports built-in and MCP-backed registrations, and routes tool calls through the registry's typed dispatch boundary.",
+      "display_text": {
+        "zh-CN": "固定版本的 Grok Build ToolBridge 持有已 finalise 的 tool registry，提供面向模型的定义，支持 built-in 与 MCP-backed 注册，并通过 registry 的 typed dispatch boundary 路由工具调用。",
+        "en": "Grok Build's pinned ToolBridge owns a finalized registry, exposes model-facing definitions, supports built-in and MCP-backed registrations, and routes calls through typed registry dispatch."
+      },
+      "status": "reviewed",
+      "evidence": [
+        {
+          "type": "source",
+          "title": "Grok Build ToolBridge",
+          "source_url": "https://github.com/xai-org/grok-build/blob/75e73f3d6ac0350d211f12ae7d57c2c0aad72576/crates/codegen/xai-grok-tools/src/bridge.rs",
+          "captured_at": "2026-08-10",
+          "locator": "ToolBridge registry construction, definitions, and call",
+          "commit": "75e73f3d6ac0350d211f12ae7d57c2c0aad72576"
+        }
+      ],
+      "reviewed_at": "2026-08-10",
+      "reviewers": [
+        "foundation-maintainers"
+      ]
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "opencode-source-agent-loop",
+      "agent_id": "opencode",
+      "snapshot_id": "opencode-2026-08-10-source",
+      "mechanism_id": "agent-loop",
+      "surface": "cli",
+      "statement": "OpenCode's pinned session prompt service runs a repeated message-processing loop that handles pending subtasks and compaction, resolves the active Agent and tools, invokes the model processor, and stops only after an explicit terminal condition rather than after every response.",
+      "display_text": {
+        "zh-CN": "固定版本的 OpenCode session prompt service 通过重复消息循环处理待执行 subtask 与 compaction，解析当前 Agent 和工具，调用 model processor，并只在显式终止条件满足时结束，而不是每次响应后都停止。",
+        "en": "OpenCode's pinned session prompt service repeatedly handles pending subtasks and compaction, resolves the active Agent and tools, invokes the model processor, and stops only at an explicit terminal condition."
+      },
+      "status": "reviewed",
+      "evidence": [
+        {
+          "type": "source",
+          "title": "OpenCode session prompt loop",
+          "source_url": "https://github.com/anomalyco/opencode/blob/941e71dbbb94ea5b32226c2845585992dadb361f/packages/opencode/src/session/prompt.ts",
+          "captured_at": "2026-08-10",
+          "locator": "Prompt service run loop around the while(true) message processor",
+          "commit": "941e71dbbb94ea5b32226c2845585992dadb361f"
+        }
+      ],
+      "reviewed_at": "2026-08-10",
+      "reviewers": [
+        "foundation-maintainers"
+      ],
+      "notes": "Static source mapping only; no provider or released CLI was invoked."
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "opencode-source-client-server",
+      "agent_id": "opencode",
+      "snapshot_id": "opencode-2026-08-10-source",
+      "mechanism_id": "client-server-protocol",
+      "surface": "cli",
+      "statement": "OpenCode's pinned source exposes the harness through an HTTP server that can run headlessly, while the terminal UI can communicate with an embedded worker and forward global server events over an RPC channel instead of owning a separate Agent core.",
+      "display_text": {
+        "zh-CN": "固定版本的 OpenCode 源码可通过 HTTP server 无头运行；终端 UI 则能与 embedded worker 通信，并通过 RPC channel 转发全局 server event，而不是另写一套 Agent core。",
+        "en": "OpenCode's pinned source exposes a headless HTTP server, while the terminal UI can use an embedded worker and RPC-forward global server events rather than owning a separate Agent core."
+      },
+      "status": "reviewed",
+      "evidence": [
+        {
+          "type": "source",
+          "title": "OpenCode server",
+          "source_url": "https://github.com/anomalyco/opencode/blob/941e71dbbb94ea5b32226c2845585992dadb361f/packages/opencode/src/server/server.ts",
+          "captured_at": "2026-08-10",
+          "locator": "HTTP application and event routes",
+          "commit": "941e71dbbb94ea5b32226c2845585992dadb361f"
+        },
+        {
+          "type": "source",
+          "title": "OpenCode TUI worker",
+          "source_url": "https://github.com/anomalyco/opencode/blob/941e71dbbb94ea5b32226c2845585992dadb361f/packages/opencode/src/cli/tui/worker.ts",
+          "captured_at": "2026-08-10",
+          "locator": "embedded fetch and global event forwarding",
+          "commit": "941e71dbbb94ea5b32226c2845585992dadb361f"
+        }
+      ],
+      "reviewed_at": "2026-08-10",
+      "reviewers": [
+        "foundation-maintainers"
+      ]
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "opencode-source-context-compaction",
+      "agent_id": "opencode",
+      "snapshot_id": "opencode-2026-08-10-source",
+      "mechanism_id": "context-compaction",
+      "surface": "cli",
+      "statement": "OpenCode's pinned compaction service measures context pressure, constructs a summary turn, preserves recent context, and separately truncates oversized historical tool output before model input construction.",
+      "display_text": {
+        "zh-CN": "固定版本的 OpenCode compaction service 会衡量 context 压力、构造 summary turn、保留近期上下文，并在构造模型输入前单独截断过大的历史工具输出。",
+        "en": "OpenCode's pinned compaction service measures context pressure, constructs a summary turn, preserves recent context, and separately truncates oversized historical tool output."
+      },
+      "status": "reviewed",
+      "evidence": [
+        {
+          "type": "source",
+          "title": "OpenCode session compaction",
+          "source_url": "https://github.com/anomalyco/opencode/blob/941e71dbbb94ea5b32226c2845585992dadb361f/packages/opencode/src/session/compaction.ts",
+          "captured_at": "2026-08-10",
+          "locator": "overflow checks, compaction task, and tool-output pruning",
+          "commit": "941e71dbbb94ea5b32226c2845585992dadb361f"
+        }
+      ],
+      "reviewed_at": "2026-08-10",
+      "reviewers": [
+        "foundation-maintainers"
+      ]
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "opencode-source-event-bridge",
+      "agent_id": "opencode",
+      "snapshot_id": "opencode-2026-08-10-source",
+      "mechanism_id": "event-stream",
+      "surface": "cli",
+      "statement": "OpenCode's pinned event bridge enriches published events with location and aggregate identity, assigns version and sequence metadata for durable event records, and forwards the resulting public event through the global bus.",
+      "display_text": {
+        "zh-CN": "固定版本的 OpenCode event bridge 会为已发布事件补充 location 与 aggregate identity，为 durable event record 分配 version 和 sequence metadata，再通过 global bus 转发公共事件。",
+        "en": "OpenCode's pinned event bridge enriches events with location and aggregate identity, assigns version and sequence metadata for durable records, and forwards public events through the global bus."
+      },
+      "status": "reviewed",
+      "evidence": [
+        {
+          "type": "source",
+          "title": "OpenCode EventV2 bridge",
+          "source_url": "https://github.com/anomalyco/opencode/blob/941e71dbbb94ea5b32226c2845585992dadb361f/packages/opencode/src/event-v2-bridge.ts",
+          "captured_at": "2026-08-10",
+          "locator": "publish and durable event append path",
+          "commit": "941e71dbbb94ea5b32226c2845585992dadb361f"
+        }
+      ],
+      "reviewed_at": "2026-08-10",
+      "reviewers": [
+        "foundation-maintainers"
+      ],
+      "notes": "The claim covers the source-visible event bridge, not retention guarantees for every deployment."
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "opencode-source-execution-policy",
+      "agent_id": "opencode",
+      "snapshot_id": "opencode-2026-08-10-source",
+      "mechanism_id": "execution-policy",
+      "surface": "cli",
+      "statement": "OpenCode's pinned permission service evaluates wildcard rules in order with the last matching rule taking precedence, defaults unresolved requests to ask, and distinguishes deny, one-time approval, persistent approval, and rejection through explicit request/reply events.",
+      "display_text": {
+        "zh-CN": "固定版本的 OpenCode permission service 按顺序计算 wildcard rule，并由最后一个匹配项决定结果；未命中时默认 ask，同时通过显式 request/reply event 区分 deny、单次批准、持续批准和拒绝。",
+        "en": "OpenCode's pinned permission service uses last-match wildcard rules, defaults unresolved requests to ask, and represents deny, one-time approval, persistent approval, and rejection explicitly."
+      },
+      "status": "reviewed",
+      "evidence": [
+        {
+          "type": "source",
+          "title": "OpenCode permission service",
+          "source_url": "https://github.com/anomalyco/opencode/blob/941e71dbbb94ea5b32226c2845585992dadb361f/packages/opencode/src/permission/index.ts",
+          "captured_at": "2026-08-10",
+          "locator": "evaluate, ask, reply, and ruleset merge",
+          "commit": "941e71dbbb94ea5b32226c2845585992dadb361f"
+        }
+      ],
+      "reviewed_at": "2026-08-10",
+      "reviewers": [
+        "foundation-maintainers"
+      ],
+      "notes": "This is semantic authorization logic. It is not evidence of OS-level filesystem, process, or network isolation."
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "opencode-source-extension-runtime",
+      "agent_id": "opencode",
+      "snapshot_id": "opencode-2026-08-10-source",
+      "mechanism_id": "extension-runtime",
+      "surface": "cli",
+      "statement": "OpenCode's pinned source discovers local skills, loads configured plugins, and imports MCP tools over configured transports into the same tool-resolution boundary; each extension path remains subject to its own trust and permission configuration.",
+      "display_text": {
+        "zh-CN": "固定版本的 OpenCode 源码会发现本地 skill、加载已配置 plugin，并把来自配置 transport 的 MCP 工具导入同一工具解析边界；每条扩展路径仍受各自的信任与权限配置约束。",
+        "en": "OpenCode's pinned source discovers local skills, loads configured plugins, and imports MCP tools into the common tool-resolution boundary, with trust and permission still configuration-dependent."
+      },
+      "status": "reviewed",
+      "evidence": [
+        {
+          "type": "source",
+          "title": "OpenCode plugin loader",
+          "source_url": "https://github.com/anomalyco/opencode/blob/941e71dbbb94ea5b32226c2845585992dadb361f/packages/opencode/src/plugin/loader.ts",
+          "captured_at": "2026-08-10",
+          "locator": "configured and bundled plugin loading",
+          "commit": "941e71dbbb94ea5b32226c2845585992dadb361f"
+        },
+        {
+          "type": "source",
+          "title": "OpenCode MCP service",
+          "source_url": "https://github.com/anomalyco/opencode/blob/941e71dbbb94ea5b32226c2845585992dadb361f/packages/opencode/src/mcp/index.ts",
+          "captured_at": "2026-08-10",
+          "locator": "stdio, HTTP, and SSE MCP connections and tool import",
+          "commit": "941e71dbbb94ea5b32226c2845585992dadb361f"
+        },
+        {
+          "type": "source",
+          "title": "OpenCode skill discovery",
+          "source_url": "https://github.com/anomalyco/opencode/blob/941e71dbbb94ea5b32226c2845585992dadb361f/packages/opencode/src/skill/discovery.ts",
+          "captured_at": "2026-08-10",
+          "locator": "skill directories and SKILL.md discovery",
+          "commit": "941e71dbbb94ea5b32226c2845585992dadb361f"
+        }
+      ],
+      "reviewed_at": "2026-08-10",
+      "reviewers": [
+        "foundation-maintainers"
+      ],
+      "notes": "Presence of an extension mechanism is not a security endorsement of third-party code or remote servers."
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "opencode-source-retry-policy",
+      "agent_id": "opencode",
+      "snapshot_id": "opencode-2026-08-10-source",
+      "mechanism_id": "retry-recovery",
+      "surface": "cli",
+      "statement": "OpenCode's pinned retry policy classifies provider and HTTP failures, honors retry-after metadata when available, applies bounded exponential delay, and excludes context-overflow and other non-retryable failures from automatic replay.",
+      "display_text": {
+        "zh-CN": "固定版本的 OpenCode retry policy 会分类 provider 与 HTTP failure，在可用时遵守 retry-after metadata，应用有限的指数延迟，并把 context overflow 等不可重试失败排除在自动重放之外。",
+        "en": "OpenCode's pinned retry policy classifies provider and HTTP failures, honors retry-after metadata, applies bounded exponential delay, and excludes non-retryable failures such as context overflow."
+      },
+      "status": "reviewed",
+      "evidence": [
+        {
+          "type": "source",
+          "title": "OpenCode session retry policy",
+          "source_url": "https://github.com/anomalyco/opencode/blob/941e71dbbb94ea5b32226c2845585992dadb361f/packages/opencode/src/session/retry.ts",
+          "captured_at": "2026-08-10",
+          "locator": "retryable, retry-after parsing, and schedule construction",
+          "commit": "941e71dbbb94ea5b32226c2845585992dadb361f"
+        }
+      ],
+      "reviewed_at": "2026-08-10",
+      "reviewers": [
+        "foundation-maintainers"
+      ],
+      "notes": "The source defines control flow; no live provider fault was injected."
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "opencode-source-subagent-sessions",
+      "agent_id": "opencode",
+      "snapshot_id": "opencode-2026-08-10-source",
+      "mechanism_id": "subagent-orchestration",
+      "surface": "cli",
+      "statement": "OpenCode's pinned task tool enforces a nesting limit, derives child permissions from the parent and selected Agent, creates a child session linked by parentID, and supports foreground or background task execution with explicit session metadata.",
+      "display_text": {
+        "zh-CN": "固定版本的 OpenCode task tool 会限制嵌套深度，从父会话与所选 Agent 派生子权限，通过 parentID 建立 child session，并用显式 session metadata 支持前台或后台任务。",
+        "en": "OpenCode's pinned task tool limits nesting, derives child permissions, creates parent-linked child sessions, and supports foreground or background tasks with explicit metadata."
+      },
+      "status": "reviewed",
+      "evidence": [
+        {
+          "type": "source",
+          "title": "OpenCode task tool",
+          "source_url": "https://github.com/anomalyco/opencode/blob/941e71dbbb94ea5b32226c2845585992dadb361f/packages/opencode/src/tool/task.ts",
+          "captured_at": "2026-08-10",
+          "locator": "ancestry depth check, child permission derivation, and Session.create",
+          "commit": "941e71dbbb94ea5b32226c2845585992dadb361f"
+        }
+      ],
+      "reviewed_at": "2026-08-10",
+      "reviewers": [
+        "foundation-maintainers"
+      ],
+      "notes": "A child session is a context boundary, not automatically a filesystem or process isolation boundary."
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "opencode-source-tool-registry",
+      "agent_id": "opencode",
+      "snapshot_id": "opencode-2026-08-10-source",
+      "mechanism_id": "tool-dispatch",
+      "surface": "cli",
+      "statement": "OpenCode's pinned tool registry combines built-in, custom, plugin, and MCP tool definitions, filters their visibility through Agent permission rules, validates adapter-facing arguments, and routes execution through registered handlers with normalized output metadata.",
+      "display_text": {
+        "zh-CN": "固定版本的 OpenCode tool registry 合并 built-in、custom、plugin 与 MCP 工具定义，按 Agent permission rule 过滤可见性，验证 adapter-facing 参数，并通过已注册 handler 执行且规范化输出 metadata。",
+        "en": "OpenCode's pinned tool registry combines built-in, custom, plugin, and MCP definitions, permission-filters visibility, validates arguments, and dispatches registered handlers with normalized output metadata."
+      },
+      "status": "reviewed",
+      "evidence": [
+        {
+          "type": "source",
+          "title": "OpenCode tool registry",
+          "source_url": "https://github.com/anomalyco/opencode/blob/941e71dbbb94ea5b32226c2845585992dadb361f/packages/opencode/src/tool/registry.ts",
+          "captured_at": "2026-08-10",
+          "locator": "Registry service, resolve, and tool execute wrappers",
+          "commit": "941e71dbbb94ea5b32226c2845585992dadb361f"
         }
       ],
       "reviewed_at": "2026-08-10",
@@ -3028,6 +3833,22 @@
           "claim_ids": [
             "reasonix-source-agent-loop"
           ]
+        },
+        {
+          "agent_id": "opencode",
+          "snapshot_id": "opencode-2026-08-10-source",
+          "coverage": "substantial",
+          "claim_ids": [
+            "opencode-source-agent-loop"
+          ]
+        },
+        {
+          "agent_id": "grok-build",
+          "snapshot_id": "grok-build-2026-08-10-source",
+          "coverage": "substantial",
+          "claim_ids": [
+            "grok-build-source-agent-loop"
+          ]
         }
       ],
       "experiments": [],
@@ -3123,6 +3944,22 @@
           "claim_ids": [
             "reasonix-source-acp"
           ]
+        },
+        {
+          "agent_id": "opencode",
+          "snapshot_id": "opencode-2026-08-10-source",
+          "coverage": "substantial",
+          "claim_ids": [
+            "opencode-source-client-server"
+          ]
+        },
+        {
+          "agent_id": "grok-build",
+          "snapshot_id": "grok-build-2026-08-10-source",
+          "coverage": "partial",
+          "claim_ids": [
+            "grok-build-source-acp-interface"
+          ]
         }
       ],
       "experiments": [],
@@ -3213,6 +4050,22 @@
           "claim_ids": [
             "reasonix-source-context-maintenance"
           ]
+        },
+        {
+          "agent_id": "opencode",
+          "snapshot_id": "opencode-2026-08-10-source",
+          "coverage": "substantial",
+          "claim_ids": [
+            "opencode-source-context-compaction"
+          ]
+        },
+        {
+          "agent_id": "grok-build",
+          "snapshot_id": "grok-build-2026-08-10-source",
+          "coverage": "substantial",
+          "claim_ids": [
+            "grok-build-source-context-compaction"
+          ]
         }
       ],
       "experiments": [
@@ -3273,6 +4126,22 @@
           "coverage": "substantial",
           "claim_ids": [
             "reasonix-source-event-log"
+          ]
+        },
+        {
+          "agent_id": "opencode",
+          "snapshot_id": "opencode-2026-08-10-source",
+          "coverage": "substantial",
+          "claim_ids": [
+            "opencode-source-event-bridge"
+          ]
+        },
+        {
+          "agent_id": "grok-build",
+          "snapshot_id": "grok-build-2026-08-10-source",
+          "coverage": "substantial",
+          "claim_ids": [
+            "grok-build-source-event-log"
           ]
         }
       ],
@@ -3344,6 +4213,24 @@
           "claim_ids": [
             "claude-code-doc-execution-policy"
           ]
+        },
+        {
+          "agent_id": "opencode",
+          "snapshot_id": "opencode-2026-08-10-source",
+          "coverage": "substantial",
+          "claim_ids": [
+            "opencode-source-execution-policy"
+          ],
+          "notes": "This maps semantic permission evaluation only; OS isolation remains unverified."
+        },
+        {
+          "agent_id": "grok-build",
+          "snapshot_id": "grok-build-2026-08-10-source",
+          "coverage": "substantial",
+          "claim_ids": [
+            "grok-build-source-execution-policy"
+          ],
+          "notes": "The source explicitly permits an unsandboxed fallback on unsupported or failed sandbox application, so effective enforcement remains run-dependent."
         }
       ],
       "experiments": [
@@ -3413,6 +4300,22 @@
           "coverage": "partial",
           "claim_ids": [
             "claude-code-doc-hooks"
+          ]
+        },
+        {
+          "agent_id": "opencode",
+          "snapshot_id": "opencode-2026-08-10-source",
+          "coverage": "substantial",
+          "claim_ids": [
+            "opencode-source-extension-runtime"
+          ]
+        },
+        {
+          "agent_id": "grok-build",
+          "snapshot_id": "grok-build-2026-08-10-source",
+          "coverage": "substantial",
+          "claim_ids": [
+            "grok-build-source-extension-runtime"
           ]
         }
       ],
@@ -3657,6 +4560,22 @@
           "claim_ids": [
             "reasonix-source-retry-recovery"
           ]
+        },
+        {
+          "agent_id": "opencode",
+          "snapshot_id": "opencode-2026-08-10-source",
+          "coverage": "substantial",
+          "claim_ids": [
+            "opencode-source-retry-policy"
+          ]
+        },
+        {
+          "agent_id": "grok-build",
+          "snapshot_id": "grok-build-2026-08-10-source",
+          "coverage": "substantial",
+          "claim_ids": [
+            "grok-build-source-retry-policy"
+          ]
         }
       ],
       "experiments": [],
@@ -3756,7 +4675,25 @@
           "snapshot_id": "claude-code-2026-08-10-docs",
           "coverage": "partial",
           "claim_ids": [
-            "claude-code-doc-subagents"
+            "claude-code-doc-subagents",
+            "claude-code-doc-agent-teams"
+          ],
+          "notes": "Official docs distinguish one-way subagent delegation from experimental peer-capable Agent Teams and state that teammates do not receive automatic worktree isolation."
+        },
+        {
+          "agent_id": "opencode",
+          "snapshot_id": "opencode-2026-08-10-source",
+          "coverage": "substantial",
+          "claim_ids": [
+            "opencode-source-subagent-sessions"
+          ]
+        },
+        {
+          "agent_id": "grok-build",
+          "snapshot_id": "grok-build-2026-08-10-source",
+          "coverage": "substantial",
+          "claim_ids": [
+            "grok-build-source-subagent-runtime"
           ]
         }
       ],
@@ -3824,6 +4761,22 @@
             "reference-harness-controlled-tool-roundtrip"
           ],
           "notes": "Controlled project baseline only; this implementation is not comparable with a native vendor run."
+        },
+        {
+          "agent_id": "opencode",
+          "snapshot_id": "opencode-2026-08-10-source",
+          "coverage": "substantial",
+          "claim_ids": [
+            "opencode-source-tool-registry"
+          ]
+        },
+        {
+          "agent_id": "grok-build",
+          "snapshot_id": "grok-build-2026-08-10-source",
+          "coverage": "substantial",
+          "claim_ids": [
+            "grok-build-source-tool-bridge"
+          ]
         }
       ],
       "experiments": [

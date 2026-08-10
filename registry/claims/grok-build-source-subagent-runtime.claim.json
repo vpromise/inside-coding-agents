@@ -1,0 +1,35 @@
+{
+  "schema_version": "0.1.0",
+  "id": "grok-build-source-subagent-runtime",
+  "agent_id": "grok-build",
+  "snapshot_id": "grok-build-2026-08-10-source",
+  "mechanism_id": "subagent-orchestration",
+  "surface": "cli",
+  "statement": "Grok Build's pinned source resolves named subagent definitions and resume identity, while its task extension launches child work with separate session identity and explicit isolation or worktree metadata rather than treating delegation as an inline prompt macro.",
+  "display_text": {
+    "zh-CN": "固定版本的 Grok Build 源码会解析具名 subagent definition 与 resume identity；其 task extension 以独立 session identity 及显式 isolation/worktree metadata 启动子任务，而不是把委派当作内联 prompt macro。",
+    "en": "Grok Build's pinned source resolves named subagents and resume identity, while task execution uses separate child session identity and explicit isolation or worktree metadata rather than an inline prompt macro."
+  },
+  "status": "reviewed",
+  "evidence": [
+    {
+      "type": "source",
+      "title": "Grok Build subagent resolution",
+      "source_url": "https://github.com/xai-org/grok-build/blob/75e73f3d6ac0350d211f12ae7d57c2c0aad72576/crates/codegen/xai-grok-subagent-resolution/src/lib.rs",
+      "captured_at": "2026-08-10",
+      "locator": "definition, context, override, and resume modules",
+      "commit": "75e73f3d6ac0350d211f12ae7d57c2c0aad72576"
+    },
+    {
+      "type": "source",
+      "title": "Grok Build task extension",
+      "source_url": "https://github.com/xai-org/grok-build/blob/75e73f3d6ac0350d211f12ae7d57c2c0aad72576/crates/codegen/xai-grok-shell/src/extensions/task.rs",
+      "captured_at": "2026-08-10",
+      "locator": "child session launch and isolation metadata",
+      "commit": "75e73f3d6ac0350d211f12ae7d57c2c0aad72576"
+    }
+  ],
+  "reviewed_at": "2026-08-10",
+  "reviewers": ["foundation-maintainers"],
+  "notes": "Metadata describing isolation is not itself proof of effective filesystem or process isolation."
+}

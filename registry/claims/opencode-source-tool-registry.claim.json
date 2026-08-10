@@ -1,0 +1,24 @@
+{
+  "schema_version": "0.1.0",
+  "id": "opencode-source-tool-registry",
+  "agent_id": "opencode",
+  "snapshot_id": "opencode-2026-08-10-source",
+  "mechanism_id": "tool-dispatch",
+  "surface": "cli",
+  "statement": "OpenCode's pinned tool registry combines built-in, custom, plugin, and MCP tool definitions, filters their visibility through Agent permission rules, validates adapter-facing arguments, and routes execution through registered handlers with normalized output metadata.",
+  "display_text": {
+    "zh-CN": "固定版本的 OpenCode tool registry 合并 built-in、custom、plugin 与 MCP 工具定义，按 Agent permission rule 过滤可见性，验证 adapter-facing 参数，并通过已注册 handler 执行且规范化输出 metadata。",
+    "en": "OpenCode's pinned tool registry combines built-in, custom, plugin, and MCP definitions, permission-filters visibility, validates arguments, and dispatches registered handlers with normalized output metadata."
+  },
+  "status": "reviewed",
+  "evidence": [{
+    "type": "source",
+    "title": "OpenCode tool registry",
+    "source_url": "https://github.com/anomalyco/opencode/blob/941e71dbbb94ea5b32226c2845585992dadb361f/packages/opencode/src/tool/registry.ts",
+    "captured_at": "2026-08-10",
+    "locator": "Registry service, resolve, and tool execute wrappers",
+    "commit": "941e71dbbb94ea5b32226c2845585992dadb361f"
+  }],
+  "reviewed_at": "2026-08-10",
+  "reviewers": ["foundation-maintainers"]
+}

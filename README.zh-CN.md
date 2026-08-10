@@ -15,7 +15,7 @@
 
 Inside Coding Agents 是一个开源、双语的教程、架构图谱和实验室，用来系统理解 **Coding Agent** 以及大模型周围的 **Agent Harness**。项目把 agent loop、工具调用、上下文管理、工作区访问、项目指令发现、sandbox、权限、subagent、协议、扩展、重试和 trace，变成可以运行的课程与可以核查的证据。
 
-你可以对照研究 **Codex、Claude Code、Pi 和 Reasonix** 如何解决共同的工程问题，也可以直接运行与厂商无关的 Reference Harness，在不使用 API Key 的情况下复现核心机制。
+你可以对照研究 **Codex、Claude Code、OpenCode、Grok Build、Pi 和 Reasonix** 如何解决共同的工程问题，也可以直接运行与厂商无关的 Reference Harness，在不使用 API Key 的情况下复现核心机制。
 
 > 这是独立的教育与研究项目。产品名称归各自所有者所有；收录不代表任何关联或背书。
 
@@ -39,7 +39,7 @@ Inside Coding Agents 是一个开源、双语的教程、架构图谱和实验�
 | Mechanisms | 不同 Agent Harness 共同面对哪些设计问题？ | [浏览 20 个机制](content/mechanisms/README.md) |
 | Agent Atlas | 某个 Agent 如何实现这些机制？ | [查看版本化档案](content/agents/README.md) |
 | Architecture Compare | 不同 Agent 的 Harness 设计在哪里相同或仍是 unknown？ | [按机制比较证据](https://vpromise.github.io/inside-coding-agents/compare/) |
-| Evidence Explorer | 某条 Claim 由哪个原始来源支持？ | [筛选 51 条 Evidence](https://vpromise.github.io/inside-coding-agents/evidence/) |
+| Evidence Explorer | 某条 Claim 由哪个原始来源支持？ | [筛选 78 条 Evidence](https://vpromise.github.io/inside-coding-agents/evidence/) |
 | Experiment Lab | 哪些观察可以在固定条件下复现？ | [回放 10 项受控实验](labs/README.md) |
 | Registry | Claim、Evidence、Schema 和稳定 ID 存在哪里？ | [了解数据模型](registry/README.md) |
 | Web | 内容图谱如何生成双语、可搜索的网站？ | [运行网页](apps/web/README.md) |
@@ -48,11 +48,11 @@ Inside Coding Agents 是一个开源、双语的教程、架构图谱和实验�
 
 - 13 篇可运行的双语长文教程，从 Agent Loop、Context 一直推进到 Approval、Sandbox/Network、Project Trust 与 scoped Git Rollback；
 - 20 个跨 Agent Mechanism，其中 Context Budget、Compaction、Memory、Permissions、OS Sandbox、Checkpoint/Rollback 已补齐中英双语 L0–L4 深度正文；
-- 5 个 Agent Profile、9 个不可变 Snapshot 和 30 条已审查 Claim；
-- Codex、Pi、Reasonix 的固定 commit 源码地图；
-- Claude Code 基于官方文档的 clean-room Snapshot；
+- 7 个 Agent Profile、11 个不可变 Snapshot 和 49 条已审查 Claim；
+- Codex、OpenCode、Grok Build、Pi、Reasonix 的固定 commit 源码地图；
+- Claude Code 基于官方文档的 clean-room Snapshot，包括 subagent 与实验性 Agent Teams；
 - 10 项受控实验、20 条 reproduced Trace、结构化 Result 与可读报告；
-- Architecture Compare、51 条 Evidence Explorer、Agent Timeline、结构化 Snapshot Diff、可搜索 Architecture Atlas、双语全文搜索和交互式 Trace Player；
+- Architecture Compare、78 条 Evidence Explorer、Agent Timeline、结构化 Snapshot Diff、可搜索 Architecture Atlas、双语全文搜索和交互式 Trace Player；
 - 每周自动运行的 90 天 Snapshot freshness 门禁；它只要求人工复核，不自动改写研究 Claim；
 - Schema、内容图谱、digest、trace、链接、发布安全和网站构建校验。
 
@@ -108,8 +108,10 @@ Atlas 是版本化的证据索引，不是热度排行，也不是 Benchmark 榜
 
 | Agent | 证据边界 | Snapshot | 已审查 Claim |
 | --- | --- | ---: | ---: |
-| Claude Code | 官方文档；clean-room 边界 | 1 | 3 |
+| Claude Code | 官方文档；clean-room 边界 | 1 | 4 |
 | Codex | 固定版本的公开源码与官方文档 | 3 | 9 |
+| Grok Build | 固定版本的公开源码与官方文档 | 1 | 9 |
+| OpenCode | 固定版本的公开源码与官方文档 | 1 | 9 |
 | Pi | 固定版本的公开源码 | 2 | 8 |
 | Reasonix | 固定版本的公开源码 | 2 | 9 |
 | Reference Harness | 本仓库源码与受控复现 | 1 | 1 |

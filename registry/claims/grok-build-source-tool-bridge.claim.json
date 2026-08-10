@@ -1,0 +1,24 @@
+{
+  "schema_version": "0.1.0",
+  "id": "grok-build-source-tool-bridge",
+  "agent_id": "grok-build",
+  "snapshot_id": "grok-build-2026-08-10-source",
+  "mechanism_id": "tool-dispatch",
+  "surface": "cli",
+  "statement": "Grok Build's pinned ToolBridge owns a finalized tool registry, exposes model-facing definitions, supports built-in and MCP-backed registrations, and routes tool calls through the registry's typed dispatch boundary.",
+  "display_text": {
+    "zh-CN": "固定版本的 Grok Build ToolBridge 持有已 finalise 的 tool registry，提供面向模型的定义，支持 built-in 与 MCP-backed 注册，并通过 registry 的 typed dispatch boundary 路由工具调用。",
+    "en": "Grok Build's pinned ToolBridge owns a finalized registry, exposes model-facing definitions, supports built-in and MCP-backed registrations, and routes calls through typed registry dispatch."
+  },
+  "status": "reviewed",
+  "evidence": [{
+    "type": "source",
+    "title": "Grok Build ToolBridge",
+    "source_url": "https://github.com/xai-org/grok-build/blob/75e73f3d6ac0350d211f12ae7d57c2c0aad72576/crates/codegen/xai-grok-tools/src/bridge.rs",
+    "captured_at": "2026-08-10",
+    "locator": "ToolBridge registry construction, definitions, and call",
+    "commit": "75e73f3d6ac0350d211f12ae7d57c2c0aad72576"
+  }],
+  "reviewed_at": "2026-08-10",
+  "reviewers": ["foundation-maintainers"]
+}

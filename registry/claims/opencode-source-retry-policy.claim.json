@@ -1,0 +1,25 @@
+{
+  "schema_version": "0.1.0",
+  "id": "opencode-source-retry-policy",
+  "agent_id": "opencode",
+  "snapshot_id": "opencode-2026-08-10-source",
+  "mechanism_id": "retry-recovery",
+  "surface": "cli",
+  "statement": "OpenCode's pinned retry policy classifies provider and HTTP failures, honors retry-after metadata when available, applies bounded exponential delay, and excludes context-overflow and other non-retryable failures from automatic replay.",
+  "display_text": {
+    "zh-CN": "固定版本的 OpenCode retry policy 会分类 provider 与 HTTP failure，在可用时遵守 retry-after metadata，应用有限的指数延迟，并把 context overflow 等不可重试失败排除在自动重放之外。",
+    "en": "OpenCode's pinned retry policy classifies provider and HTTP failures, honors retry-after metadata, applies bounded exponential delay, and excludes non-retryable failures such as context overflow."
+  },
+  "status": "reviewed",
+  "evidence": [{
+    "type": "source",
+    "title": "OpenCode session retry policy",
+    "source_url": "https://github.com/anomalyco/opencode/blob/941e71dbbb94ea5b32226c2845585992dadb361f/packages/opencode/src/session/retry.ts",
+    "captured_at": "2026-08-10",
+    "locator": "retryable, retry-after parsing, and schedule construction",
+    "commit": "941e71dbbb94ea5b32226c2845585992dadb361f"
+  }],
+  "reviewed_at": "2026-08-10",
+  "reviewers": ["foundation-maintainers"],
+  "notes": "The source defines control flow; no live provider fault was injected."
+}

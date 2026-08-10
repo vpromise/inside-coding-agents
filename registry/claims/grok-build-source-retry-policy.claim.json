@@ -1,0 +1,25 @@
+{
+  "schema_version": "0.1.0",
+  "id": "grok-build-source-retry-policy",
+  "agent_id": "grok-build",
+  "snapshot_id": "grok-build-2026-08-10-source",
+  "mechanism_id": "retry-recovery",
+  "surface": "cli",
+  "statement": "Grok Build's pinned sampler retry module returns explicit retry decisions for rate limits, transient server failures, context limits, image fallback, and client rebuilds, using retry-after or exponential jitter while keeping fatal outcomes non-retryable.",
+  "display_text": {
+    "zh-CN": "固定版本的 Grok Build sampler retry module 会针对 rate limit、瞬时 server failure、context limit、image fallback 与 client rebuild 返回显式 retry decision，使用 retry-after 或指数 jitter，并保持 fatal outcome 不重试。",
+    "en": "Grok Build's pinned sampler retry module produces explicit decisions for rate limits, transient failures, context limits, image fallback, and client rebuilds, using retry-after or exponential jitter while leaving fatal outcomes non-retryable."
+  },
+  "status": "reviewed",
+  "evidence": [{
+    "type": "source",
+    "title": "Grok Build sampler retry decisions",
+    "source_url": "https://github.com/xai-org/grok-build/blob/75e73f3d6ac0350d211f12ae7d57c2c0aad72576/crates/codegen/xai-grok-sampler/src/retry.rs",
+    "captured_at": "2026-08-10",
+    "locator": "RetryDecision and error classification",
+    "commit": "75e73f3d6ac0350d211f12ae7d57c2c0aad72576"
+  }],
+  "reviewed_at": "2026-08-10",
+  "reviewers": ["foundation-maintainers"],
+  "notes": "No live provider failure was injected for this snapshot."
+}

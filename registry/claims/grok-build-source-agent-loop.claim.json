@@ -1,0 +1,25 @@
+{
+  "schema_version": "0.1.0",
+  "id": "grok-build-source-agent-loop",
+  "agent_id": "grok-build",
+  "snapshot_id": "grok-build-2026-08-10-source",
+  "mechanism_id": "agent-loop",
+  "surface": "cli",
+  "statement": "Grok Build's pinned session actor multiplexes commands and asynchronous events, starts an explicit turn, streams sampler output, dispatches observed tool calls, and emits turn lifecycle updates until the turn completes, fails, or is cancelled.",
+  "display_text": {
+    "zh-CN": "固定版本的 Grok Build session actor 会复用 command 与异步 event 通道，显式启动 turn、流式处理 sampler output、分派观察到的 tool call，并持续发送 turn 生命周期更新，直到完成、失败或取消。",
+    "en": "Grok Build's pinned session actor multiplexes commands and asynchronous events, explicitly starts turns, streams sampler output, dispatches tool calls, and emits lifecycle updates through completion, failure, or cancellation."
+  },
+  "status": "reviewed",
+  "evidence": [{
+    "type": "source",
+    "title": "Grok Build session run loop",
+    "source_url": "https://github.com/xai-org/grok-build/blob/75e73f3d6ac0350d211f12ae7d57c2c0aad72576/crates/codegen/xai-grok-shell/src/session/acp_session_impl/run_loop.rs",
+    "captured_at": "2026-08-10",
+    "locator": "session actor run loop and turn event dispatch",
+    "commit": "75e73f3d6ac0350d211f12ae7d57c2c0aad72576"
+  }],
+  "reviewed_at": "2026-08-10",
+  "reviewers": ["foundation-maintainers"],
+  "notes": "Static source mapping only; no Grok model request was made."
+}

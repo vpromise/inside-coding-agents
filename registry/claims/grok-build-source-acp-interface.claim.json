@@ -1,0 +1,25 @@
+{
+  "schema_version": "0.1.0",
+  "id": "grok-build-source-acp-interface",
+  "agent_id": "grok-build",
+  "snapshot_id": "grok-build-2026-08-10-source",
+  "mechanism_id": "client-server-protocol",
+  "surface": "cli",
+  "statement": "Grok Build's pinned ACP library implements line-oriented JSON-RPC message transport and normalization, while the shell exposes a session interface that projects Agent activity into ACP session updates for editor or process clients.",
+  "display_text": {
+    "zh-CN": "固定版本的 Grok Build ACP library 实现 line-oriented JSON-RPC 消息传输与规范化；shell 则暴露 session interface，把 Agent activity 投影为面向 editor 或 process client 的 ACP session update。",
+    "en": "Grok Build's pinned ACP library implements line-oriented JSON-RPC transport and normalization, and the shell projects Agent activity into ACP session updates for editor or process clients."
+  },
+  "status": "reviewed",
+  "evidence": [{
+    "type": "source",
+    "title": "Grok Build ACP library",
+    "source_url": "https://github.com/xai-org/grok-build/blob/75e73f3d6ac0350d211f12ae7d57c2c0aad72576/crates/codegen/xai-acp-lib/src/lib.rs",
+    "captured_at": "2026-08-10",
+    "locator": "ACP channel, message, normalization, and line-reader modules",
+    "commit": "75e73f3d6ac0350d211f12ae7d57c2c0aad72576"
+  }],
+  "reviewed_at": "2026-08-10",
+  "reviewers": ["foundation-maintainers"],
+  "notes": "This is a source-level interface mapping; interoperability was not exercised against an external ACP client."
+}

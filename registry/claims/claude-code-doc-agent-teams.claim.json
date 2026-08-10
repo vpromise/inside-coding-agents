@@ -1,0 +1,24 @@
+{
+  "schema_version": "0.1.0",
+  "id": "claude-code-doc-agent-teams",
+  "agent_id": "claude-code",
+  "snapshot_id": "claude-code-2026-08-10-docs",
+  "mechanism_id": "subagent-orchestration",
+  "surface": "cli",
+  "statement": "Claude Code's official Agent Teams documentation describes an experimental lead-and-teammates model with independent context windows, a shared task list, and direct teammate messaging; it also states that teammates do not receive automatic worktree isolation.",
+  "display_text": {
+    "zh-CN": "Claude Code 官方 Agent Teams 文档描述了一种实验性的 lead-and-teammates 模型：每个 teammate 拥有独立 context window，共享 task list，并可直接互发消息；文档同时说明 teammate 不会自动获得 worktree 隔离。",
+    "en": "Claude Code's official Agent Teams documentation describes experimental lead-and-teammate coordination with independent context windows, a shared task list, direct messaging, and no automatic worktree isolation."
+  },
+  "status": "reviewed",
+  "evidence": [{
+    "type": "official-doc",
+    "title": "Claude Code Agent Teams",
+    "source_url": "https://code.claude.com/docs/en/agent-teams",
+    "captured_at": "2026-08-10",
+    "locator": "How agent teams work, comparison with subagents, enablement, and limitations"
+  }],
+  "reviewed_at": "2026-08-10",
+  "reviewers": ["foundation-maintainers"],
+  "notes": "This is an official product-contract claim for an experimental feature, not a claim about closed-core implementation details or effective workspace isolation."
+}

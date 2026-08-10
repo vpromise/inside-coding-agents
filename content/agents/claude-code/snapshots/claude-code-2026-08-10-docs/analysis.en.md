@@ -28,7 +28,9 @@ Hooks cover lifecycle points including PreToolUse, PostToolUse, PermissionReques
 
 ## 7. Orchestration — documented product contract
 
-Subagents have separate context, prompts, tools, models, permission modes, hooks, skills, turn/depth limits, and optional worktree isolation. Documentation also distinguishes foreground/background execution, resume, and teams; this snapshot does not infer scheduler implementation. Claim: `claude-code-doc-subagents`.
+Subagents have separate context, prompts, tools, models, permission modes, hooks, skills, turn/depth limits, and optional worktree isolation. Documentation also distinguishes foreground/background execution and resume. Claim: `claude-code-doc-subagents`.
+
+Agent Teams is a separate experimental contract: a lead coordinates teammates with independent context windows, a shared task list, and direct messages between teammates. Unlike isolated subagent delegation, team members can coordinate laterally; unlike an explicit worktree mode, teammates do not receive automatic workspace isolation. The documentation version observed here also describes direct teammate spawning without the earlier setup-tool lifecycle. This snapshot records the public contract without inferring an internal scheduler. Claim: `claude-code-doc-agent-teams`.
 
 ## 8. Interfaces — partial
 

@@ -1,0 +1,35 @@
+{
+  "schema_version": "0.1.0",
+  "id": "grok-build-source-event-log",
+  "agent_id": "grok-build",
+  "snapshot_id": "grok-build-2026-08-10-source",
+  "mechanism_id": "event-stream",
+  "surface": "cli",
+  "statement": "Grok Build's pinned file-event utilities write versioned session events as append-oriented JSONL, while an event tracker emits turn, tool, permission, and terminal lifecycle records with stable typed payloads.",
+  "display_text": {
+    "zh-CN": "固定版本的 Grok Build file-event utility 以 append-oriented JSONL 写入带版本的 session event；event tracker 则发送 turn、tool、permission 与 terminal 生命周期记录，并使用稳定的 typed payload。",
+    "en": "Grok Build's pinned file-event utilities write versioned session events as append-oriented JSONL, and the tracker emits typed turn, tool, permission, and terminal lifecycle records."
+  },
+  "status": "reviewed",
+  "evidence": [
+    {
+      "type": "source",
+      "title": "Grok Build event log",
+      "source_url": "https://github.com/xai-org/grok-build/blob/75e73f3d6ac0350d211f12ae7d57c2c0aad72576/crates/codegen/xai-file-utils/src/events/log.rs",
+      "captured_at": "2026-08-10",
+      "locator": "JSONL event writer",
+      "commit": "75e73f3d6ac0350d211f12ae7d57c2c0aad72576"
+    },
+    {
+      "type": "source",
+      "title": "Grok Build event tracker",
+      "source_url": "https://github.com/xai-org/grok-build/blob/75e73f3d6ac0350d211f12ae7d57c2c0aad72576/crates/codegen/xai-file-utils/src/events/tracker.rs",
+      "captured_at": "2026-08-10",
+      "locator": "turn, tool, permission, and terminal event emission",
+      "commit": "75e73f3d6ac0350d211f12ae7d57c2c0aad72576"
+    }
+  ],
+  "reviewed_at": "2026-08-10",
+  "reviewers": ["foundation-maintainers"],
+  "notes": "Source-visible append behavior does not establish deployment-wide retention, durability, or redaction policy."
+}

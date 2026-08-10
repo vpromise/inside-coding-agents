@@ -32,6 +32,18 @@
       "coverage": "substantial",
       "claim_ids": ["reference-harness-controlled-tool-roundtrip"],
       "notes": "Controlled project baseline only; this implementation is not comparable with a native vendor run."
+    },
+    {
+      "agent_id": "opencode",
+      "snapshot_id": "opencode-2026-08-10-source",
+      "coverage": "substantial",
+      "claim_ids": ["opencode-source-tool-registry"]
+    },
+    {
+      "agent_id": "grok-build",
+      "snapshot_id": "grok-build-2026-08-10-source",
+      "coverage": "substantial",
+      "claim_ids": ["grok-build-source-tool-bridge"]
     }
   ],
   "experiments": ["reference-tool-roundtrip-v1"],

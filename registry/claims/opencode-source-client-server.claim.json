@@ -1,0 +1,34 @@
+{
+  "schema_version": "0.1.0",
+  "id": "opencode-source-client-server",
+  "agent_id": "opencode",
+  "snapshot_id": "opencode-2026-08-10-source",
+  "mechanism_id": "client-server-protocol",
+  "surface": "cli",
+  "statement": "OpenCode's pinned source exposes the harness through an HTTP server that can run headlessly, while the terminal UI can communicate with an embedded worker and forward global server events over an RPC channel instead of owning a separate Agent core.",
+  "display_text": {
+    "zh-CN": "固定版本的 OpenCode 源码可通过 HTTP server 无头运行；终端 UI 则能与 embedded worker 通信，并通过 RPC channel 转发全局 server event，而不是另写一套 Agent core。",
+    "en": "OpenCode's pinned source exposes a headless HTTP server, while the terminal UI can use an embedded worker and RPC-forward global server events rather than owning a separate Agent core."
+  },
+  "status": "reviewed",
+  "evidence": [
+    {
+      "type": "source",
+      "title": "OpenCode server",
+      "source_url": "https://github.com/anomalyco/opencode/blob/941e71dbbb94ea5b32226c2845585992dadb361f/packages/opencode/src/server/server.ts",
+      "captured_at": "2026-08-10",
+      "locator": "HTTP application and event routes",
+      "commit": "941e71dbbb94ea5b32226c2845585992dadb361f"
+    },
+    {
+      "type": "source",
+      "title": "OpenCode TUI worker",
+      "source_url": "https://github.com/anomalyco/opencode/blob/941e71dbbb94ea5b32226c2845585992dadb361f/packages/opencode/src/cli/tui/worker.ts",
+      "captured_at": "2026-08-10",
+      "locator": "embedded fetch and global event forwarding",
+      "commit": "941e71dbbb94ea5b32226c2845585992dadb361f"
+    }
+  ],
+  "reviewed_at": "2026-08-10",
+  "reviewers": ["foundation-maintainers"]
+}

@@ -28,7 +28,9 @@ hooks 覆盖 PreToolUse、PostToolUse、PermissionRequest、SessionStart/End、S
 
 ## 7. Orchestration — documented product contract
 
-subagent 有独立 context、prompt、tools、model、permission mode、hooks、skills、max turns/depth 与可选 worktree isolation。文档还区分 foreground/background、resume 与 teams，但本 snapshot 不推断 scheduler 实现。对应 Claim：`claude-code-doc-subagents`。
+subagent 有独立 context、prompt、tools、model、permission mode、hooks、skills、max turns/depth 与可选 worktree isolation。文档还区分 foreground/background 与 resume。对应 Claim：`claude-code-doc-subagents`。
+
+Agent Teams 是另一份实验性合同：lead 协调拥有独立 context window 的 teammate，共享 task list，并允许 teammate 直接互发消息。它不同于单向隔离的 subagent delegation，也不同于显式 worktree mode；teammate 不会自动获得 workspace isolation。本次观察到的文档版本还描述了无需旧式 setup-tool lifecycle 的直接 teammate spawning。这里记录公开合同，不推断内部 scheduler。对应 Claim：`claude-code-doc-agent-teams`。
 
 ## 8. Interfaces — partial
 

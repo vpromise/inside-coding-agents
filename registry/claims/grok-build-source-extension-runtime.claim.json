@@ -1,0 +1,35 @@
+{
+  "schema_version": "0.1.0",
+  "id": "grok-build-source-extension-runtime",
+  "agent_id": "grok-build",
+  "snapshot_id": "grok-build-2026-08-10-source",
+  "mechanism_id": "extension-runtime",
+  "surface": "cli",
+  "statement": "Grok Build's pinned extension surface includes plugins, prompt skills, MCP tools, and lifecycle hooks; hook dispatch distinguishes observational events from pre-tool gates that may modify or block an operation.",
+  "display_text": {
+    "zh-CN": "固定版本的 Grok Build 扩展面包括 plugin、prompt skill、MCP tool 与 lifecycle hook；hook dispatch 会区分观察性事件和可修改或阻止操作的 pre-tool gate。",
+    "en": "Grok Build's pinned extension surface includes plugins, prompt skills, MCP tools, and lifecycle hooks, with pre-tool gates able to modify or block operations."
+  },
+  "status": "reviewed",
+  "evidence": [
+    {
+      "type": "source",
+      "title": "Grok Build hook events",
+      "source_url": "https://github.com/xai-org/grok-build/blob/75e73f3d6ac0350d211f12ae7d57c2c0aad72576/crates/codegen/xai-grok-hooks/src/event.rs",
+      "captured_at": "2026-08-10",
+      "locator": "session, tool, prompt, and subagent hook event types",
+      "commit": "75e73f3d6ac0350d211f12ae7d57c2c0aad72576"
+    },
+    {
+      "type": "source",
+      "title": "Grok Build hook dispatcher",
+      "source_url": "https://github.com/xai-org/grok-build/blob/75e73f3d6ac0350d211f12ae7d57c2c0aad72576/crates/codegen/xai-grok-hooks/src/dispatcher.rs",
+      "captured_at": "2026-08-10",
+      "locator": "pre-tool gate and post-event dispatch",
+      "commit": "75e73f3d6ac0350d211f12ae7d57c2c0aad72576"
+    }
+  ],
+  "reviewed_at": "2026-08-10",
+  "reviewers": ["foundation-maintainers"],
+  "notes": "Extension capability does not imply that third-party extension code is isolated or trustworthy."
+}

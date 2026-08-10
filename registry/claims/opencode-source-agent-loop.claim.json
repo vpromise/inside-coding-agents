@@ -1,0 +1,25 @@
+{
+  "schema_version": "0.1.0",
+  "id": "opencode-source-agent-loop",
+  "agent_id": "opencode",
+  "snapshot_id": "opencode-2026-08-10-source",
+  "mechanism_id": "agent-loop",
+  "surface": "cli",
+  "statement": "OpenCode's pinned session prompt service runs a repeated message-processing loop that handles pending subtasks and compaction, resolves the active Agent and tools, invokes the model processor, and stops only after an explicit terminal condition rather than after every response.",
+  "display_text": {
+    "zh-CN": "固定版本的 OpenCode session prompt service 通过重复消息循环处理待执行 subtask 与 compaction，解析当前 Agent 和工具，调用 model processor，并只在显式终止条件满足时结束，而不是每次响应后都停止。",
+    "en": "OpenCode's pinned session prompt service repeatedly handles pending subtasks and compaction, resolves the active Agent and tools, invokes the model processor, and stops only at an explicit terminal condition."
+  },
+  "status": "reviewed",
+  "evidence": [{
+    "type": "source",
+    "title": "OpenCode session prompt loop",
+    "source_url": "https://github.com/anomalyco/opencode/blob/941e71dbbb94ea5b32226c2845585992dadb361f/packages/opencode/src/session/prompt.ts",
+    "captured_at": "2026-08-10",
+    "locator": "Prompt service run loop around the while(true) message processor",
+    "commit": "941e71dbbb94ea5b32226c2845585992dadb361f"
+  }],
+  "reviewed_at": "2026-08-10",
+  "reviewers": ["foundation-maintainers"],
+  "notes": "Static source mapping only; no provider or released CLI was invoked."
+}

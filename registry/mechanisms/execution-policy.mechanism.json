@@ -32,6 +32,20 @@
       "snapshot_id": "claude-code-2026-08-10-docs",
       "coverage": "partial",
       "claim_ids": ["claude-code-doc-execution-policy"]
+    },
+    {
+      "agent_id": "opencode",
+      "snapshot_id": "opencode-2026-08-10-source",
+      "coverage": "substantial",
+      "claim_ids": ["opencode-source-execution-policy"],
+      "notes": "This maps semantic permission evaluation only; OS isolation remains unverified."
+    },
+    {
+      "agent_id": "grok-build",
+      "snapshot_id": "grok-build-2026-08-10-source",
+      "coverage": "substantial",
+      "claim_ids": ["grok-build-source-execution-policy"],
+      "notes": "The source explicitly permits an unsandboxed fallback on unsupported or failed sandbox application, so effective enforcement remains run-dependent."
     }
   ],
   "experiments": ["reference-approval-binding-v1"],
