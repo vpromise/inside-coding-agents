@@ -114,11 +114,44 @@ const [
   listFilesRecursive("labs/results", ".trace.jsonl"),
 ]);
 
+const lessonTraceSources = await Promise.all(
+  curriculum.lessons.map(async (lesson) => {
+    const sourcePath = lesson.golden_trace.path;
+    const text = await readText(sourcePath);
+    const events = parseJsonl(text, sourcePath);
+    if (!events.length) throw new Error(`Lesson Golden Trace has no events: ${sourcePath}`);
+    if (events.some((event) => event.provenance?.run_id !== lesson.golden_trace.run_id)) {
+      throw new Error(`Lesson Golden Trace run_id mismatch: ${sourcePath}`);
+    }
+    return {
+      lesson,
+      text,
+      trace: {
+        id: lesson.golden_trace.run_id,
+        title: {
+          "zh-CN": `S${lesson.number} ${lesson.title["zh-CN"]} · Golden Trace`,
+          en: `S${lesson.number} ${lesson.title.en} · Golden Trace`,
+        },
+        kind: "golden",
+        lesson_id: lesson.id,
+        run_id: lesson.golden_trace.run_id,
+        source_path: sourcePath,
+        download_path: `/data/traces/${lesson.golden_trace.run_id}.jsonl`,
+        events,
+      },
+    };
+  }),
+);
+
 const curriculumWithContent = {
   ...curriculum,
   lessons: await Promise.all(
     curriculum.lessons.map(async (lesson) => ({
       ...lesson,
+      golden_trace: {
+        ...lesson.golden_trace,
+        download_path: `/data/traces/${lesson.golden_trace.run_id}.jsonl`,
+      },
       source_code: await readText(lesson.code_path),
       content: {
         "zh-CN": await readText(lesson.content_paths["zh-CN"]),
@@ -166,6 +199,7 @@ const traceSources = [
     },
     text: syntheticTraceText,
   },
+  ...lessonTraceSources.map(({ trace, text }) => ({ trace, text })),
   ...(await Promise.all(
     formalTracePaths.map(async (sourcePath) => {
       const text = await readText(sourcePath);
@@ -288,6 +322,7 @@ const bundle = {
     mechanisms: "registry/mechanisms/*.mechanism.json",
     experiments: "registry/experiments/*.experiment.json",
     experiment_results: "labs/results/**/result.json",
+    lesson_traces: "curriculum/lessons/**/golden.trace.jsonl",
     traces: traceSources.map(({ trace }) => trace.source_path),
   },
   curriculum: curriculumWithContent,

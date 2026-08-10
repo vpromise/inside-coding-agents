@@ -1,12 +1,12 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:inside-coding-agents:schema:curriculum-catalog:0.1.0",
+  "$id": "urn:inside-coding-agents:schema:curriculum-catalog:0.2.0",
   "title": "Inside Coding Agents Curriculum Catalog",
   "type": "object",
   "additionalProperties": false,
   "required": ["schema_version", "track", "title", "lessons"],
   "properties": {
-    "schema_version": {"const": "0.1.0"},
+    "schema_version": {"const": "0.2.0"},
     "track": {"$ref": "#/$defs/stableId"},
     "title": {"$ref": "#/$defs/localizedText"},
     "lessons": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/lesson"}}
@@ -31,10 +31,73 @@
         "en": {"type": "string", "pattern": "^curriculum/.+\\.en\\.md$"}
       }
     },
+    "localizedTextList": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/localizedText"}
+    },
+    "changeContract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["previous_lesson_id", "summary", "adds", "preserves"],
+      "properties": {
+        "previous_lesson_id": {
+          "oneOf": [
+            {"$ref": "#/$defs/stableId"},
+            {"type": "null"}
+          ]
+        },
+        "summary": {"$ref": "#/$defs/localizedText"},
+        "adds": {"$ref": "#/$defs/localizedTextList"},
+        "preserves": {"$ref": "#/$defs/localizedTextList"}
+      }
+    },
+    "goldenTrace": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "run_id", "expected_event_count", "focus_event_types"],
+      "properties": {
+        "path": {"type": "string", "pattern": "^curriculum/lessons/.+\\.trace\\.jsonl$"},
+        "run_id": {"$ref": "#/$defs/stableId"},
+        "expected_event_count": {"type": "integer", "minimum": 1},
+        "focus_event_types": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "pattern": "^[a-z]+(?:\\.[a-z]+)*$"}
+        }
+      }
+    },
+    "agentBridge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["relationship", "claim_ids", "notes"],
+      "properties": {
+        "relationship": {"enum": ["direct", "adjacent", "gap"]},
+        "claim_ids": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/stableId"}
+        },
+        "notes": {"$ref": "#/$defs/localizedText"}
+      }
+    },
+    "exerciseCheck": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "level", "title", "acceptance", "command"],
+      "properties": {
+        "id": {"$ref": "#/$defs/stableId"},
+        "level": {"enum": ["observe", "modify", "research"]},
+        "title": {"$ref": "#/$defs/localizedText"},
+        "acceptance": {"$ref": "#/$defs/localizedText"},
+        "command": {"type": "string", "minLength": 1}
+      }
+    },
     "lesson": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "number", "slug", "title", "summary", "mechanism_ids", "status", "estimated_minutes", "difficulty", "code_path", "content_paths", "run"],
+      "required": ["id", "number", "slug", "title", "summary", "mechanism_ids", "status", "estimated_minutes", "difficulty", "code_path", "content_paths", "run", "change_contract", "golden_trace", "agent_bridge", "exercise_checks"],
       "properties": {
         "id": {"$ref": "#/$defs/stableId"},
         "number": {"type": "string", "pattern": "^[0-9]{2}$"},
@@ -47,7 +110,15 @@
         "difficulty": {"enum": ["beginner", "intermediate", "advanced"]},
         "code_path": {"type": "string", "pattern": "^curriculum/.+\\.py$"},
         "content_paths": {"$ref": "#/$defs/contentPaths"},
-        "run": {"type": "string", "minLength": 1}
+        "run": {"type": "string", "minLength": 1},
+        "change_contract": {"$ref": "#/$defs/changeContract"},
+        "golden_trace": {"$ref": "#/$defs/goldenTrace"},
+        "agent_bridge": {"$ref": "#/$defs/agentBridge"},
+        "exercise_checks": {
+          "type": "array",
+          "minItems": 2,
+          "items": {"$ref": "#/$defs/exerciseCheck"}
+        }
       }
     }
   }

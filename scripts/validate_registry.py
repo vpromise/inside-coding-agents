@@ -179,8 +179,17 @@ if len(lesson_numbers) != len(set(lesson_numbers)):
 if len(lesson_slugs) != len(set(lesson_slugs)):
     ERRORS.append("curriculum lesson slugs are not unique")
 
+expected_previous_lesson_id: str | None = None
+lesson_golden_trace_paths: list[Path] = []
 for lesson in lessons:
     lesson_id = lesson.get("id")
+    change_contract = lesson.get("change_contract", {})
+    if change_contract.get("previous_lesson_id") != expected_previous_lesson_id:
+        ERRORS.append(
+            f"lesson {lesson_id} previous_lesson_id must be "
+            f"{expected_previous_lesson_id!r}"
+        )
+    expected_previous_lesson_id = lesson_id
     for mechanism_id in lesson.get("mechanism_ids", []):
         if mechanism_id not in mechanisms:
             ERRORS.append(f"lesson {lesson_id} references unknown mechanism {mechanism_id}")
@@ -190,6 +199,30 @@ for lesson in lessons:
     code_path = lesson.get("code_path")
     if code_path and not (ROOT / code_path).is_file():
         ERRORS.append(f"lesson {lesson_id} code path does not exist: {code_path}")
+    trace_contract = lesson.get("golden_trace", {})
+    trace_path = resolve_repo_path(
+        trace_contract.get("path", ""),
+        f"lesson {lesson_id} golden trace",
+    )
+    if trace_path is not None:
+        lesson_golden_trace_paths.append(trace_path)
+        if not trace_path.is_file():
+            ERRORS.append(
+                f"lesson {lesson_id} golden trace does not exist: "
+                f"{trace_contract.get('path')}"
+            )
+    bridge = lesson.get("agent_bridge", {})
+    bridge_claim_ids = bridge.get("claim_ids", [])
+    if bridge.get("relationship") == "gap" and bridge_claim_ids:
+        ERRORS.append(f"lesson {lesson_id} declares a gap but also references claims")
+    if bridge.get("relationship") != "gap" and not bridge_claim_ids:
+        ERRORS.append(f"lesson {lesson_id} must reference claims or declare a gap")
+    for claim_id in bridge_claim_ids:
+        if claim_id not in claims:
+            ERRORS.append(f"lesson {lesson_id} references unknown bridge claim {claim_id}")
+    exercise_ids = [check.get("id") for check in lesson.get("exercise_checks", [])]
+    if len(exercise_ids) != len(set(exercise_ids)):
+        ERRORS.append(f"lesson {lesson_id} exercise check IDs are not unique")
 
 snapshot_index: dict[str, tuple[str, dict[str, Any]]] = {}
 for agent_id, agent in agents.items():
@@ -543,10 +576,30 @@ def validate_trace(path: Path) -> list[dict[str, Any]]:
 
 trace_paths = sorted((ROOT / "registry/examples").glob("*.jsonl"))
 trace_paths.extend(sorted((ROOT / "labs/results").rglob("*.trace.jsonl")))
+trace_paths.extend(lesson_golden_trace_paths)
 trace_events_by_path = {
     str(path.relative_to(ROOT)): validate_trace(path) for path in trace_paths
 }
 trace_event_count = sum(len(events) for events in trace_events_by_path.values())
+
+for lesson in lessons:
+    lesson_id = lesson.get("id")
+    trace_contract = lesson.get("golden_trace", {})
+    path_value = trace_contract.get("path", "")
+    events = trace_events_by_path.get(path_value, [])
+    if len(events) != trace_contract.get("expected_event_count"):
+        ERRORS.append(f"lesson {lesson_id} golden trace event count is inconsistent")
+    observed_types = {event.get("type") for event in events}
+    for event_type in trace_contract.get("focus_event_types", []):
+        if event_type not in observed_types:
+            ERRORS.append(
+                f"lesson {lesson_id} golden trace lacks focus event {event_type}"
+            )
+    if any(
+        event.get("provenance", {}).get("run_id") != trace_contract.get("run_id")
+        for event in events
+    ):
+        ERRORS.append(f"lesson {lesson_id} golden trace run_id is inconsistent")
 
 for experiment_id, result in experiment_results.items():
     subjects = experiments[experiment_id].get("subjects", [])

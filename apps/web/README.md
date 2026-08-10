@@ -4,7 +4,7 @@ The public reading and research interface uses a Next.js-compatible App Router, 
 
 ## Data boundary
 
-The website does not maintain a second fact database. `scripts/sync-content.mjs` reads the canonical curriculum, Agent profiles, Claims, Mechanisms, Experiments, Results, and Traces from the repository root.
+The website does not maintain a second fact database. `scripts/sync-content.mjs` reads the canonical curriculum, per-lesson Golden Traces, Agent profiles, Claims, Mechanisms, Experiments, Results, and Traces from the repository root.
 
 Generated projections live under `app/data/` and `public/data/`. They are committed so a source snapshot can build independently, but they must be regenerated rather than edited by hand.
 
@@ -36,4 +36,4 @@ npm run typecheck
 npm test
 ```
 
-`npm test` regenerates content, creates a production build, and renders every published route. The tests also verify graph relationships, bilingual search, navigation, and downloadable Trace artifacts.
+`npm test` regenerates content, creates a production build, and renders every published route. The tests also verify course contracts, graph relationships, bilingual search, navigation, and downloadable Trace artifacts.

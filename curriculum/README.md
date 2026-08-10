@@ -11,7 +11,7 @@ The curriculum contains six bilingual, progressively layered lessons and a provi
 | s05 | Instruction discovery | Repository constraints follow deterministic precedence |
 | s06 | Context budget | History is measured and compacted before overflow |
 
-Each lesson includes a long-form `lesson.en.md`, a complete Chinese `lesson.zh.md`, and an independently runnable `demo.py`. Shared teaching code lives under `harness/`; deterministic end-to-end tests live under `tests/`. `catalog.json` is the canonical website navigation source.
+Each lesson includes a long-form `lesson.en.md`, a complete Chinese `lesson.zh.md`, an independently runnable `demo.py`, and a deterministic `golden.trace.jsonl`. Shared teaching code lives under `harness/`; deterministic end-to-end tests live under `tests/`. `catalog.json` is the canonical website navigation source.
 
 Every published lesson follows the same learning contract:
 
@@ -21,6 +21,13 @@ Every published lesson follows the same learning contract:
 4. Run an offline demo and inspect its Trace 0.1 events.
 5. Study failure modes and complete graduated exercises.
 6. Separate the teaching implementation from production-grade concerns.
+
+The `0.2.0` course contract adds four machine-checkable bridges to every lesson:
+
+- `change_contract` states what changed from the previous chapter and which invariants remain.
+- `golden_trace` is generated directly from the runnable demo and verified byte for byte.
+- `agent_bridge` links the reference mechanism to reviewed Agent Claims, or marks an evidence gap explicitly.
+- `exercise_checks` provides local commands with concrete acceptance criteria.
 
 The content-quality tests enforce bilingual parity, stable section anchors, minimum tutorial depth, runnable source links, code examples, tables, and explicit evidence boundaries.
 
@@ -32,6 +39,7 @@ From the repository root:
 python3 -m curriculum.lessons.s01_agent_loop.demo
 python3 -m curriculum.lessons.s03_tool_dispatch.demo
 python3 -m curriculum.lessons.s06_context_budget.demo
+python3 -m curriculum.golden verify
 python3 -m unittest discover -s curriculum/tests -v
 ```
 

@@ -16,6 +16,7 @@ export const metadata: Metadata = {
 
 export default function LearnPage() {
   const lessons = content.curriculum.lessons;
+  const exerciseCheckCount = lessons.reduce((total, lesson) => total + lesson.exercise_checks.length, 0);
   return (
     <main className="page-shell interior-page">
       <header className="interior-hero">
@@ -23,8 +24,9 @@ export default function LearnPage() {
         <h1><LocalizedText zh="从 40 行循环，走到" en="From a 40-line loop to" /><br /><LocalizedText zh="可观察的工具型 Agent。" en="an observable tool-using agent." /></h1>
         <p><LocalizedText zh="六篇长文教程共用一个无依赖 Python reference harness。每章从问题、心智模型和逐步实现讲到失败路径、练习与生产边界。" en="Six long-form tutorials share one dependency-free Python reference harness. Each moves from the problem and mental model through implementation, failure paths, exercises, and production boundaries." /></p>
         <div className="metric-row">
-          <span><strong>6</strong> <LocalizedText zh="课程" en="lessons" /></span>
-          <span><strong>8</strong> <LocalizedText zh="测试" en="tests" /></span>
+          <span><strong>{lessons.length}</strong> <LocalizedText zh="课程" en="lessons" /></span>
+          <span><strong>{lessons.length}</strong> Golden Traces</span>
+          <span><strong>{exerciseCheckCount}</strong> <LocalizedText zh="验收命令" en="acceptance checks" /></span>
           <span><strong>0</strong> API keys</span>
           <span><strong>2</strong> <LocalizedText zh="语言" en="languages" /></span>
         </div>

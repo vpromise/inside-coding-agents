@@ -74,6 +74,10 @@ test("renders a long-form lesson with rich reading primitives and runnable sourc
 
   assert.match(html, /href="#mental-model"/);
   assert.match(html, /href="#deep-dive"/);
+  assert.match(html, /id="change-contract"/);
+  assert.match(html, /id="agent-bridge"/);
+  assert.match(html, /id="golden-trace"/);
+  assert.match(html, /id="exercise-checks"/);
   assert.match(html, /id="mental-model"/);
   assert.match(html, /id="source"/);
   assert.match(html, /<blockquote>/);
@@ -82,14 +86,27 @@ test("renders a long-form lesson with rich reading primitives and runnable sourc
   assert.match(html, /data-language="python"/);
   assert.match(html, /Not pseudocode/);
   assert.match(html, /def build_demo/);
+  assert.match(html, /run-s01-agent-loop-golden/);
+  assert.match(html, /codex-source-agent-loop/);
+  assert.match(html, /python3 -m curriculum\.golden verify s01-agent-loop/);
 });
 
 test("renders a cross-entity bilingual search index", async () => {
+  const generated = JSON.parse(
+    await readFile(new URL("../app/data/content.generated.json", import.meta.url), "utf8"),
+  );
+  const recordCount = generated.curriculum.lessons.length
+    + generated.mechanisms.length
+    + generated.agents.length
+    + generated.agents.reduce((total, agent) => total + agent.snapshots.length, 0)
+    + generated.claims.length
+    + generated.experiments.length
+    + generated.traces.length;
   const response = await render("/search");
   assert.equal(response.status, 200);
   const html = await response.text();
   assert.match(html, /id="knowledge-search"/);
-  assert.match(html, /68 results/);
+  assert.match(html, new RegExp(`${recordCount} results`));
   assert.match(html, /href="\/learn\/agent-loop"/);
   assert.match(html, /href="\/mechanisms\/agent-loop"/);
   assert.match(html, /href="\/agents\/codex\/[^"#]+#codex-source-agent-loop"/);
@@ -106,14 +123,21 @@ test("generated content resolves the shared source graph", async () => {
   assert.equal(generated.agents.length, 5);
   assert.equal(generated.claims.length, 30);
   assert.equal(generated.experiments.length, 1);
-  assert.equal(generated.traces.length, 3);
+  assert.equal(generated.traces.length, 9);
 
   for (const lesson of generated.curriculum.lessons) {
     assert.ok(lesson.estimated_minutes >= 20, `${lesson.id} reading time`);
     assert.match(lesson.source_code, /def build_demo/);
     assert.match(lesson.content.en, /\{#deep-dive\}/);
     assert.match(lesson.content["zh-CN"], /\{#deep-dive\}/);
+    assert.equal(lesson.exercise_checks.length, 2);
+    assert.equal(lesson.golden_trace.expected_event_count,
+      generated.traces.find((trace) => trace.id === lesson.golden_trace.run_id).events.length);
   }
+
+  const goldenTraces = generated.traces.filter((trace) => trace.kind === "golden");
+  assert.equal(goldenTraces.length, generated.curriculum.lessons.length);
+  assert.ok(goldenTraces.every((trace) => trace.lesson_id));
 
   const mechanism = generated.mechanisms.find((item) => item.id === "agent-loop");
   const agent = generated.agents.find((item) => item.id === "codex");
@@ -191,5 +215,18 @@ test("removes disposable starter assets and publishes the trace download", async
       "utf8",
     );
     assert.equal(reproducedTrace.trim().split(/\r?\n/).length, 9);
+  }
+  const generated = JSON.parse(
+    await readFile(new URL("../app/data/content.generated.json", import.meta.url), "utf8"),
+  );
+  for (const lesson of generated.curriculum.lessons) {
+    const goldenTrace = await readFile(
+      new URL(`../public/data/traces/${lesson.golden_trace.run_id}.jsonl`, import.meta.url),
+      "utf8",
+    );
+    assert.equal(
+      goldenTrace.trim().split(/\r?\n/).length,
+      lesson.golden_trace.expected_event_count,
+    );
   }
 });

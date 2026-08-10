@@ -7,14 +7,21 @@
     "mechanisms": "registry/mechanisms/*.mechanism.json",
     "experiments": "registry/experiments/*.experiment.json",
     "experiment_results": "labs/results/**/result.json",
+    "lesson_traces": "curriculum/lessons/**/golden.trace.jsonl",
     "traces": [
       "registry/examples/example-trace.jsonl",
       "labs/results/reference-tool-roundtrip-v1/run-001.trace.jsonl",
-      "labs/results/reference-tool-roundtrip-v1/run-002.trace.jsonl"
+      "labs/results/reference-tool-roundtrip-v1/run-002.trace.jsonl",
+      "curriculum/lessons/s01_agent_loop/golden.trace.jsonl",
+      "curriculum/lessons/s02_events_streaming/golden.trace.jsonl",
+      "curriculum/lessons/s03_tool_dispatch/golden.trace.jsonl",
+      "curriculum/lessons/s04_workspace_tools/golden.trace.jsonl",
+      "curriculum/lessons/s05_instructions/golden.trace.jsonl",
+      "curriculum/lessons/s06_context_budget/golden.trace.jsonl"
     ]
   },
   "curriculum": {
-    "schema_version": "0.1.0",
+    "schema_version": "0.2.0",
     "track": "foundations",
     "title": {
       "zh-CN": "从零构建 Agent Harness",
@@ -45,6 +52,81 @@
           "en": "curriculum/lessons/s01_agent_loop/lesson.en.md"
         },
         "run": "python3 -m curriculum.lessons.s01_agent_loop.demo",
+        "change_contract": {
+          "previous_lesson_id": null,
+          "summary": {
+            "zh-CN": "建立后续所有章节共享的有界循环基线。",
+            "en": "Establish the bounded-loop baseline shared by every later lesson."
+          },
+          "adds": [
+            {
+              "zh-CN": "显式 session 生命周期与停止原因",
+              "en": "An explicit session lifecycle and stop reason"
+            },
+            {
+              "zh-CN": "Model 与 Harness 之间的 provider-neutral 边界",
+              "en": "A provider-neutral boundary between model and harness"
+            }
+          ],
+          "preserves": [
+            {
+              "zh-CN": "只记录可观察行为，不记录隐藏推理。",
+              "en": "Record observable behavior, never hidden reasoning."
+            }
+          ]
+        },
+        "golden_trace": {
+          "path": "curriculum/lessons/s01_agent_loop/golden.trace.jsonl",
+          "run_id": "run-s01-agent-loop-golden",
+          "expected_event_count": 5,
+          "focus_event_types": [
+            "session.start",
+            "model.request",
+            "model.response",
+            "session.stop"
+          ],
+          "download_path": "/data/traces/run-s01-agent-loop-golden.jsonl"
+        },
+        "agent_bridge": {
+          "relationship": "direct",
+          "claim_ids": [
+            "codex-source-agent-loop",
+            "pi-source-agent-loop",
+            "reasonix-source-agent-loop"
+          ],
+          "notes": {
+            "zh-CN": "三份固定源码快照都提供了可核对的 Agent Loop 结构，但产品协议和恢复策略不同。",
+            "en": "Three pinned source snapshots expose inspectable agent-loop structures, while their product protocols and recovery policies differ."
+          }
+        },
+        "exercise_checks": [
+          {
+            "id": "s01-golden-trace",
+            "level": "observe",
+            "title": {
+              "zh-CN": "复核 Golden Trace",
+              "en": "Verify the Golden Trace"
+            },
+            "acceptance": {
+              "zh-CN": "提交的 JSONL 与示例真实运行完全一致，并通过 Trace Schema。",
+              "en": "The committed JSONL exactly matches a real demo run and passes the trace schema."
+            },
+            "command": "python3 -m curriculum.golden verify s01-agent-loop"
+          },
+          {
+            "id": "s01-loop-contract",
+            "level": "modify",
+            "title": {
+              "zh-CN": "守住循环不变量",
+              "en": "Preserve loop invariants"
+            },
+            "acceptance": {
+              "zh-CN": "正常完成仍产生连续 sequence，并以 session.stop 结束。",
+              "en": "A completed run keeps contiguous sequence numbers and ends with session.stop."
+            },
+            "command": "python3 -m unittest curriculum.tests.test_vertical_slice.VerticalSliceTests.test_s01_minimal_loop -v"
+          }
+        ],
         "source_code": "from curriculum.harness import AgentRunner, ModelTurn, ScriptedModel\nfrom curriculum.lessons.common import lesson_trace, print_run\n\n\ndef build_demo() -> tuple[AgentRunner, object]:\n    trace = lesson_trace(\"s01-agent-loop\")\n    model = ScriptedModel(\n        [ModelTurn(content=\"A harness keeps calling the model until work stops.\", stop=True)]\n    )\n    return AgentRunner(model=model, trace=trace), trace\n\n\ndef main() -> None:\n    runner, trace = build_demo()\n    result = runner.run(\"Explain an agent loop in one sentence.\")\n    print_run(result.final_text, trace)\n\n\nif __name__ == \"__main__\":\n    main()\n",
         "content": {
           "zh-CN": "# s01 · 最小 Agent Loop\n\n> 模型只提出下一步，Harness 才拥有循环、状态、边界和停止条件。\n\n## 学完这一章，你会得到什么 {#learn}\n\n这一章从一个普通的模型调用开始，把它改造成一个**可终止、可观察、可测试**的 Agent Loop。我们故意暂时不加入工具：先看清控制骨架，s03 再把工具往返接进同一个循环。\n\n完成本章后，你应该能够：\n\n- 用自己的话区分 Model、Harness 和 Agent Product。\n- 解释 `messages` 为什么是循环状态，而不是聊天记录的随意拼接。\n- 找出一次运行的三个终止出口：正常完成、达到 `max_turns`、异常失败。\n- 从 Trace 中还原“用户输入 → 模型请求 → 模型响应 → 会话停止”。\n- 运行离线示例并修改它，而不需要 API Key 或网络。\n\n### 开始前只需要知道\n\n你只需要会读基础 Python：函数、列表、`for` 循环和 dataclass。示例中的 `ScriptedModel` 是确定性的模型替身，它不是为了模拟模型智能，而是为了让 Harness 行为可以重复测试。\n\n---\n\n## 问题：为什么一次模型调用还不是 Agent？ {#problem}\n\n普通的 LLM 调用只有一个方向：输入消息，得到一次输出，然后程序结束。即使模型在输出里说“下一步我需要读文件”，文件也不会自动被读取；即使它发现任务没完成，也不会自动请求下一轮。\n\n一个可工作的 Agent Product 至少需要两个角色：\n\n| 角色 | 决定什么 | 不应该偷偷决定什么 |\n| --- | --- | --- |\n| Model | 基于当前上下文提出文本或结构化动作 | 文件是否真的被修改、命令是否被允许 |\n| Harness | 保存状态、调用模型、执行获准动作、判断继续或停止 | 伪造模型的隐藏推理、替模型编造结论 |\n\n把两者连接起来的最小机制就是循环。没有循环，模型输出只是建议；有了循环，上一轮的结果可以成为下一轮的输入。\n\n> Agent Loop 不是“让模型多想几次”的魔法。它是一份明确的控制协议：什么时候调用、保存什么、为什么继续、为何停止。\n\n---\n\n## 心智模型：状态机，而不是 `while True` 咒语 {#mental-model}\n\n把一次运行想成一个有边界的状态机：\n\n```text\nSTART\n  │\n  ├─ append user message\n  │\n  ├─ request model ──> append assistant message\n  │                         │\n  │                         ├─ needs action ──> continue\n  │                         └─ no action ─────> COMPLETE\n  │\n  └─ turn budget exhausted ──────────────────> MAX_TURNS\n```\n\n循环真正拥有的是四类状态：\n\n| 状态 | 本章中的表示 | 设计意义 |\n| --- | --- | --- |\n| 对话状态 | `messages` | 下一轮模型能看到什么 |\n| 迭代状态 | `turn_number` | 当前执行到第几轮 |\n| 配置状态 | `AgentConfig.max_turns` | 防止无界运行 |\n| 观测状态 | `TraceRecorder.events` | 事后可以证明发生了什么 |\n\n### 三条必须一直成立的不变量\n\n1. 每次 `model.request` 使用的消息序列都可以从 Harness 状态解释。\n2. 每个 assistant 响应只追加一次，流式 chunk 不能变成多条 assistant message。\n3. 每次运行最终都产生明确的 `session.stop`，不能悄悄消失。\n\n这三条不变量会贯穿后面的工具、上下文和权限章节。\n\n---\n\n## 逐步构建最小循环 {#build}\n\n### 第 1 步：用 provider-neutral 类型描述一轮\n\n本项目不把任何厂商 SDK 对象塞进核心循环。模型边界只需要接收 `Message`，返回 `ModelTurn`：\n\n```python\n@dataclass(frozen=True)\nclass Message:\n    role: Role\n    content: str\n\n@dataclass(frozen=True)\nclass ModelTurn:\n    content: str = \"\"\n    tool_calls: tuple[ToolCall, ...] = ()\n    chunks: tuple[str, ...] = ()\n    stop: bool = False\n```\n\n这样做的价值不是少写几个字段，而是把变化隔离到 adapter：未来接 OpenAI、Anthropic 或本地模型时，核心循环仍然处理同一种内部协议。\n\n### 第 2 步：建立初始消息\n\n`AgentRunner.run()` 先放入可选的 system prompt，再放入用户输入：\n\n```python\nmessages: list[Message] = []\nif self.system_prompt:\n    messages.append(Message(role=\"system\", content=self.system_prompt))\nmessages.append(Message(role=\"user\", content=user_input))\n```\n\n消息顺序是状态的一部分。System 约束在前，当前用户意图在后；下一章会看到响应如何以事件增量到达，但最终仍只形成一条 assistant message。\n\n### 第 3 步：给循环一个硬上限\n\n教学实现使用有界 `for`，而不是裸 `while True`：\n\n```python\nfor turn_number in range(1, self.config.max_turns + 1):\n    turn = self.model.respond(messages, self.tools.descriptors())\n    final_text = turn.resolved_content\n    messages.append(Message(role=\"assistant\", content=final_text))\n\n    if not turn.tool_calls:\n        return completed_result(...)\n```\n\n“没有工具调用”是当前 reference harness 的正常完成信号。等 s03 加入工具后，存在 `tool_calls` 就意味着 Harness 要执行动作、追加结果并进入下一轮。\n\n### 第 4 步：把耗尽预算变成显式结果\n\n如果所有轮次都用完，循环不能假装成功：\n\n```python\nself._emit(\n    \"error\",\n    actor_kind=\"harness\",\n    actor_id=self.config.agent_id,\n    payload={\"kind\": \"max-turns\", \"max_turns\": self.config.max_turns},\n)\nself._emit(\n    \"session.stop\",\n    actor_kind=\"harness\",\n    actor_id=self.config.agent_id,\n    payload={\"reason\": \"max-turns\"},\n)\n```\n\n调用方得到的不是一个模糊的空字符串，而是 `RunResult.stop_reason == \"max-turns\"`。可靠系统的关键不是永远成功，而是失败时仍然给出机器可读的状态。\n\n### 第 5 步：用确定性模型替身固定行为\n\n本章 demo 只声明一轮响应：\n\n```python\nmodel = ScriptedModel([\n    ModelTurn(\n        content=\"A harness keeps calling the model until work stops.\",\n        stop=True,\n    )\n])\n```\n\n`ScriptedModel` 会按顺序弹出预先声明的 turn，并保存收到的 requests。于是测试既能检查最终文本，也能检查模型在每一轮究竟看到了哪些消息。\n\n---\n\n## 运行并观察，而不是只读代码 {#run}\n\n从仓库根目录执行：\n\n```bash\npython3 -m curriculum.lessons.s01_agent_loop.demo\n```\n\n程序会先打印最终文本，再打印 Trace 0.1 JSONL。你应该看到如下事件族：\n\n```text\nsession.start\nuser.message\nmodel.request\nmodel.response\nsession.stop\n```\n\n逐项检查：\n\n1. `sequence` 从 0 开始严格递增，中间没有空洞。\n2. `model.request.payload.roles` 是 `user`；本章没有 system prompt。\n3. `model.response` 的 actor 是 `model`，而不是 Harness。\n4. `session.stop.payload.reason` 是 `completed`。\n5. 任意 payload 中都不存在 `chain_of_thought`。\n\n### 为什么 Trace 不是普通日志？\n\n普通日志面向人类排错，格式可能随时变化。Trace 是稳定的数据合同：事件有 ID、顺序、actor、provenance 和 redaction 状态，可以被播放器、实验 runner 和验证器共同消费。\n\n试着把输出保存后查询事件类型：\n\n```bash\npython3 -m curriculum.lessons.s01_agent_loop.demo \\\n  | rg '\"type\"'\n```\n\n本示例不会读写工作区、访问网络或读取环境变量，因此可以安全地重复运行。\n\n---\n\n## 读代码时应该盯住什么 {#code-reading}\n\n### `turn.stop` 为什么没有直接控制循环？\n\n当前核心以 `tool_calls` 是否为空判断是否需要继续，因为真正要求 Harness 做事的是结构化动作，而不是一个可能受 provider 流式时序影响的单一 stop 字段。`stop` 保留在内部类型中，用于 adapter 和诊断，但不能成为唯一真相。\n\n### 为什么 assistant message 在判断前追加？\n\n模型的文本和工具请求属于同一个 assistant turn。即使它同时请求工具，这一轮也必须进入历史；否则下一轮看不到自己为什么发起动作。\n\n### 为什么 `RunResult` 同时返回 messages 和 events？\n\n两者回答不同问题：\n\n- `messages` 是**模型可见状态**，用于继续推理。\n- `events` 是**观察者可见事实**，用于回放、审计和评测。\n\n不要把内部事件全部塞回模型上下文，也不要从 messages 猜测精确执行时间线。\n\n---\n\n## 常见错误与失败模式 {#failure-modes}\n\n| 错误 | 表面现象 | 正确处理 |\n| --- | --- | --- |\n| 无上限 `while True` | 模型反复请求动作，进程不退出 | 配置 `max_turns`，返回明确 stop reason |\n| 每个 chunk 都追加 message | 历史内容重复，下一轮语义污染 | chunk 只更新累积显示，流结束后追加一次 |\n| 把异常当完成 | UI 显示成功但没有最终答案 | 区分 completed、max-turns、cancelled、error |\n| Trace 记录隐藏推理 | 泄露不可验证内容，误导读者 | 只记录可观察输入、输出、动作和策略决定 |\n| 核心循环依赖厂商对象 | 更换模型时重写全部控制逻辑 | 在 adapter 边界转换为内部类型 |\n\n---\n\n## 动手实验：从小白到研究者 {#exercises}\n\n### A. 热身：看见请求\n\n在 `main()` 中运行后打印 `runner.model.requests`。验收条件：第一次 request 只有用户消息，而且内容与传入 prompt 完全一致。\n\n### B. 工程练习：触发 `max-turns`\n\n把模型第一轮改成包含一个虚构 `ToolCall`，并把 `AgentConfig.max_turns` 设为 1。验收条件：最终 `stop_reason` 是 `max-turns`，最后两个事件依次为 `error` 和 `session.stop`。\n\n### C. 设计练习：增加取消\n\n先不要写线程或 signal handler，只设计 `cancelled` 的数据合同：谁发出取消、在哪个检查点生效、是否允许正在执行的工具完成、Trace 记录什么。把答案写成一张状态转换表。\n\n### D. 研究练习：做一个 provider adapter\n\n定义一个实现 `Model` Protocol 的 adapter，将你熟悉的 SDK 响应转换成 `ModelTurn`。核心验收不是“能调用 API”，而是 `AgentRunner` 无须知道 provider 名称。\n\n运行全部课程测试验证没有破坏不变量：\n\n```bash\npython3 -m unittest discover -s curriculum/tests -v\n```\n\n---\n\n## 深入：生产级循环还缺哪些保护？ {#deep-dive}\n\n教学循环刻意只保留控制骨架。真实 coding agent 通常还需要：\n\n- **取消传播**：用户中断要传到模型流、工具进程和子任务。\n- **超时与重试**：区分可重试网络错误、上下文过长和永久参数错误。\n- **权限决策**：工具参数通过 schema 不代表允许执行。\n- **上下文预算**：在每次模型请求前决定哪些状态可见。\n- **并发纪律**：可并行的只读工具与必须串行的写操作不能混为一谈。\n- **持久会话**：崩溃后恢复需要稳定的 turn、message 和 tool-call identity。\n- **成本边界**：轮数、token、时间和金额都应该有独立预算。\n\n这些保护层会让实现从几十行增长到几百或几千行，但它们没有改变核心关系：模型提出动作，Harness 管理状态和副作用。\n\n> 判断一个复杂 Agent Loop 时，先把所有保护机制暂时折叠，寻找那条不变的数据流：request → response → effect → result → next request。\n\n---\n\n## 本章检查点 {#checkpoint}\n\n如果你能回答下面五个问题，就可以进入下一章：\n\n1. 为什么 Agent Loop 必须有 Harness 拥有的停止条件？\n2. `messages` 与 `events` 为什么不能合并成同一个数组？\n3. 为什么不能把每个 streaming chunk 追加成一条 assistant message？\n4. 达到 `max_turns` 时，调用方应该得到什么结构化信息？\n5. Provider adapter 应该位于循环内部还是边界？为什么？\n\n下一章会保持这条循环不变，只改变模型响应抵达 Harness 的方式：我们把 streaming delta 转成稳定、可回放的事件，同时保证最终消息仍然只有一条。\n",
@@ -76,6 +158,80 @@
           "en": "curriculum/lessons/s02_events_streaming/lesson.en.md"
         },
         "run": "python3 -m curriculum.lessons.s02_events_streaming.demo",
+        "change_contract": {
+          "previous_lesson_id": "s01-agent-loop",
+          "summary": {
+            "zh-CN": "保持同一循环，把单次响应改造成有序的 streaming delta。",
+            "en": "Keep the same loop while turning one response into ordered streaming deltas."
+          },
+          "adds": [
+            {
+              "zh-CN": "逐增量 model.response 事件",
+              "en": "One model.response event per delta"
+            },
+            {
+              "zh-CN": "累积文本与最终 chunk 标记",
+              "en": "Accumulated text and an explicit final-chunk marker"
+            }
+          ],
+          "preserves": [
+            {
+              "zh-CN": "一次模型 turn 最终仍只追加一条 assistant message。",
+              "en": "One model turn still appends exactly one assistant message."
+            }
+          ]
+        },
+        "golden_trace": {
+          "path": "curriculum/lessons/s02_events_streaming/golden.trace.jsonl",
+          "run_id": "run-s02-events-streaming-golden",
+          "expected_event_count": 7,
+          "focus_event_types": [
+            "model.request",
+            "model.response",
+            "session.stop"
+          ],
+          "download_path": "/data/traces/run-s02-events-streaming-golden.jsonl"
+        },
+        "agent_bridge": {
+          "relationship": "direct",
+          "claim_ids": [
+            "codex-source-event-stream",
+            "pi-source-session-events",
+            "reasonix-source-event-log"
+          ],
+          "notes": {
+            "zh-CN": "对照重点是事件边界和可消费协议，不把 UI 流式效果误当成内部事件模型。",
+            "en": "The comparison focuses on event boundaries and consumable protocols, not on inferring internals from streaming UI behavior."
+          }
+        },
+        "exercise_checks": [
+          {
+            "id": "s02-golden-trace",
+            "level": "observe",
+            "title": {
+              "zh-CN": "复核 Streaming Trace",
+              "en": "Verify the streaming trace"
+            },
+            "acceptance": {
+              "zh-CN": "三个 delta 形成三个有序事件，且最后一个明确标记 final。",
+              "en": "Three deltas produce three ordered events and the last is explicitly final."
+            },
+            "command": "python3 -m curriculum.golden verify s02-events-streaming"
+          },
+          {
+            "id": "s02-message-contract",
+            "level": "modify",
+            "title": {
+              "zh-CN": "验证流式消息合同",
+              "en": "Test the streaming message contract"
+            },
+            "acceptance": {
+              "zh-CN": "增量可回放，同时不会污染下一轮的消息历史。",
+              "en": "Deltas remain replayable without polluting the next-turn message history."
+            },
+            "command": "python3 -m unittest curriculum.tests.test_vertical_slice.VerticalSliceTests.test_s02_streaming_becomes_events -v"
+          }
+        ],
         "source_code": "from curriculum.harness import AgentRunner, ModelTurn, ScriptedModel\nfrom curriculum.lessons.common import lesson_trace, print_run\n\n\ndef build_demo() -> tuple[AgentRunner, object]:\n    trace = lesson_trace(\"s02-events-streaming\")\n    model = ScriptedModel(\n        [ModelTurn(chunks=(\"Observe \", \"events, \", \"not hidden state.\"), stop=True)]\n    )\n    return AgentRunner(model=model, trace=trace), trace\n\n\ndef main() -> None:\n    runner, trace = build_demo()\n    result = runner.run(\"Stream one observability rule.\")\n    print_run(result.final_text, trace)\n\n\nif __name__ == \"__main__\":\n    main()\n",
         "content": {
           "zh-CN": "# s02 · Streaming 与事件\n\n> 传输 chunk 是“正在到达的字节”，assistant message 是“模型最终说过的话”；两者不能混为一谈。\n\n## 学完这一章，你会得到什么 {#learn}\n\ns01 建立了有界循环，但模型响应仍像一次性返回的字符串。真实模型通常流式输出：文本逐段出现，tool-call arguments 也可能分片到达，连接还可能中途断开。本章把这些传输增量转换成稳定事件，同时维持干净的会话状态。\n\n完成本章后，你应该能够：\n\n- 区分 provider chunk、可观察 event 和最终 assistant message。\n- 解释为什么 UI 可以逐字更新，而 `messages` 只能在一轮完成后追加一次。\n- 设计严格递增、可关联、可脱敏的事件序列。\n- 从 `delta` 和 `accumulated` 字段检查流是否丢失、重复或乱序。\n- 运行确定性 streaming demo，并验证最终状态与事件投影一致。\n\n---\n\n## 问题：流式输出制造了两个时间尺度 {#problem}\n\n非流式调用只有“请求前”和“响应后”。流式调用却同时存在：\n\n1. **传输时间**：chunk 什么时候抵达，是否重试，是否断流。\n2. **会话时间**：这一轮最终形成了哪条 assistant message。\n\n如果每收到一个 chunk 就往 `messages` 追加一条 assistant message，下一轮模型会看到人为拆碎的历史：\n\n```text\nassistant: \"Observe \"\nassistant: \"events, \"\nassistant: \"not hidden state.\"\n```\n\n这不是模型说了三轮，而是一次响应经过了三次传输。正确的最终状态应该是：\n\n```text\nassistant: \"Observe events, not hidden state.\"\n```\n\n> Streaming 是 transport concern；message history 是 conversation concern；event stream 是 observability concern。\n\n---\n\n## 心智模型：一个事实，三个投影 {#mental-model}\n\n同一轮响应可以被投影到三个不同表面：\n\n| 表面 | 面向谁 | 允许增量更新吗 | 最终保留什么 |\n| --- | --- | --- | --- |\n| Provider stream | Adapter | 是 | 原始 chunk / delta |\n| Trace events | UI、评测、审计 | 是 | 每个可观察状态转换 |\n| `messages` | 下一轮模型 | 否 | 一条完整 assistant message |\n\n数据流如下：\n\n```text\nprovider chunks\n  \"Observe \" ─┐\n  \"events, \" ─┼─> accumulator ─> \"Observe events, not hidden state.\"\n  \"not...\"   ─┘         │\n                         ├─> model.response event × 3\n                         └─> assistant message × 1\n```\n\n### 事件不是隐藏状态转储\n\nTrace 只记录 Harness 实际观察到的事实：delta、累计文本、工具请求、执行结果、终止原因。它不记录模型内部不可见的 chain-of-thought，也不应该把密钥、完整环境变量或未脱敏文件内容塞进 payload。\n\n### 一条可靠事件流的四个性质\n\n1. **有序**：同一 session 内 `sequence` 严格递增。\n2. **可关联**：`parent_event_id` 或 tool-call ID 能连接因果关系。\n3. **可解释**：actor 清楚说明事件来自 user、model、harness 还是 tool。\n4. **可发布**：redaction 与 provenance 使读者知道数据边界。\n\n---\n\n## 逐步把 chunk 变成事件 {#build}\n\n### 第 1 步：让模型替身返回 chunks\n\n本章 demo 声明三个确定性增量：\n\n```python\nmodel = ScriptedModel([\n    ModelTurn(chunks=(\n        \"Observe \",\n        \"events, \",\n        \"not hidden state.\",\n    ), stop=True)\n])\n```\n\n`ModelTurn.resolved_content` 定义最终文本：\n\n```python\n@property\ndef resolved_content(self) -> str:\n    return \"\".join(self.chunks) if self.chunks else self.content\n```\n\n这是一条重要边界：adapter 可以使用任何原生 chunk 类型，但进入 Harness 后必须给出稳定的内部表示。\n\n### 第 2 步：为可见 UI 维护 accumulator\n\n`AgentRunner` 逐个处理 chunk：\n\n```python\naccumulated = \"\"\nfor index, chunk in enumerate(turn.chunks):\n    accumulated += chunk\n    self._emit(\n        \"model.response\",\n        actor_kind=\"model\",\n        actor_id=self.config.model_id,\n        payload={\n            \"turn\": turn_number,\n            \"delta\": chunk,\n            \"accumulated\": accumulated,\n            \"final\": index == len(turn.chunks) - 1,\n            \"tool_calls\": [],\n        },\n    )\n```\n\n`delta` 适合网络和调试分析；`accumulated` 适合播放器直接展示当前完整文本。生产系统可以只存 delta 以节省空间，但播放器就必须可靠地重建累计状态。\n\n### 第 3 步：流结束后只追加一次 message\n\n事件全部记录后，循环追加 `resolved_content`：\n\n```python\nfinal_text = turn.resolved_content\nmessages.append(Message(role=\"assistant\", content=final_text))\n```\n\n注意这行不在 chunk 循环里。这个位置保证“3 个 response event，1 条 assistant message”。\n\n### 第 4 步：把因果链写进 Trace\n\n`AgentRunner._emit()` 会把上一事件 ID 作为下一事件的 parent：\n\n```python\nevent_id = self.trace.emit(\n    event_type,\n    parent_event_id=self._parent_event_id,\n    **kwargs,\n)\nself._parent_event_id = event_id\n```\n\n教学实现使用线性 parent chain。更复杂系统中，并行工具会形成分支 DAG，此时不能只依赖“上一条事件”。\n\n### 第 5 步：显式标记最后一个增量\n\n最后一个 event 带有 `final: true`。消费者不必猜“多久没收到数据才算结束”，也不必把 socket close 当成业务完成。\n\n---\n\n## 运行并核对状态投影 {#run}\n\n执行：\n\n```bash\npython3 -m curriculum.lessons.s02_events_streaming.demo\n```\n\n关注三条 `model.response`：\n\n| 序号 | `delta` | `accumulated` | `final` |\n| --- | --- | --- | --- |\n| 1 | `Observe ` | `Observe ` | false |\n| 2 | `events, ` | `Observe events, ` | false |\n| 3 | `not hidden state.` | `Observe events, not hidden state.` | true |\n\n然后验证最终 `RunResult`：\n\n```python\nrunner, trace = build_demo()\nresult = runner.run(\"Stream one observability rule.\")\n\nassert result.final_text == \"Observe events, not hidden state.\"\nassert result.messages[-1].role == \"assistant\"\nassert result.messages[-1].content == result.final_text\n```\n\n### 做一次投影一致性检查\n\n最终 message、最后一个事件的 `accumulated` 和 `result.final_text` 应完全相同：\n\n```python\nresponses = [\n    event for event in result.events\n    if event[\"type\"] == \"model.response\"\n]\nassert responses[-1][\"payload\"][\"accumulated\"] == result.final_text\n```\n\n如果这条断言失败，说明 transport projection 与 conversation state 已经分叉。\n\n---\n\n## 从事件到播放器 {#code-reading}\n\n一个 Trace 播放器不需要知道模型 SDK。它只消费规范化事件，并维护一个读取游标：\n\n```text\ncursor = 0\nvisible = events[:cursor + 1]\ncurrent = visible[-1]\n```\n\n这带来三个能力：\n\n- **暂停**：检查任一事件发生时已知的事实。\n- **回放**：按 sequence 重建用户看到的过程。\n- **比较**：对两个 run 的事件类型、结果和 stop reason 做结构化 diff。\n\n但播放器不能把 `timestamp` 当作绝对真理。分布式系统会有时钟偏差；因果关系应该优先依赖 sequence、parent 和 correlation ID。\n\n---\n\n## 流式系统最常见的失败模式 {#failure-modes}\n\n| 失败 | 风险 | 需要的策略 |\n| --- | --- | --- |\n| 重复 chunk | 文本重复、tool arguments 失真 | provider event ID 去重或幂等 accumulator |\n| chunk 乱序 | JSON 无法解析、UI 倒退 | sequence 检查，拒绝或缓冲乱序事件 |\n| 连接中断 | 半条消息被误认为完成 | 独立的 interrupted/error 终止状态 |\n| 空 chunk | 消费者误判无进展 | 允许空 delta，但仍保持序列合同 |\n| tool JSON 分片 | 过早执行不完整参数 | 等 content block 完成后再验证与 dispatch |\n| 消费者太慢 | 内存不断增长 | 有界队列、背压、降采样或落盘 |\n| 敏感文本进入 Trace | 发布后泄密 | 写入前字段级 redaction，而不是事后搜索替换 |\n\n---\n\n## 动手实验 {#exercises}\n\n### A. 空增量\n\n把第二个 chunk 改成空字符串。验收条件：事件 sequence 仍连续，最终文本没有重复，最后一个 response 仍为 `final: true`。\n\n### B. 投影属性测试\n\n写一个小测试，输入任意 chunk tuple，断言：\n\n1. response event 数等于 chunk 数。\n2. 每个 `accumulated` 都是下一个的前缀。\n3. 最后一个 `accumulated` 等于 `\"\".join(chunks)`。\n4. messages 中只有一条新增 assistant message。\n\n### C. 中断合同\n\n给 `ModelTurn` 设计一个 `stream_error` 教学字段。不要直接复用 `stop=True`。验收条件：Trace 明确区分正常结束与传输中断，且半条文本是否进入 messages 有书面策略。\n\n### D. Tool-call assembler\n\n设计一个 accumulator，把三段 `{\"path\"`、`: \"README`、`.md\"}` 合并为参数对象。只有在完整 JSON 和 content-block end 同时到达后，才允许进入 s03 的 validation。\n\n---\n\n## 深入：生产事件总线的设计选择 {#deep-dive}\n\n教学实现把事件保存在内存 list 中。生产系统还要回答：\n\n- 事件先写持久化存储，还是先推 UI？\n- 客户端重连时从 event ID、sequence 还是时间戳续传？\n- 高频 token delta 是否全部保留，还是聚合成更粗粒度事件？\n- 多工具并发时，parent relationship 如何形成 DAG？\n- Redaction 在 adapter、event bus 还是 storage 层执行？\n- Schema 升级时，旧播放器如何读取新事件？\n\n一个实用分层是：provider adapter 负责协议解析，Harness 负责语义事件，transport 负责投递，storage 负责保留，UI 负责投影。任一层都不应该重新猜测上游语义。\n\n> 好的事件系统不是“记录一切”，而是以稳定合同记录足够多的可观察事实，同时明确哪些内容从未被记录。\n\n---\n\n## 本章检查点 {#checkpoint}\n\n进入 s03 前，请确认你能回答：\n\n1. 为什么三个 chunk 不能变成三条 assistant message？\n2. `delta` 与 `accumulated` 分别服务什么消费者？\n3. Socket close 为什么不能等价于业务完成？\n4. 并行工具出现后，线性 parent chain 为什么不够？\n5. Trace redaction 应该发生在公开之后还是写入之前？\n\n下一章会让模型不再只输出文本：它将产生结构化 `ToolCall`，Harness 必须验证名称和参数、执行 handler、记录结果，再把结果送回下一轮。\n",
@@ -107,6 +263,82 @@
           "en": "curriculum/lessons/s03_tool_dispatch/lesson.en.md"
         },
         "run": "python3 -m curriculum.lessons.s03_tool_dispatch.demo",
+        "change_contract": {
+          "previous_lesson_id": "s02-events-streaming",
+          "summary": {
+            "zh-CN": "在不改变循环所有权的前提下加入结构化 Tool Roundtrip。",
+            "en": "Add a structured tool roundtrip without changing ownership of the loop."
+          },
+          "adds": [
+            {
+              "zh-CN": "Tool Registry、参数校验与 dispatch",
+              "en": "Tool registry, argument validation, and dispatch"
+            },
+            {
+              "zh-CN": "tool.request 与 tool.result 的可追踪配对",
+              "en": "Traceable pairing of tool.request and tool.result"
+            }
+          ],
+          "preserves": [
+            {
+              "zh-CN": "模型只能请求动作；Harness 决定是否以及如何执行。",
+              "en": "The model only requests actions; the harness decides whether and how to execute them."
+            }
+          ]
+        },
+        "golden_trace": {
+          "path": "curriculum/lessons/s03_tool_dispatch/golden.trace.jsonl",
+          "run_id": "run-s03-tool-dispatch-golden",
+          "expected_event_count": 9,
+          "focus_event_types": [
+            "model.response",
+            "tool.request",
+            "tool.result",
+            "model.request"
+          ],
+          "download_path": "/data/traces/run-s03-tool-dispatch-golden.jsonl"
+        },
+        "agent_bridge": {
+          "relationship": "direct",
+          "claim_ids": [
+            "codex-source-tool-router",
+            "pi-source-tool-dispatch",
+            "reasonix-source-tool-dispatch",
+            "reference-harness-controlled-tool-roundtrip"
+          ],
+          "notes": {
+            "zh-CN": "Vendor 源码 Claim 与可复现 reference baseline 分开呈现；后者不是 Native Agent 证据。",
+            "en": "Vendor source claims are shown separately from the reproducible reference baseline, which is not native-agent evidence."
+          }
+        },
+        "exercise_checks": [
+          {
+            "id": "s03-golden-trace",
+            "level": "observe",
+            "title": {
+              "zh-CN": "复核 Tool Roundtrip",
+              "en": "Verify the tool roundtrip"
+            },
+            "acceptance": {
+              "zh-CN": "request、result 与第二次模型请求按因果顺序出现。",
+              "en": "The request, result, and second model request appear in causal order."
+            },
+            "command": "python3 -m curriculum.golden verify s03-tool-dispatch"
+          },
+          {
+            "id": "s03-dispatch-contract",
+            "level": "modify",
+            "title": {
+              "zh-CN": "验证 Dispatch 合同",
+              "en": "Test the dispatch contract"
+            },
+            "acceptance": {
+              "zh-CN": "工具结果以绑定 tool_call_id 的 tool message 返回下一轮。",
+              "en": "The tool result returns to the next turn as a tool message bound to tool_call_id."
+            },
+            "command": "python3 -m unittest curriculum.tests.test_vertical_slice.VerticalSliceTests.test_s03_tool_roundtrip -v"
+          }
+        ],
         "source_code": "from curriculum.harness import (\n    AgentRunner,\n    ModelTurn,\n    ScriptedModel,\n    Tool,\n    ToolCall,\n    ToolRegistry,\n)\nfrom curriculum.lessons.common import lesson_trace, print_run\n\n\ndef build_demo() -> tuple[AgentRunner, object]:\n    registry = ToolRegistry()\n    registry.register(\n        Tool(\n            name=\"echo\",\n            description=\"Return the supplied text.\",\n            parameters={\n                \"type\": \"object\",\n                \"additionalProperties\": False,\n                \"required\": [\"text\"],\n                \"properties\": {\"text\": {\"type\": \"string\"}},\n            },\n            handler=lambda args: {\"echo\": args[\"text\"]},\n        )\n    )\n    model = ScriptedModel(\n        [\n            ModelTurn(\n                tool_calls=(\n                    ToolCall(id=\"call-001\", name=\"echo\", arguments={\"text\": \"hello\"}),\n                )\n            ),\n            ModelTurn(content=\"The echo tool returned hello.\", stop=True),\n        ]\n    )\n    trace = lesson_trace(\"s03-tool-dispatch\")\n    return AgentRunner(model=model, tools=registry, trace=trace), trace\n\n\ndef main() -> None:\n    runner, trace = build_demo()\n    result = runner.run(\"Use the echo tool, then report its result.\")\n    print_run(result.final_text, trace)\n\n\nif __name__ == \"__main__\":\n    main()\n",
         "content": {
           "zh-CN": "# s03 · Tool Registry 与 Dispatch\n\n> 工具调用不是“执行一段模型文本”，而是一份必须经过描述、验证、执行、关联和回传的结构化协议。\n\n## 学完这一章，你会得到什么 {#learn}\n\n前两章的模型只能返回文本。现在我们给它第一个真正的能力：`echo`。重点并不在 echo 本身，而在完整往返——模型提出 `ToolCall`，Registry 验证名称与参数，handler 执行，Harness 记录结果并把 tool message 送回下一轮。\n\n完成本章后，你应该能够：\n\n- 解释 descriptor、schema、handler 和 tool result 各自承担的责任。\n- 区分 validation、authorization 与 execution，避免把它们混成一个“安全检查”。\n- 跟踪 `tool_call_id` 如何连接请求、结果和下一轮消息。\n- 让未知工具、缺失参数、多余参数和 handler 异常都变成结构化失败。\n- 读懂一次两轮模型调用、一次工具执行的完整 Trace。\n\n---\n\n## 问题：模型说“调用工具”以后，谁来负责？ {#problem}\n\n模型输出下面的 JSON，并不意味着程序应该直接执行：\n\n```json\n{\n  \"id\": \"call-001\",\n  \"name\": \"echo\",\n  \"arguments\": {\"text\": \"hello\"}\n}\n```\n\n在真正产生副作用前，Harness 至少要回答：\n\n1. `echo` 是已注册工具吗？\n2. `text` 是否存在且类型正确？\n3. 是否包含 schema 未声明的字段？\n4. 当前会话是否有权调用它？\n5. handler 成功、失败或超时时如何编码结果？\n6. 下一轮模型如何知道结果属于哪次请求？\n\n本章实现 1、2、3、5、6；权限与 OS sandbox 在后续层处理。\n\n> Schema validation 只能证明“参数长得像预期”，不能证明“这个动作被允许”。\n\n---\n\n## 心智模型：工具往返是一条闭环 {#mental-model}\n\n```text\nmessages + descriptors\n        │\n        ▼\n      MODEL\n        │ ToolCall(id, name, arguments)\n        ▼\n  validate name + schema\n        │\n        ├─ invalid ─> structured error result\n        │\n        ▼\n   execute handler\n        │\n        ├─ exception ─> structured error result\n        ▼\n append tool message\n        │\n        └────────────> next model request\n```\n\n闭环里有四份数据合同：\n\n| 合同 | 生产者 | 消费者 | 稳定键 |\n| --- | --- | --- | --- |\n| Tool descriptor | Registry | Model adapter | `name` |\n| Tool call | Model | Harness | `id` + `name` |\n| Tool result event | Harness/tool | Trace consumers | `tool_call_id` |\n| Tool message | Harness | 下一轮 Model | `tool_call_id` + `name` |\n\n### Descriptor 是模型的操作界面\n\n模型只看到名称、描述和参数 schema，不应该看到 Python handler、凭据或内部对象。描述越含糊，模型越容易选错工具；schema 越宽松，Harness 接到的歧义越多。\n\n### Registry 是能力目录，不是权限系统\n\n“已注册”表示 Harness 知道如何执行，并不表示任何用户、目录或会话都能执行。生产系统通常在 Registry 与 handler 之间插入 policy decision point。\n\n---\n\n## 逐步构建工具系统 {#build}\n\n### 第 1 步：定义一个 Tool\n\n核心类型把公开描述与私有实现放在一起管理，但 `descriptor()` 只投影安全字段：\n\n```python\n@dataclass(frozen=True)\nclass Tool:\n    name: str\n    description: str\n    parameters: JsonObject\n    handler: Handler\n\n    def descriptor(self) -> JsonObject:\n        return {\n            \"name\": self.name,\n            \"description\": self.description,\n            \"parameters\": self.parameters,\n        }\n```\n\n本章注册 `echo`：\n\n```python\nregistry.register(Tool(\n    name=\"echo\",\n    description=\"Return the supplied text.\",\n    parameters={\n        \"type\": \"object\",\n        \"additionalProperties\": False,\n        \"required\": [\"text\"],\n        \"properties\": {\"text\": {\"type\": \"string\"}},\n    },\n    handler=lambda args: {\"echo\": args[\"text\"]},\n))\n```\n\n`additionalProperties: False` 很重要：`{\"text\": \"hello\", \"command\": \"...\"}` 不能悄悄穿过 validation。\n\n### 第 2 步：禁止重复工具名\n\nRegistry 使用名称索引 handler：\n\n```python\ndef register(self, tool: Tool) -> None:\n    if tool.name in self._tools:\n        raise ValueError(f\"tool already registered: {tool.name}\")\n    self._tools[tool.name] = tool\n```\n\n如果后注册工具可以覆盖前一个，插件就可能劫持同名能力。即使生产系统允许 override，也应该要求显式命名空间或优先级，而不是静默覆盖。\n\n### 第 3 步：在 handler 之前验证\n\n`ToolRegistry.execute()` 先找工具，再验证参数，最后才调用 handler：\n\n```python\ntool = self._tools.get(name)\nif tool is None:\n    raise ToolValidationError(f\"unknown tool: {name}\")\n\nself._validate(tool.parameters, arguments)\nreturn tool.handler(dict(arguments))\n```\n\n教学 validator 支持 object、required、additionalProperties 和基础类型。它不是完整 JSON Schema 实现；生产系统应使用成熟 validator 并固定 schema dialect。\n\n### 第 4 步：声明模型的两轮脚本\n\n第一轮请求工具，第二轮读取结果后完成：\n\n```python\nmodel = ScriptedModel([\n    ModelTurn(tool_calls=(\n        ToolCall(\n            id=\"call-001\",\n            name=\"echo\",\n            arguments={\"text\": \"hello\"},\n        ),\n    )),\n    ModelTurn(\n        content=\"The echo tool returned hello.\",\n        stop=True,\n    ),\n])\n```\n\n这让工具往返的因果关系完全确定，不需要真实模型“碰巧”选择正确工具。\n\n### 第 5 步：执行并追加 tool message\n\n核心循环为每个 call 发出请求事件，执行 Registry，再追加结果：\n\n```python\nvalue = self.tools.execute(call.name, call.arguments)\nencoded = encode_tool_result(value)\n\nmessages.append(Message(\n    role=\"tool\",\n    content=encoded,\n    name=call.name,\n    tool_call_id=call.id,\n))\n```\n\n下一轮 request 的 roles 应该是：\n\n```text\nuser → assistant → tool\n```\n\nProvider adapter 可以把内部 `role=\"tool\"` 转换为厂商要求的原生结构，但 `tool_call_id` 必须保留。\n\n### 第 6 步：把失败也送回模型\n\n未知工具、参数错误和 handler 错误都实现为 `ToolError`。Harness 捕获后生成 JSON：\n\n```python\n{\n    \"ok\": False,\n    \"error\": str(exc),\n    \"error_type\": type(exc).__name__,\n}\n```\n\n失败仍然成为 tool message，模型才有机会修正参数、换工具或向用户解释。异常不能只写 stderr 后丢失。\n\n---\n\n## 运行完整工具往返 {#run}\n\n执行：\n\n```bash\npython3 -m curriculum.lessons.s03_tool_dispatch.demo\n```\n\n预期事件顺序：\n\n```text\nsession.start\nuser.message\nmodel.request       # turn 1: descriptors include echo\nmodel.response      # contains call-001\ntool.request        # echo({\"text\": \"hello\"})\ntool.result         # {\"echo\": \"hello\"}\nmodel.request       # turn 2: includes the tool message\nmodel.response      # final explanation\nsession.stop\n```\n\n### 检查模型第二轮看到了什么\n\n```python\nrunner, trace = build_demo()\nresult = runner.run(\"Use the echo tool, then report its result.\")\n\nsecond_request = runner.model.requests[1]\nassert [message.role for message in second_request] == [\n    \"user\", \"assistant\", \"tool\"\n]\nassert second_request[-1].tool_call_id == \"call-001\"\n```\n\n### 检查 request/result 配对\n\n```python\nrequests = [e for e in result.events if e[\"type\"] == \"tool.request\"]\nresults = [e for e in result.events if e[\"type\"] == \"tool.result\"]\n\nassert requests[0][\"payload\"][\"tool_call_id\"] == \\\n       results[0][\"payload\"][\"tool_call_id\"]\nassert results[0][\"payload\"][\"ok\"] is True\n```\n\n这比只检查最终回答更重要：模型完全可能在没有正确执行工具时生成一句看似合理的话。\n\n---\n\n## Validation、Authorization、Execution 三层边界 {#code-reading}\n\n这三个概念经常被混用：\n\n| 层 | 问题 | 例子 |\n| --- | --- | --- |\n| Validation | 输入结构有效吗？ | `path` 是字符串吗？是否有未知字段？ |\n| Authorization | 当前主体可以做吗？ | 这个 repo 是否可信？写文件要审批吗？ |\n| Execution | 动作怎样被隔离地运行？ | cwd、env、timeout、sandbox、资源上限 |\n\n正确顺序通常是 validate → authorize → execute，但还要考虑 TOCTOU：授权时检查的路径或文件，执行时可能已经变化。s04 会加入工作区边界，并明确它仍不是 OS sandbox。\n\n### 结果为什么要 JSON 编码？\n\n工具返回值可能是 dict、list、数字或布尔值。稳定 JSON 能让 provider adapter、Trace 和测试使用同一表示。`sort_keys=True` 还让确定性测试和 fingerprint 更可靠。\n\n### 错误为什么要分类？\n\n- `ToolValidationError` 表示模型可修正的输入问题。\n- `ToolExecutionError` 表示 handler 已开始但执行失败。\n- Policy denial 应该是另一类错误，因为“格式错误”和“没有权限”的恢复方式不同。\n\n---\n\n## 常见错误与攻击面 {#failure-modes}\n\n| 问题 | 后果 | 防护 |\n| --- | --- | --- |\n| `eval` 模型输出 | 任意代码执行 | 只 dispatch 已注册 handler |\n| 宽松 `additionalProperties` | 隐藏参数穿透 | 默认拒绝未知字段 |\n| 描述与实现不一致 | 模型选错或误用工具 | descriptor 与 handler 同版本发布 |\n| 丢失 `tool_call_id` | 并发结果无法配对 | 请求、事件、消息全程保留 ID |\n| handler 异常冒出循环 | 会话突然终止 | 分类并编码失败结果 |\n| 结果无限大 | 上下文和 UI 被淹没 | s06 的输出预算与截断 |\n| 重试非幂等写操作 | 重复修改或扣费 | 幂等键、事务或人工确认 |\n| 工具输出提示注入 | 下一轮模型被不可信文本操纵 | 标记来源、最小暴露、策略隔离 |\n\n---\n\n## 动手实验 {#exercises}\n\n### A. 拒绝额外参数\n\n把 call arguments 改为 `{\"text\": \"hello\", \"extra\": true}`。验收条件：handler 不执行；`tool.result.payload.ok` 为 false；`error_type` 是 `ToolValidationError`。\n\n### B. 未知工具恢复\n\n把名称改成 `missing_tool`，但保留第二轮模型响应。观察 Harness 如何把错误作为 tool message 回送。然后让第二轮脚本改为请求正确的 `echo`，验证循环可以恢复。\n\n### C. 新增结构化工具\n\n注册 `add`，参数为两个 number，返回 `{\"sum\": ...}`。验收条件：不修改 `AgentRunner.run()`；只新增 Tool 定义和脚本 turn。\n\n### D. 并发设计题\n\n假设一轮同时请求 `read_file A`、`read_file B` 和 `write_file C`。为 Tool 增加 `concurrency` 元数据，设计调度规则：哪些能并行，哪些必须等待，结果仍如何按 call ID 回传。\n\n### E. Fuzz validation\n\n对 arguments 生成缺字段、错类型、布尔伪装整数、深层对象和超大字符串。验收条件：任何非法输入都在 handler 前失败，且错误可序列化。\n\n---\n\n## 深入：生产级 Tool Runtime {#deep-dive}\n\n成熟 Harness 通常把 Registry 扩展成完整 runtime：\n\n- **Discovery**：内置工具、插件、MCP server 和动态能力如何合并。\n- **Namespacing**：不同 provider 出现同名工具时如何避免冲突。\n- **Policy metadata**：read/write/network/destructive 等风险标签。\n- **Approval**：在副作用前暂停，并把决定绑定到精确参数。\n- **Isolation**：子进程、文件系统、网络和资源限制。\n- **Cancellation**：取消信号传进 handler，清理子进程。\n- **Observability**：duration、exit status、截断、redaction 和 provenance。\n- **Idempotency**：重试不会重复产生不可逆副作用。\n\n另一个关键问题是工具描述本身也属于 prompt surface。过多、重叠或模糊的工具会消耗 token 并降低选择准确率，因此生产系统可能按任务动态筛选 descriptor，而不是每轮广播全部能力。\n\n> Tool use 的质量由两部分共同决定：模型是否选对动作，以及 Harness 是否把动作安全、准确、可恢复地执行。只优化其中一半不够。\n\n---\n\n## 本章检查点 {#checkpoint}\n\n进入 s04 前，请确认你能回答：\n\n1. Tool descriptor 为什么不能包含 handler 或凭据？\n2. Schema-valid 为什么不等于 authorized？\n3. `tool_call_id` 必须在哪四个位置保留？\n4. Handler 失败为什么仍要生成 tool message？\n5. 新增工具为什么不应该修改核心循环？\n\n下一章会把抽象 handler 换成真实的 File、Shell 和 Edit 工具，并围绕工作区路径、命令 allowlist 和精确替换建立第一层副作用边界。\n",
@@ -138,6 +370,81 @@
           "en": "curriculum/lessons/s04_workspace_tools/lesson.en.md"
         },
         "run": "python3 -m curriculum.lessons.s04_workspace_tools.demo",
+        "change_contract": {
+          "previous_lesson_id": "s03-tool-dispatch",
+          "summary": {
+            "zh-CN": "把抽象工具替换为受工作区边界约束的真实文件副作用。",
+            "en": "Replace an abstract tool with real file effects constrained by a workspace boundary."
+          },
+          "adds": [
+            {
+              "zh-CN": "路径规范化、逃逸拒绝与显式工具 allowlist",
+              "en": "Path normalization, escape rejection, and an explicit tool allowlist"
+            },
+            {
+              "zh-CN": "可处置 fixture 中的真实文件读取",
+              "en": "A real file read inside a disposable fixture"
+            }
+          ],
+          "preserves": [
+            {
+              "zh-CN": "工具 Schema 校验不能替代权限与执行边界。",
+              "en": "Tool-schema validation does not replace permissions or execution boundaries."
+            }
+          ]
+        },
+        "golden_trace": {
+          "path": "curriculum/lessons/s04_workspace_tools/golden.trace.jsonl",
+          "run_id": "run-s04-workspace-tools-golden",
+          "expected_event_count": 9,
+          "focus_event_types": [
+            "tool.request",
+            "tool.result",
+            "session.stop"
+          ],
+          "download_path": "/data/traces/run-s04-workspace-tools-golden.jsonl"
+        },
+        "agent_bridge": {
+          "relationship": "adjacent",
+          "claim_ids": [
+            "codex-source-execution-policy",
+            "pi-source-execution-boundary",
+            "reasonix-source-execution-policy",
+            "claude-code-doc-execution-policy"
+          ],
+          "notes": {
+            "zh-CN": "这些 Claim 证明相邻的 approval/sandbox 边界；它们不等同于本章教学用的 Path.resolve 实现。",
+            "en": "These claims establish adjacent approval and sandbox boundaries; they do not imply the agents use this lesson's Path.resolve implementation."
+          }
+        },
+        "exercise_checks": [
+          {
+            "id": "s04-golden-trace",
+            "level": "observe",
+            "title": {
+              "zh-CN": "复核工作区读取",
+              "en": "Verify the workspace read"
+            },
+            "acceptance": {
+              "zh-CN": "Golden Trace 只包含 fixture 内的相对路径与干净结果。",
+              "en": "The Golden Trace contains only a fixture-relative path and a clean result."
+            },
+            "command": "python3 -m curriculum.golden verify s04-workspace-tools"
+          },
+          {
+            "id": "s04-boundary-contract",
+            "level": "modify",
+            "title": {
+              "zh-CN": "攻击路径边界",
+              "en": "Challenge the path boundary"
+            },
+            "acceptance": {
+              "zh-CN": "../ 逃逸在任何文件操作发生前被拒绝。",
+              "en": "A ../ escape is rejected before any filesystem operation occurs."
+            },
+            "command": "python3 -m unittest curriculum.tests.test_vertical_slice.VerticalSliceTests.test_workspace_rejects_escape -v"
+          }
+        ],
         "source_code": "from pathlib import Path\n\nfrom curriculum.harness import (\n    AgentRunner,\n    ModelTurn,\n    ScriptedModel,\n    ToolCall,\n    Workspace,\n    workspace_tool_registry,\n)\nfrom curriculum.lessons.common import lesson_trace, print_run\n\n\ndef build_demo() -> tuple[AgentRunner, object]:\n    workspace = Workspace(Path(__file__).parent / \"fixture\")\n    registry = workspace_tool_registry(workspace)\n    model = ScriptedModel(\n        [\n            ModelTurn(\n                tool_calls=(\n                    ToolCall(\n                        id=\"call-readme\",\n                        name=\"read_file\",\n                        arguments={\"path\": \"README.md\"},\n                    ),\n                )\n            ),\n            ModelTurn(content=\"The fixture describes a bounded workspace.\", stop=True),\n        ]\n    )\n    trace = lesson_trace(\"s04-workspace-tools\")\n    return AgentRunner(model=model, tools=registry, trace=trace), trace\n\n\ndef main() -> None:\n    runner, trace = build_demo()\n    result = runner.run(\"Read the fixture README and summarize it.\")\n    print_run(result.final_text, trace)\n\n\nif __name__ == \"__main__\":\n    main()\n",
         "content": {
           "zh-CN": "# s04 · File、Shell 与 Edit Tools\n\n> 给 Agent “手”之前，先定义它的工作台边界；路径检查是第一层护栏，不是完整 sandbox。\n\n## 学完这一章，你会得到什么 {#learn}\n\ns03 的 `echo` 没有副作用。真实 coding agent 必须读文件、写文件、做精确编辑并运行命令；从这一刻开始，错误不再只是坏字符串，而可能变成数据丢失、越界读取或任意代码执行。\n\n本章构建一个小型 `Workspace` 和四种能力：`read_file`、`write_file`、`replace_text`、`run_command`。默认 demo 只开放读取，所有写入与命令都必须在创建 Registry 时显式启用。\n\n完成本章后，你应该能够：\n\n- 用规范化绝对路径检查阻止绝对路径与 `../` 逃逸。\n- 解释为什么 path containment、approval 和 OS sandbox 是三层不同机制。\n- 说明 argv 执行相对 shell string 的安全收益与剩余风险。\n- 设计“恰好匹配一次”的 edit contract，避免含糊修改。\n- 为文件与命令工具写出正向、越界和失败测试。\n\n---\n\n## 问题：副作用把错误成本放大了 {#problem}\n\n考虑模型提出的四个请求：\n\n```text\nread_file(\"README.md\")\nread_file(\"../../.ssh/config\")\nreplace_text(\"app.py\", \"return 1\", \"return 2\")\nrun_command([\"python3\", \"script.py\"])\n```\n\n它们在 JSON 层都可能完全合法，但风险完全不同。Schema 只能确认 `path` 是字符串、`argv` 是数组；它不知道路径是否越界、命令是否获准、目标文件是否可信，也不能约束子进程的系统调用。\n\n因此副作用工具至少需要四层边界：\n\n| 层 | 回答的问题 | 本章是否实现 |\n| --- | --- | --- |\n| Input validation | 参数结构正确吗？ | 是 |\n| Workspace boundary | 目标路径仍在项目内吗？ | 是，教学级 |\n| Policy / approval | 当前请求被允许吗？ | 只用静态 allowlist 示范 |\n| OS sandbox | 进程实际能访问哪些系统资源？ | 否 |\n\n> 不要把“路径没有逃逸”写成“工具是安全的”。准确陈述边界，本身就是安全设计的一部分。\n\n---\n\n## 心智模型：能力越强，决策点越多 {#mental-model}\n\n```text\nToolCall\n   │\n   ├─ validate schema\n   ├─ resolve workspace target\n   ├─ decide policy / approval\n   ├─ execute with timeout + minimal environment\n   ├─ bound output\n   └─ record result + provenance\n```\n\n文件工具与命令工具共享 Registry 协议，但威胁模型不同：\n\n| 工具 | 主要输入 | 主要风险 | 关键不变量 |\n| --- | --- | --- | --- |\n| Read | relative path | 越界读取、秘密泄露、超大文件 | resolved path 位于 root，输出有上限 |\n| Write | path + content | 覆盖数据、创建恶意配置 | 显式启用，路径受限 |\n| Edit | path + old + new | 匹配错误、重复替换 | old 恰好出现一次 |\n| Command | argv | 任意执行、网络/进程逃逸 | executable allowlist、无 shell、超时 |\n\n### 默认能力应该最小\n\n`workspace_tool_registry(workspace)` 默认只注册 `read_file`。只有传入 `allow_writes=True` 才加入写与编辑；只有 `allowed_commands` 非空才加入命令工具。能力不是运行时碰运气拒绝，而是在 descriptor 暴露前就尽量缩小。\n\n---\n\n## 逐步构建 Workspace 边界 {#build}\n\n### 第 1 步：固定并规范化 root\n\n```python\nclass Workspace:\n    def __init__(self, root: str | Path) -> None:\n        self.root = Path(root).resolve()\n```\n\n保存绝对、规范化 root，后续比较才不会受调用方 cwd 变化影响。生产系统还要决定 root 是否允许包含 symlink，以及项目在运行期间能否被替换。\n\n### 第 2 步：只接受相对路径\n\n```python\ndef resolve(self, relative_path: str) -> Path:\n    if not relative_path or Path(relative_path).is_absolute():\n        raise ToolValidationError(\"path must be non-empty and relative\")\n\n    candidate = (self.root / relative_path).resolve()\n    try:\n        candidate.relative_to(self.root)\n    except ValueError as exc:\n        raise ToolValidationError(\"path escapes the workspace\") from exc\n    return candidate\n```\n\n关键不是检查字符串里有没有 `..`。`a/../README.md` 可能合法，编码、分隔符和 symlink 也会让纯字符串检查失效。先 resolve，再用路径语义确认 candidate 属于 root。\n\n### 第 3 步：限制读取结果\n\n```python\ndef read_file(self, relative_path: str, *, max_chars: int = 20_000):\n    path = self.resolve(relative_path)\n    content = path.read_text(encoding=\"utf-8\")\n    return {\n        \"path\": relative_path,\n        \"content\": content[:max_chars],\n        \"truncated\": len(content) > max_chars,\n    }\n```\n\n路径安全不代表输出大小安全。读取结果需要明确的截断标记，否则模型会把 preview 当成完整文件。\n\n### 第 4 步：让编辑拒绝歧义\n\n```python\noccurrences = content.count(old)\nif occurrences != 1:\n    raise ToolExecutionError(\n        f\"expected exactly one match, found {occurrences}\"\n    )\nupdated = content.replace(old, new, 1)\n```\n\n零匹配说明文件已变化或模型引用错误；多匹配说明 edit 不够精确。两种情况都应停止并返回结构化失败，而不是“尽量改一个”。\n\n### 第 5 步：命令使用 argv，不经过 shell\n\n```python\nif not argv or argv[0] not in allowed_commands:\n    raise ToolValidationError(\"command is not in the lesson allowlist\")\n\ncompleted = subprocess.run(\n    argv,\n    cwd=self.root,\n    env={\"PATH\": os.environ.get(\"PATH\", \"\"), \"LANG\": \"C.UTF-8\"},\n    capture_output=True,\n    text=True,\n    timeout=timeout_seconds,\n    check=False,\n)\n```\n\n把参数直接传给 `subprocess.run`，意味着 `;`、`$()`、重定向等不会自动获得 shell 语义。但被允许的 executable 本身仍可能执行任意代码，例如 `python3 -c ...`；所以 executable allowlist 只是示范，不是完整命令 policy。\n\n### 第 6 步：Registry 按配置投影能力\n\n```python\nregistry = workspace_tool_registry(\n    workspace,\n    allow_writes=False,\n    allowed_commands=(),\n)\n```\n\n本章 demo 使用这个最小配置，所以模型 descriptor 里只有 `read_file`。如果能力没有暴露，模型就不会被鼓励去调用它；即使模型伪造名字，s03 的 Registry 仍会拒绝。\n\n---\n\n## 运行受限读取示例 {#run}\n\n执行：\n\n```bash\npython3 -m curriculum.lessons.s04_workspace_tools.demo\n```\n\nDemo root 固定为：\n\n```text\ncurriculum/lessons/s04_workspace_tools/fixture/\n└── README.md\n```\n\n模型请求 `read_file({\"path\": \"README.md\"})`，预期 Trace 包含成功的 tool result：\n\n```python\nrunner, trace = build_demo()\nresult = runner.run(\"Read the fixture README and summarize it.\")\n\ntool_result = next(\n    event for event in result.events\n    if event[\"type\"] == \"tool.result\"\n)\nassert tool_result[\"payload\"][\"ok\"] is True\nassert tool_result[\"payload\"][\"tool\"] == \"read_file\"\n```\n\n### 直接验证逃逸被拒绝\n\n在临时目录里运行：\n\n```python\nfrom tempfile import TemporaryDirectory\nfrom curriculum.harness import Workspace\nfrom curriculum.harness.tools import ToolValidationError\n\nwith TemporaryDirectory() as directory:\n    workspace = Workspace(directory)\n    try:\n        workspace.resolve(\"../outside.txt\")\n    except ToolValidationError as error:\n        assert str(error) == \"path escapes the workspace\"\n```\n\n验收重点是：错误发生在任何文件读取或写入之前。\n\n---\n\n## 四个实现边界，必须说准确 {#code-reading}\n\n### Path containment 不是 sandbox\n\n`Workspace.resolve()` 只能约束经过它解析的路径。它不能阻止允许的子进程读取其他目录、访问网络、fork 新进程或调用系统 API。\n\n### Allowlist 不是语义分析器\n\n允许 `git` 不代表所有 `git` 子命令都安全；允许 `python3` 几乎等于允许通用程序执行。生产 policy 往往需要检查 executable、subcommand、flags、cwd、环境和信任状态。\n\n### 当前写入不是原子的\n\n`write_text()` 直接覆盖目标文件。进程中断可能留下部分状态；并发 writer 可能相互覆盖。更稳健的实现会写临时文件、fsync，并在同一文件系统内原子 rename。\n\n### Resolve 与使用之间存在时间窗口\n\n检查 candidate 到真正 open 之间，攻击者可能替换 symlink 或目录。这是 TOCTOU。高威胁环境需要基于 file descriptor 的安全打开方式或 OS sandbox，而不是重复调用 `resolve()`。\n\n---\n\n## 常见失败模式 {#failure-modes}\n\n| 错误 | 表面上为什么合理 | 实际风险 |\n| --- | --- | --- |\n| `path.startswith(root)` | 写起来简单 | `/work/project-evil` 也可能匹配 |\n| 只拒绝字符串 `..` | 看似能挡 traversal | 编码、symlink、规范化绕过 |\n| `shell=True` 执行模型字符串 | 支持管道与重定向 | 命令注入面急剧扩大 |\n| edit 替换第一个匹配 | 总能“做点事” | 修改错误位置且难以察觉 |\n| 把完整 stdout 送回模型 | 信息最全 | context 溢出、秘密泄露 |\n| 默认开放写工具 | 使用方便 | 不必要的副作用面 |\n| 复用完整父进程环境 | 省去配置 | 凭据和敏感变量进入子进程 |\n\n---\n\n## 动手实验 {#exercises}\n\n### A. 路径测试矩阵\n\n分别测试 `README.md`、`./README.md`、`folder/../README.md`、`../outside` 和绝对路径。把“接受/拒绝”写成表，再运行断言验证实现与威胁模型一致。\n\n### B. 精确编辑\n\n在临时 fixture 写入两个相同的 `TODO`，调用 `replace_text`。验收条件：文件内容不变，错误报告 `found 2`。然后把 old 扩展成唯一上下文，确认只修改一次。\n\n### C. 命令 allowlist\n\n创建 Registry，只允许 `python3`，调用 `git status`。验收条件：在启动子进程前得到 `ToolValidationError`。再解释为什么允许 `python3` 仍然风险很高。\n\n### D. 超时\n\n为一个允许的测试程序设置极短 timeout。设计 `TimeoutExpired` 到 `ToolExecutionError` 的转换，并确保 Trace 不把它误标为 validation failure。\n\n### E. 原子写设计\n\n不用立即实现，先画出步骤：同目录临时文件 → 写入 → flush/fsync → 权限处理 → atomic replace → 清理。标注每一步失败后的恢复策略。\n\n---\n\n## 深入：生产级副作用治理 {#deep-dive}\n\n生产 coding agent 通常组合多层防线：\n\n- **Project trust**：未信任仓库中的指令和脚本默认不能获得高权限。\n- **Capability policy**：按 read/write/network/destructive 分类工具。\n- **Argument-aware approval**：批准的是精确命令或路径范围，不是抽象工具名。\n- **OS sandbox**：使用容器、namespace、seatbelt、seccomp 或平台隔离限制实际系统调用。\n- **Network policy**：域名、端口、DNS、代理和凭据注入都要受控。\n- **Resource limits**：CPU、内存、文件大小、进程数和 wall time。\n- **Audit trail**：记录请求、决定、执行结果和 redaction，但不泄露秘密。\n- **Rollback strategy**：版本控制、备份或事务让失败操作可恢复。\n\n安全不是一个布尔字段，而是一连串可审查的决策点。最危险的设计是把所有层压缩成 `safe=True`，让读者误以为边界已经完整。\n\n> 最小权限不仅是“拒绝危险动作”，还包括“不向模型描述当前任务根本不需要的能力”。\n\n---\n\n## 本章检查点 {#checkpoint}\n\n进入 s05 前，请确认你能回答：\n\n1. 为什么 `candidate.startswith(root)` 不是可靠路径检查？\n2. 不经过 shell 能消除哪些风险，又保留哪些风险？\n3. 为什么 edit 要求 old 恰好出现一次？\n4. Path boundary 与 OS sandbox 的责任分别是什么？\n5. 为什么写工具应该显式启用，而不是默认注册？\n\n下一章会处理另一种边界：项目里的 `AGENTS.md` 可以告诉 Agent 如何工作，但它本身也是不可信输入。我们要确定发现范围、层级顺序、大小限制和权限上限。\n",
@@ -168,6 +475,76 @@
           "en": "curriculum/lessons/s05_instructions/lesson.en.md"
         },
         "run": "python3 -m curriculum.lessons.s05_instructions.demo",
+        "change_contract": {
+          "previous_lesson_id": "s04-workspace-tools",
+          "summary": {
+            "zh-CN": "在模型请求前加入可审计、从根到叶组合的项目指令。",
+            "en": "Compile auditable root-to-leaf project instructions before the model request."
+          },
+          "adds": [
+            {
+              "zh-CN": "有界目录遍历与分层 instruction discovery",
+              "en": "Bounded directory traversal and layered instruction discovery"
+            },
+            {
+              "zh-CN": "来源可见、顺序稳定的 system prompt 组合",
+              "en": "Source-visible, deterministically ordered system-prompt composition"
+            }
+          ],
+          "preserves": [
+            {
+              "zh-CN": "项目指令仍由 Harness 发现和编译，而不是由模型自行搜索。",
+              "en": "Project instructions are still discovered and compiled by the harness, not searched for ad hoc by the model."
+            }
+          ]
+        },
+        "golden_trace": {
+          "path": "curriculum/lessons/s05_instructions/golden.trace.jsonl",
+          "run_id": "run-s05-instructions-golden",
+          "expected_event_count": 5,
+          "focus_event_types": [
+            "model.request",
+            "model.response",
+            "session.stop"
+          ],
+          "download_path": "/data/traces/run-s05-instructions-golden.jsonl"
+        },
+        "agent_bridge": {
+          "relationship": "gap",
+          "claim_ids": [],
+          "notes": {
+            "zh-CN": "当前固定 Snapshot 尚无达到本项目证据标准的 instruction precedence Claim；网页必须把它显示为研究缺口，而不是猜测实现。",
+            "en": "Current pinned snapshots do not yet have an instruction-precedence claim at this project's evidence standard; the site must show that research gap instead of guessing."
+          }
+        },
+        "exercise_checks": [
+          {
+            "id": "s05-golden-trace",
+            "level": "observe",
+            "title": {
+              "zh-CN": "复核指令输入",
+              "en": "Verify instruction input"
+            },
+            "acceptance": {
+              "zh-CN": "运行与提交的 Trace 一致，且不泄露本地绝对路径。",
+              "en": "The run matches the committed trace without leaking a local absolute path."
+            },
+            "command": "python3 -m curriculum.golden verify s05-instructions"
+          },
+          {
+            "id": "s05-precedence-contract",
+            "level": "modify",
+            "title": {
+              "zh-CN": "验证 Root-to-leaf 顺序",
+              "en": "Test root-to-leaf precedence"
+            },
+            "acceptance": {
+              "zh-CN": "根级指令稳定出现在 package 级指令之前，外部 cwd 被拒绝。",
+              "en": "Root instructions remain before package instructions and an external cwd is rejected."
+            },
+            "command": "python3 -m unittest curriculum.tests.test_vertical_slice.VerticalSliceTests.test_s05_root_to_leaf_instructions curriculum.tests.test_vertical_slice.VerticalSliceTests.test_instruction_discovery_rejects_external_cwd -v"
+          }
+        ],
         "source_code": "from pathlib import Path\n\nfrom curriculum.harness import AgentRunner, ModelTurn, ScriptedModel, discover_instructions\nfrom curriculum.harness.context import render_instructions\nfrom curriculum.lessons.common import lesson_trace, print_run\n\n\ndef build_demo() -> tuple[AgentRunner, object]:\n    fixture = Path(__file__).parent / \"fixture\"\n    documents = discover_instructions(fixture, fixture / \"package\")\n    prompt = render_instructions(documents)\n    model = ScriptedModel(\n        [ModelTurn(content=\"I will preserve tests and use package-local style.\", stop=True)]\n    )\n    trace = lesson_trace(\"s05-instructions\")\n    return AgentRunner(model=model, trace=trace, system_prompt=prompt), trace\n\n\ndef main() -> None:\n    runner, trace = build_demo()\n    result = runner.run(\"State the two instructions you will follow.\")\n    print_run(result.final_text, trace)\n\n\nif __name__ == \"__main__\":\n    main()\n",
         "content": {
           "zh-CN": "# s05 · Instructions 与项目发现\n\n> 项目指令是 Harness 发现的上下文，不是仓库授予自己的权限。\n\n## 学完这一章，你会得到什么 {#learn}\n\nCoding agent 不能只理解用户当前一句话。它还要知道项目怎样测试、哪些目录有特殊规则、代码遵循什么约定。很多 Harness 会从工作区发现 `AGENTS.md` 或类似文件，并根据当前目录组合成 system context。\n\n本章实现一个确定性的 root-to-leaf discovery：从 workspace root 走到 cwd，按顺序读取每一层 `AGENTS.md`，限制单文件大小，再把文档渲染进 system prompt。\n\n完成本章后，你应该能够：\n\n- 解释为什么 instruction discovery 属于 Harness，而不是让模型自己随意搜索。\n- 从 root 到 cwd 构造唯一、可测试的加载顺序。\n- 区分“更具体的项目约定”与“更高的安全权限”。\n- 处理 cwd 越界、超大文件、编码错误和动态变化。\n- 在 Trace 和 prompt 中保留指令来源，而不是拼成无法审计的一大段文字。\n\n---\n\n## 问题：同一个任务在不同目录有不同约束 {#problem}\n\n假设仓库结构如下：\n\n```text\nworkspace/\n├── AGENTS.md                 # 全局：修改后必须跑测试\n├── packages/\n│   ├── AGENTS.md             # 包级：使用 package-local 命名\n│   └── api/\n│       ├── AGENTS.md         # 目录级：路由必须有集成测试\n│       └── handler.py        # 当前 cwd\n└── README.md\n```\n\n如果 cwd 是 `packages/api`，只读 root 会漏掉局部约定，只读 cwd 会漏掉全局规则，无序搜索则让行为随文件系统遍历顺序变化。\n\nHarness 需要明确回答：\n\n1. 从哪个 root 开始？\n2. 最深读到哪里？\n3. 同名指令的顺序是什么？\n4. 文件有多大才允许进入 prompt？\n5. 指令能否要求访问工作区外、关闭 sandbox 或泄露密钥？\n\n> Instruction precedence 解决的是上下文组合，不是权限提升。低信任输入不能覆盖平台政策、用户意图或系统安全边界。\n\n---\n\n## 心智模型：作用域链，而不是全文搜索 {#mental-model}\n\n把目录层级看成编程语言里的 lexical scope：\n\n```text\nworkspace root\n    │  AGENTS.md\n    ▼\npackages\n    │  AGENTS.md\n    ▼\npackages/api  ← cwd\n       AGENTS.md\n```\n\n只有 root 到 cwd 这条祖先链相关。兄弟目录的指令不应因为一次全仓库 glob 偶然进入上下文。\n\n| 维度 | 决策 | 本章策略 |\n| --- | --- | --- |\n| Scope | 哪些目录相关 | root → cwd 的祖先链 |\n| Order | 如何组合 | root-to-leaf |\n| Identity | 如何保留来源 | workspace-relative path |\n| Size | 如何限制输入 | 每文件最多 32,000 bytes |\n| Encoding | 非法 UTF-8 怎么办 | replacement decoding |\n| Authority | 指令能授予什么 | 不能提升权限 |\n\n### 顺序只是输入，不是自动 override\n\n本章把更具体的文件放在后面，让模型同时看到全局与局部规则。真正的冲突语义仍需产品定义：是后者覆盖、两者都必须满足，还是冲突时询问用户。不要把字符串拼接顺序误当成完整 policy engine。\n\n---\n\n## 逐步实现确定性发现 {#build}\n\n### 第 1 步：规范化 root 与 cwd\n\n```python\nroot = Path(workspace_root).resolve()\ncurrent = Path(cwd).resolve()\nif not _inside(root, current):\n    raise ValueError(\"cwd must be inside workspace_root\")\n```\n\n发现前先验证 cwd 属于 workspace。否则调用方可以把 root 指向可信项目，却让 discovery 去读取任意外部目录。\n\n### 第 2 步：构造祖先链\n\n```python\ndirectories = [root]\ncursor = root\nfor part in current.relative_to(root).parts:\n    cursor = cursor / part\n    directories.append(cursor)\n```\n\n如果 cwd 等于 root，列表只有 root；如果 cwd 是三层子目录，就得到四个稳定条目。没有递归 glob，也不会碰兄弟目录。\n\n### 第 3 步：按层查找固定文件名\n\n```python\nfor directory in directories:\n    candidate = directory / filename\n    if not candidate.is_file():\n        continue\n```\n\n文件名是显式配置，默认 `AGENTS.md`。生产 Harness 可能支持多种约定，但每增加一种都要定义优先级、去重和冲突规则。\n\n### 第 4 步：在进入 prompt 前限制字节数\n\n```python\nraw = candidate.read_bytes()\nif len(raw) > max_bytes_per_file:\n    raw = raw[:max_bytes_per_file]\n\ndocuments.append(InstructionDocument(\n    path=candidate.relative_to(root).as_posix(),\n    content=raw.decode(\"utf-8\", errors=\"replace\"),\n))\n```\n\n先按 bytes 限制，避免解码前就读入无限 prompt；用 replacement decoding 让坏编码成为可见字符，而不是让整个会话崩溃。生产系统还应记录 `truncated: true` 和原始大小，本教学类型暂未包含这些字段。\n\n### 第 5 步：保留来源地渲染\n\n```python\ndef render_instructions(documents):\n    return \"\\n\\n\".join(\n        f\"# Instructions from {document.path}\\n\"\n        f\"{document.content.strip()}\"\n        for document in documents\n    )\n```\n\n来源标题让模型、调试器和审计者知道每条规则来自哪里。不要只拼接裸文本，否则冲突发生时无法解释。\n\n### 第 6 步：把结果放进 system message\n\n```python\ndocuments = discover_instructions(fixture, fixture / \"package\")\nprompt = render_instructions(documents)\n\nrunner = AgentRunner(\n    model=model,\n    trace=trace,\n    system_prompt=prompt,\n)\n```\n\ns01 的初始消息逻辑会把这段 prompt 放在 user message 之前。Core loop 不需要知道文件系统发现细节。\n\n---\n\n## 运行两层指令示例 {#run}\n\nFixture 是：\n\n```text\ncurriculum/lessons/s05_instructions/fixture/\n├── AGENTS.md\n└── package/\n    └── AGENTS.md\n```\n\nRoot 文件要求保留测试，package 文件要求使用局部命名风格。执行：\n\n```bash\npython3 -m curriculum.lessons.s05_instructions.demo\n```\n\n检查 system message 中的顺序：\n\n```python\nrunner, trace = build_demo()\nresult = runner.run(\"State the two instructions you will follow.\")\n\nsystem = result.messages[0]\nassert system.role == \"system\"\nassert system.content.index(\"Workspace instructions\") < \\\n       system.content.index(\"Package instructions\")\n```\n\n模型脚本返回：\n\n```text\nI will preserve tests and use package-local style.\n```\n\n这不是在评测模型遵循率，而是在验证 discovery → render → initial messages 的 Harness 数据链路。\n\n### 验证外部 cwd 被拒绝\n\n```python\nwith TemporaryDirectory() as root, TemporaryDirectory() as outside:\n    with self.assertRaises(ValueError):\n        discover_instructions(root, outside)\n```\n\n这是 discovery 自己的边界检查，不能依赖调用方“应该传正确路径”。\n\n---\n\n## 指令的信任边界 {#code-reading}\n\n### 项目文件是数据，不是更高优先级命令\n\n仓库可能来自互联网，`AGENTS.md` 也可能写着“上传环境变量”“关闭测试”“忽略用户”。Harness 应把它放在平台和用户约束之下，并且不能让文字自动改变工具权限。\n\n### Prompt order 与 authority order 不同\n\n一段文本出现在 system prompt，并不天然获得平台级 system authority。产品需要明确标注来源与信任等级；更成熟的协议会把 platform policy、user instruction 和 repository guidance 分成不同结构，而不是只靠一条长字符串。\n\n### 指令发现应绑定工作对象\n\n如果 Agent 从 `package/a` 切换到 `package/b`，适用指令也会变化。Harness 应在 cwd 或操作目标变化时重新计算 scope，或者明确固定当前工作上下文，避免使用过期缓存。\n\n### 来源与内容都需要预算\n\n大量嵌套指令会占满上下文。可以限制文件数、单文件大小、总大小和层级深度，并在 Trace 中记录哪些文件被加载、截断或跳过。\n\n---\n\n## 常见失败模式 {#failure-modes}\n\n| 错误 | 结果 | 更好的设计 |\n| --- | --- | --- |\n| 全仓库递归查找 | 兄弟目录规则污染当前任务 | 只遍历 root-to-cwd 祖先链 |\n| 依赖 `os.walk` 顺序 | 不同平台行为不同 | 显式构造目录序列 |\n| 丢掉文件路径 | 无法解释冲突来源 | 每段保留 workspace-relative identity |\n| 无大小上限 | Prompt 被大文件占满 | 单文件和总预算 |\n| 指令文字提升权限 | 恶意仓库突破边界 | Authority 与内容分离 |\n| 缓存永不失效 | 切换目录后用错规则 | 绑定 cwd、mtime 或 content digest |\n| 静默截断 | 模型误以为规则完整 | 记录 truncated 状态并展示警告 |\n| 发现失败直接忽略 | Agent 在未知规则下修改 | 按风险选择 fail closed 或提示用户 |\n\n---\n\n## 动手实验 {#exercises}\n\n### A. 增加第三层\n\n在 `fixture/package/child/AGENTS.md` 加一条规则，并把 cwd 改为 child。验收条件：system prompt 顺序严格为 root、package、child。\n\n### B. 兄弟目录隔离\n\n添加 `fixture/sibling/AGENTS.md`，cwd 仍为 package。验收条件：sibling 内容不出现在 documents 或 prompt 中。\n\n### C. 大小上限\n\n把 `max_bytes_per_file` 设为很小的值，输入多字节中文。观察字节切断可能落在 UTF-8 字符中间，replacement decoding 会出现什么。设计一个既按 bytes 防御、又尽量在字符边界截断的改进版。\n\n### D. 冲突策略\n\nRoot 写“使用双引号”，leaf 写“使用单引号”。分别设计三种产品语义：leaf override、全部约束、冲突询问。说明它们对可预测性与用户体验的影响。\n\n### E. 来源 Trace\n\n增加 `instructions.loaded` 事件，payload 只包含相对路径、bytes、truncated 和 digest，不包含完整敏感内容。验收条件：可以证明加载了什么，又不会复制整份 prompt。\n\n---\n\n## 深入：Instructions 是一种受控上下文编译 {#deep-dive}\n\n生产 Harness 可以把 prompt 构建看成编译流程：\n\n```text\nplatform policy\n  + user request\n  + project instructions\n  + tool descriptors\n  + skills / memory\n  + runtime facts\n          │\n          ▼\nvalidated, budgeted model context\n```\n\n每个输入都应该有来源、信任级别、作用域、优先级和预算。编译器负责拒绝不合法组合、标记冲突、裁剪低优先级内容，并输出可解释 manifest。\n\n进一步的问题包括：\n\n- Git worktree、monorepo 和跨目录编辑如何计算适用 scope？\n- Symlink 指向另一个项目时使用哪套指令？\n- 指令变更后，正在运行的 turn 是冻结旧版本还是热更新？\n- Subagent 继承父指令、重新发现，还是只接收显式摘要？\n- 指令中的链接和脚本是否允许自动加载？\n- 如何评测 instruction following，而不把模型能力与 discovery bug 混在一起？\n\n> 好的 instruction system 不是“把更多文字塞进 system prompt”，而是把异构上下文编译成有来源、有边界、可预算的输入。\n\n---\n\n## 本章检查点 {#checkpoint}\n\n进入 s06 前，请确认你能回答：\n\n1. 为什么 discovery 只走 root-to-cwd 祖先链？\n2. Prompt 中位置更靠后，为什么不代表权限更高？\n3. 为什么必须保留 instruction source path？\n4. cwd 变化时缓存应如何失效？\n5. 指令为什么不能关闭 sandbox 或授予网络权限？\n\n下一章会面对所有长会话都会遇到的问题：system、instructions、消息、工具结果和 schema 最终会超过模型窗口。我们要让截断与裁剪成为显式、可测试、可观察的预算策略。\n",
@@ -199,6 +576,81 @@
           "en": "curriculum/lessons/s06_context_budget/lesson.en.md"
         },
         "run": "python3 -m curriculum.lessons.s06_context_budget.demo",
+        "change_contract": {
+          "previous_lesson_id": "s05-instructions",
+          "summary": {
+            "zh-CN": "让有限上下文中的截断与裁剪成为显式、可回放的 Harness 策略。",
+            "en": "Turn truncation and pruning in a finite context window into explicit, replayable harness policy."
+          },
+          "adds": [
+            {
+              "zh-CN": "单工具输出上限与全局输入预算",
+              "en": "A per-tool-output limit and a global input budget"
+            },
+            {
+              "zh-CN": "context.prune 事件与可见的信息损失",
+              "en": "context.prune events and visible information loss"
+            }
+          ],
+          "preserves": [
+            {
+              "zh-CN": "完整事实记录与每轮模型可见投影保持分离。",
+              "en": "The complete factual record remains separate from each model-visible projection."
+            }
+          ]
+        },
+        "golden_trace": {
+          "path": "curriculum/lessons/s06_context_budget/golden.trace.jsonl",
+          "run_id": "run-s06-context-budget-golden",
+          "expected_event_count": 10,
+          "focus_event_types": [
+            "tool.result",
+            "context.prune",
+            "model.request",
+            "session.stop"
+          ],
+          "download_path": "/data/traces/run-s06-context-budget-golden.jsonl"
+        },
+        "agent_bridge": {
+          "relationship": "adjacent",
+          "claim_ids": [
+            "codex-source-auto-compaction",
+            "pi-source-context-compaction",
+            "reasonix-source-context-maintenance"
+          ],
+          "notes": {
+            "zh-CN": "这些固定源码 Claim 覆盖更高级的 compaction；本章只实现确定性 truncation/pruning，因此不能把两者当作同一机制。",
+            "en": "These pinned source claims cover more advanced compaction; this lesson implements deterministic truncation and pruning, so the mechanisms must not be treated as identical."
+          }
+        },
+        "exercise_checks": [
+          {
+            "id": "s06-golden-trace",
+            "level": "observe",
+            "title": {
+              "zh-CN": "复核预算决策",
+              "en": "Verify budget decisions"
+            },
+            "acceptance": {
+              "zh-CN": "Trace 同时证明 oversized result 被截断，下一次请求前发生 context.prune。",
+              "en": "The trace proves both oversized-result truncation and context.prune before the next request."
+            },
+            "command": "python3 -m curriculum.golden verify s06-context-budget"
+          },
+          {
+            "id": "s06-budget-contract",
+            "level": "modify",
+            "title": {
+              "zh-CN": "验证双层预算",
+              "en": "Test the two-level budget"
+            },
+            "acceptance": {
+              "zh-CN": "单结果上限与历史裁剪独立生效，并产生结构化观测事件。",
+              "en": "Per-result limiting and history pruning act independently and emit structured observations."
+            },
+            "command": "python3 -m unittest curriculum.tests.test_vertical_slice.VerticalSliceTests.test_s06_truncates_and_prunes -v"
+          }
+        ],
         "source_code": "from curriculum.harness import (\n    AgentRunner,\n    ContextBudget,\n    ModelTurn,\n    ScriptedModel,\n    Tool,\n    ToolCall,\n    ToolRegistry,\n)\nfrom curriculum.lessons.common import lesson_trace, print_run\n\n\ndef build_demo() -> tuple[AgentRunner, object]:\n    registry = ToolRegistry()\n    registry.register(\n        Tool(\n            name=\"large_result\",\n            description=\"Return a deliberately oversized synthetic payload.\",\n            parameters={\n                \"type\": \"object\",\n                \"additionalProperties\": False,\n                \"properties\": {},\n            },\n            handler=lambda args: {\"content\": \"context-data-\" * 80},\n        )\n    )\n    model = ScriptedModel(\n        [\n            ModelTurn(\n                tool_calls=(\n                    ToolCall(id=\"call-large\", name=\"large_result\", arguments={}),\n                )\n            ),\n            ModelTurn(content=\"The harness truncated the oversized result.\", stop=True),\n        ]\n    )\n    trace = lesson_trace(\"s06-context-budget\")\n    return (\n        AgentRunner(\n            model=model,\n            tools=registry,\n            trace=trace,\n            system_prompt=\"Keep tool output bounded. \" * 8,\n            budget=ContextBudget(max_input_chars=300, max_tool_output_chars=180),\n        ),\n        trace,\n    )\n\n\ndef main() -> None:\n    runner, trace = build_demo()\n    result = runner.run(\"Fetch the large result, then explain the budget behavior.\")\n    print_run(result.final_text, trace)\n\n\nif __name__ == \"__main__\":\n    main()\n",
         "content": {
           "zh-CN": "# s06 · Context Budget 与截断\n\n> 上下文不是无限聊天记录，而是 Harness 为下一次模型调用编译的一份有预算输入。\n\n## 学完这一章，你会得到什么 {#learn}\n\n到 s05 为止，Harness 会不断累积 system prompt、项目指令、用户消息、assistant turn、tool results 和 tool descriptors。任何有限上下文窗口最终都会被填满。等 provider 返回 “context length exceeded” 才处理，已经太晚。\n\n本章加入两道独立预算：工具结果进入消息前先截断；每次模型请求前再裁剪整个消息列表。为了离线、确定性教学，我们用字符数代替 tokenizer，并把每次策略动作写入 Trace。\n\n完成本章后，你应该能够：\n\n- 画出 system、messages、tools、输出预留共同争夺窗口的预算模型。\n- 区分 tool-output truncation、history pruning 和 semantic compaction。\n- 解释为什么要先限制单条工具结果，再处理全局消息预算。\n- 读懂“保留 system、优先最近消息”的反向选择算法。\n- 指出教学算法在 token 计数、消息配对和超大 system prompt 上的局限。\n\n---\n\n## 问题：上下文会在最不方便的时候耗尽 {#problem}\n\n模型窗口通常同时容纳：\n\n```text\nsystem + project instructions + tool schemas\n+ conversation history + tool results\n+ reserved output tokens\n<= provider context window\n```\n\n如果 Harness 只把消息不断 append，两个现象会先后出现：\n\n1. 成本与延迟随历史增长。\n2. 最终 request 被 provider 拒绝，Agent 在任务中途停止。\n\n工具输出尤其危险：一次测试日志、搜索结果或依赖树就可能比此前全部对话更大。只裁旧聊天而不限制单条结果，会让一个 tool message 独占窗口。\n\n> Context management 的目标不是“永远保留最多文本”，而是在预算内保留完成下一步所需的状态，并让信息损失可见。\n\n---\n\n## 心智模型：两级保险丝 {#mental-model}\n\n本章使用两级策略：\n\n```text\nraw tool result\n      │\n      ├─ Level 1: max_tool_output_chars\n      │       └─ bounded result + truncated metadata\n      ▼\nappend tool message\n      │\n      ├─ Level 2: max_input_chars before next model call\n      │       └─ keep system + recent messages\n      ▼\nmodel request\n```\n\n| 策略 | 作用对象 | 发生时机 | 是否理解语义 |\n| --- | --- | --- | --- |\n| Truncation | 单个 tool result | 结果进入 messages 前 | 否 |\n| Pruning | 消息列表 | 每次 model request 前 | 否 |\n| Compaction | 一段历史 | 超预算前或策略触发时 | 是，生成摘要/状态 |\n\n教学实现前两种。Compaction 会生成新的语义投影，需要更强的 provenance、失败处理和评测，因此没有伪装成简单字符串截断。\n\n### 预算决定是 Harness policy\n\n模型可以建议“这段历史不重要”，但最终输入包含什么、删除什么、为输出预留多少，必须由 Harness 执行并记录。否则同一会话无法可靠重放。\n\n---\n\n## 逐步实现两级预算 {#build}\n\n### 第 1 步：声明两个独立上限\n\n```python\n@dataclass(frozen=True)\nclass ContextBudget:\n    max_input_chars: int = 8_000\n    max_tool_output_chars: int = 2_000\n```\n\n把它们分开，才能判断到底是某个工具异常膨胀，还是长期历史自然增长。生产配置还会为 system、tool schema 和输出分别预留 token。\n\n### 第 2 步：稳定编码工具结果\n\n```python\nencoded = json.dumps(value, ensure_ascii=False, sort_keys=True)\nif len(encoded) <= self.max_tool_output_chars:\n    return value, False\n```\n\n预算针对将进入消息的序列化形式，而不是 Python 对象数量。排序让同一对象在测试中得到稳定长度与 fingerprint。\n\n### 第 3 步：超限时返回带元数据的 preview\n\n```python\npreview_size = max(0, self.max_tool_output_chars - 96)\nreturn {\n    \"truncated\": True,\n    \"original_chars\": len(encoded),\n    \"preview\": encoded[:preview_size],\n}, True\n```\n\n结果不能只是无提示地切掉尾部。`truncated` 告诉模型和 UI 内容不完整，`original_chars` 说明损失规模，`preview` 保留可辨认片段。\n\n常数 96 是教学实现为 JSON 包装预留的近似空间，不保证最终编码严格等于上限；生产代码应对最终 wire representation 再次测量。\n\n### 第 4 步：在每次 model request 前调用 `fit`\n\n```python\nif self.budget is not None:\n    report = self.budget.fit(messages)\n    if report.removed_count or report.final_chars < report.original_chars:\n        messages = list(report.messages)\n        self._emit(\n            \"context.prune\",\n            actor_kind=\"harness\",\n            actor_id=self.config.agent_id,\n            payload={\n                \"removed_messages\": report.removed_count,\n                \"original_chars\": report.original_chars,\n                \"final_chars\": report.final_chars,\n            },\n        )\n```\n\n预算检查必须发生在 request 之前；把 prune 放在 response 之后只能保护下一轮，无法挽救当前已经超限的请求。\n\n### 第 5 步：固定 system，反向保留最近历史\n\n```python\nsystem = [message for message in messages[:1] if message.role == \"system\"]\nremaining = list(messages[len(system):])\nkept_reversed = []\nused = sum(len(message.content) for message in system)\n\nfor message in reversed(remaining):\n    if kept_reversed and used + len(message.content) > self.max_input_chars:\n        continue\n    kept_reversed.append(message)\n    used += len(message.content)\n```\n\n算法从最新消息向前选择，因为最近的用户意图、assistant action 和 tool result 通常最直接影响下一步。最后再 reverse 回原始时间顺序。\n\n### 第 6 步：至少保留最新消息的尾部\n\n```python\nif not kept_reversed and used + len(message.content) > self.max_input_chars:\n    room = max(0, self.max_input_chars - used)\n    message = Message(\n        role=message.role,\n        content=message.content[-room:] if room else \"\",\n        name=message.name,\n        tool_call_id=message.tool_call_id,\n    )\n```\n\n这避免预算极小时把全部动态历史删除。但保留“尾部”只是确定性教学选择：代码文件可能需要开头，错误日志可能需要首尾，tool-call/result pair 也不应被拆散。\n\n---\n\n## 运行超大工具结果示例 {#run}\n\n本章注册一个故意返回大 payload 的工具：\n\n```python\nhandler=lambda args: {\"content\": \"context-data-\" * 80}\n```\n\nRunner 配置为：\n\n```python\nContextBudget(\n    max_input_chars=300,\n    max_tool_output_chars=180,\n)\n```\n\n执行：\n\n```bash\npython3 -m curriculum.lessons.s06_context_budget.demo\n```\n\n你应该在 Trace 中先后看到：\n\n```text\ntool.result             payload.truncated = true\ncontext.prune           original_chars > final_chars\nmodel.request           receives the bounded projection\n```\n\n验证代码：\n\n```python\nrunner, trace = build_demo()\nresult = runner.run(\"Fetch the large result, then explain the budget behavior.\")\n\ntool_result = next(e for e in result.events if e[\"type\"] == \"tool.result\")\nassert tool_result[\"payload\"][\"truncated\"] is True\n\nprune = next(e for e in result.events if e[\"type\"] == \"context.prune\")\nassert prune[\"payload\"][\"final_chars\"] < \\\n       prune[\"payload\"][\"original_chars\"]\n```\n\n### 检查模型实际看到的第二轮\n\n```python\nsecond_request = runner.model.requests[1]\nfor message in second_request:\n    print(message.role, len(message.content), message.content[:60])\n```\n\n不要只看 `result.messages`：它表示运行结束时的内部列表；`model.requests[1]` 才是第二轮真正传给模型的投影。\n\n---\n\n## 读懂算法，也要看见它的局限 {#code-reading}\n\n### 字符不等于 token\n\n中文、英文、代码和 JSON 的 token/character 比例不同，不同 tokenizer 也不同。字符预算只为了离线确定性。Provider adapter 应使用实际 tokenizer 或服务端计数，并保留安全余量。\n\n### System prompt 可能自己就超预算\n\n教学算法始终保留第一条 system message。如果它大于 `max_input_chars`，最终输入仍会超限。生产系统必须对 prompt 各 section 单独预算，或者在启动前拒绝不可能满足的配置。\n\n### 独立消息不一定能独立删除\n\nAssistant tool call 与对应 tool result 是协议对；只保留一边可能让 provider 拒绝消息结构。更稳健的算法以 turn 或 atomic group 为单位裁剪，而不是逐条 message。\n\n### Pruning 会永久丢信息\n\n简单删除不能恢复旧目标、约束和未完成任务。Semantic compaction 会把旧历史转成摘要、todo state、文件变化和 unresolved questions，但摘要本身也可能失真，需要 provenance 和质量评测。\n\n### Preview 需要取样策略\n\n只保留前缀适合某些文件，却可能漏掉错误栈尾部。工具可以提供结构化 pagination、head+tail、匹配窗口或 artifact handle，让模型按需继续读取。\n\n---\n\n## 常见失败模式 {#failure-modes}\n\n| 错误 | 后果 | 更好的策略 |\n| --- | --- | --- |\n| 等 provider 报超限 | 任务中途硬失败 | request 前预估并留余量 |\n| 只限制总历史 | 单个 tool result 独占窗口 | 单结果与全局两级预算 |\n| 静默截断 | 模型把片段当完整事实 | 明确 truncated、原始大小、读取方式 |\n| 删除 tool-call 一半 | 协议无效或语义断裂 | 按 atomic turn/group 裁剪 |\n| 永远保留全部 system | 配置本身超限 | Section budget 与启动时验证 |\n| 摘要覆盖原始记录 | 无法审计摘要错误 | 原始 transcript 外存，context 只存投影 |\n| 每轮重新总结全部历史 | 成本和漂移不断累积 | 增量 compaction 与稳定 checkpoint |\n| 没有 prune 事件 | 无法解释模型为何遗忘 | 记录策略、前后大小与丢弃范围 |\n\n---\n\n## 动手实验 {#exercises}\n\n### A. 调低输入预算\n\n把 `max_input_chars` 降到 120。验收条件：最新 tool result 仍保留可辨认 preview；Trace 报告裁剪前后字符数；运行仍有明确 stop reason。\n\n### B. 超大 system prompt\n\n创建长度 500 的 system prompt，却设置输入预算 100。运行并解释为何当前 `final_chars` 仍可能超过预算。然后设计启动时 validation，拒绝这组配置。\n\n### C. Atomic turn pruning\n\n把 messages 分成 system、user turn、assistant+tool group。实现按 group 从后往前保留，保证 tool-call 与 result 不分离。为“单个 group 自身超限”定义策略。\n\n### D. Head + tail 工具结果\n\n修改 `truncate_tool_result`，同时保留前 60% 与后 40%，中间插入省略元数据。验收条件：最终 JSON 有稳定上限，模型能看见错误日志结尾。\n\n### E. Token adapter\n\n为 `ContextBudget` 注入 `measure(text) -> int`，测试字符计数器和一个 fake tokenizer。核心算法不应该依赖具体 provider SDK。\n\n### F. Compaction manifest\n\n设计一个摘要对象，至少包含 goal、completed work、open tasks、changed files、constraints 和 source event range。说明每个字段如何从原始 Trace 追溯。\n\n---\n\n## 深入：从预算到长期记忆 {#deep-dive}\n\n生产 Context Manager 往往组合四种层：\n\n1. **Immediate window**：最近 turn 与当前工具结果，原样保留。\n2. **Compacted history**：旧对话的结构化摘要和 checkpoint。\n3. **External artifacts**：大文件、日志和搜索结果保存在窗口外，用 handle 按需读取。\n4. **Durable memory**：跨会话仍有价值的项目事实，经过选择与更新。\n\n关键不是“存在哪里”，而是每次模型调用如何选择投影。一个成熟预算器可能计算：\n\n```text\navailable_input\n= context_window\n- reserved_output\n- system_sections\n- tool_descriptors\n- safety_margin\n```\n\n然后把剩余空间分给 current task、recent turns、tool results、retrieved memory 和 compacted state。每一类都需要优先级、最小保证和最大上限。\n\n### 如何评测 compaction？\n\n压缩率不够。至少要测：\n\n- 后续任务完成率是否下降。\n- 关键约束是否仍被遵循。\n- 未完成任务是否被保留。\n- 文件与 tool-call identity 是否正确。\n- 摘要是否引入原文没有的事实。\n- 多次 compaction 后错误是否累积。\n\n> Context window 是模型的工作记忆，不是系统的唯一数据库。可靠 Harness 会保存完整事实记录，再为每轮编译一个有限投影。\n\n---\n\n## 本章检查点 {#checkpoint}\n\n完成 foundations 前，请确认你能回答：\n\n1. 为什么单工具结果与全局历史需要不同预算？\n2. 为什么字符数只适合教学？\n3. Tool call 与 result 为什么应作为 atomic group？\n4. Pruning 与 semantic compaction 的信息损失有何不同？\n5. 为什么 `context.prune` 必须成为 Trace 事件？\n\n至此，你已经拥有一条可运行的 reference harness vertical slice：有界 loop、流式事件、结构化工具、工作区边界、分层指令和上下文预算。下一步不是盲目加功能，而是用 Mechanism、Agent Snapshot、Claim、Experiment 与 Trace 去比较真实 coding agent 如何解决同一组问题。\n",
@@ -3438,6 +3890,1603 @@
             "fields": []
           },
           "parent_event_id": "evt-007"
+        }
+      ]
+    },
+    {
+      "id": "run-s01-agent-loop-golden",
+      "title": {
+        "zh-CN": "S01 最小 Agent Loop · Golden Trace",
+        "en": "S01 The Minimal Agent Loop · Golden Trace"
+      },
+      "kind": "golden",
+      "lesson_id": "s01-agent-loop",
+      "run_id": "run-s01-agent-loop-golden",
+      "source_path": "curriculum/lessons/s01_agent_loop/golden.trace.jsonl",
+      "download_path": "/data/traces/run-s01-agent-loop-golden.jsonl",
+      "events": [
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-000",
+          "session_id": "session-s01-agent-loop",
+          "sequence": 0,
+          "timestamp": "2026-08-10T00:00:00Z",
+          "type": "session.start",
+          "actor": {
+            "kind": "harness",
+            "id": "reference-agent"
+          },
+          "payload": {
+            "max_turns": 8,
+            "tool_count": 0
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s01-agent-loop-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          }
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-001",
+          "session_id": "session-s01-agent-loop",
+          "sequence": 1,
+          "timestamp": "2026-08-10T00:00:01Z",
+          "type": "user.message",
+          "actor": {
+            "kind": "user",
+            "id": "learner"
+          },
+          "payload": {
+            "content": "Explain an agent loop in one sentence."
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s01-agent-loop-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-000"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-002",
+          "session_id": "session-s01-agent-loop",
+          "sequence": 2,
+          "timestamp": "2026-08-10T00:00:02Z",
+          "type": "model.request",
+          "actor": {
+            "kind": "harness",
+            "id": "reference-agent"
+          },
+          "payload": {
+            "turn": 1,
+            "message_count": 1,
+            "roles": [
+              "user"
+            ],
+            "tools": []
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s01-agent-loop-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-001"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-003",
+          "session_id": "session-s01-agent-loop",
+          "sequence": 3,
+          "timestamp": "2026-08-10T00:00:03Z",
+          "type": "model.response",
+          "actor": {
+            "kind": "model",
+            "id": "scripted-model-v1"
+          },
+          "payload": {
+            "turn": 1,
+            "content": "A harness keeps calling the model until work stops.",
+            "stop": true,
+            "tool_calls": []
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s01-agent-loop-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-002"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-004",
+          "session_id": "session-s01-agent-loop",
+          "sequence": 4,
+          "timestamp": "2026-08-10T00:00:04Z",
+          "type": "session.stop",
+          "actor": {
+            "kind": "harness",
+            "id": "reference-agent"
+          },
+          "payload": {
+            "reason": "completed",
+            "turns": 1
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s01-agent-loop-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-003"
+        }
+      ]
+    },
+    {
+      "id": "run-s02-events-streaming-golden",
+      "title": {
+        "zh-CN": "S02 Streaming 与事件 · Golden Trace",
+        "en": "S02 Streaming and Events · Golden Trace"
+      },
+      "kind": "golden",
+      "lesson_id": "s02-events-streaming",
+      "run_id": "run-s02-events-streaming-golden",
+      "source_path": "curriculum/lessons/s02_events_streaming/golden.trace.jsonl",
+      "download_path": "/data/traces/run-s02-events-streaming-golden.jsonl",
+      "events": [
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-000",
+          "session_id": "session-s02-events-streaming",
+          "sequence": 0,
+          "timestamp": "2026-08-10T00:00:00Z",
+          "type": "session.start",
+          "actor": {
+            "kind": "harness",
+            "id": "reference-agent"
+          },
+          "payload": {
+            "max_turns": 8,
+            "tool_count": 0
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s02-events-streaming-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          }
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-001",
+          "session_id": "session-s02-events-streaming",
+          "sequence": 1,
+          "timestamp": "2026-08-10T00:00:01Z",
+          "type": "user.message",
+          "actor": {
+            "kind": "user",
+            "id": "learner"
+          },
+          "payload": {
+            "content": "Stream one observability rule."
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s02-events-streaming-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-000"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-002",
+          "session_id": "session-s02-events-streaming",
+          "sequence": 2,
+          "timestamp": "2026-08-10T00:00:02Z",
+          "type": "model.request",
+          "actor": {
+            "kind": "harness",
+            "id": "reference-agent"
+          },
+          "payload": {
+            "turn": 1,
+            "message_count": 1,
+            "roles": [
+              "user"
+            ],
+            "tools": []
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s02-events-streaming-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-001"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-003",
+          "session_id": "session-s02-events-streaming",
+          "sequence": 3,
+          "timestamp": "2026-08-10T00:00:03Z",
+          "type": "model.response",
+          "actor": {
+            "kind": "model",
+            "id": "scripted-model-v1"
+          },
+          "payload": {
+            "turn": 1,
+            "delta": "Observe ",
+            "accumulated": "Observe ",
+            "final": false,
+            "tool_calls": []
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s02-events-streaming-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-002"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-004",
+          "session_id": "session-s02-events-streaming",
+          "sequence": 4,
+          "timestamp": "2026-08-10T00:00:04Z",
+          "type": "model.response",
+          "actor": {
+            "kind": "model",
+            "id": "scripted-model-v1"
+          },
+          "payload": {
+            "turn": 1,
+            "delta": "events, ",
+            "accumulated": "Observe events, ",
+            "final": false,
+            "tool_calls": []
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s02-events-streaming-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-003"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-005",
+          "session_id": "session-s02-events-streaming",
+          "sequence": 5,
+          "timestamp": "2026-08-10T00:00:05Z",
+          "type": "model.response",
+          "actor": {
+            "kind": "model",
+            "id": "scripted-model-v1"
+          },
+          "payload": {
+            "turn": 1,
+            "delta": "not hidden state.",
+            "accumulated": "Observe events, not hidden state.",
+            "final": true,
+            "tool_calls": []
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s02-events-streaming-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-004"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-006",
+          "session_id": "session-s02-events-streaming",
+          "sequence": 6,
+          "timestamp": "2026-08-10T00:00:06Z",
+          "type": "session.stop",
+          "actor": {
+            "kind": "harness",
+            "id": "reference-agent"
+          },
+          "payload": {
+            "reason": "completed",
+            "turns": 1
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s02-events-streaming-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-005"
+        }
+      ]
+    },
+    {
+      "id": "run-s03-tool-dispatch-golden",
+      "title": {
+        "zh-CN": "S03 Tool Registry 与 Dispatch · Golden Trace",
+        "en": "S03 Tool Registry and Dispatch · Golden Trace"
+      },
+      "kind": "golden",
+      "lesson_id": "s03-tool-dispatch",
+      "run_id": "run-s03-tool-dispatch-golden",
+      "source_path": "curriculum/lessons/s03_tool_dispatch/golden.trace.jsonl",
+      "download_path": "/data/traces/run-s03-tool-dispatch-golden.jsonl",
+      "events": [
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-000",
+          "session_id": "session-s03-tool-dispatch",
+          "sequence": 0,
+          "timestamp": "2026-08-10T00:00:00Z",
+          "type": "session.start",
+          "actor": {
+            "kind": "harness",
+            "id": "reference-agent"
+          },
+          "payload": {
+            "max_turns": 8,
+            "tool_count": 1
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s03-tool-dispatch-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          }
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-001",
+          "session_id": "session-s03-tool-dispatch",
+          "sequence": 1,
+          "timestamp": "2026-08-10T00:00:01Z",
+          "type": "user.message",
+          "actor": {
+            "kind": "user",
+            "id": "learner"
+          },
+          "payload": {
+            "content": "Use the echo tool, then report its result."
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s03-tool-dispatch-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-000"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-002",
+          "session_id": "session-s03-tool-dispatch",
+          "sequence": 2,
+          "timestamp": "2026-08-10T00:00:02Z",
+          "type": "model.request",
+          "actor": {
+            "kind": "harness",
+            "id": "reference-agent"
+          },
+          "payload": {
+            "turn": 1,
+            "message_count": 1,
+            "roles": [
+              "user"
+            ],
+            "tools": [
+              "echo"
+            ]
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s03-tool-dispatch-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-001"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-003",
+          "session_id": "session-s03-tool-dispatch",
+          "sequence": 3,
+          "timestamp": "2026-08-10T00:00:03Z",
+          "type": "model.response",
+          "actor": {
+            "kind": "model",
+            "id": "scripted-model-v1"
+          },
+          "payload": {
+            "turn": 1,
+            "content": "",
+            "stop": false,
+            "tool_calls": [
+              {
+                "id": "call-001",
+                "name": "echo",
+                "arguments": {
+                  "text": "hello"
+                }
+              }
+            ]
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s03-tool-dispatch-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-002"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-004",
+          "session_id": "session-s03-tool-dispatch",
+          "sequence": 4,
+          "timestamp": "2026-08-10T00:00:04Z",
+          "type": "tool.request",
+          "actor": {
+            "kind": "model",
+            "id": "scripted-model-v1"
+          },
+          "payload": {
+            "tool_call_id": "call-001",
+            "tool": "echo",
+            "arguments": {
+              "text": "hello"
+            }
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s03-tool-dispatch-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-003"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-005",
+          "session_id": "session-s03-tool-dispatch",
+          "sequence": 5,
+          "timestamp": "2026-08-10T00:00:05Z",
+          "type": "tool.result",
+          "actor": {
+            "kind": "tool",
+            "id": "echo"
+          },
+          "payload": {
+            "tool_call_id": "call-001",
+            "tool": "echo",
+            "ok": true,
+            "result": {
+              "echo": "hello"
+            },
+            "truncated": false
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s03-tool-dispatch-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-004"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-006",
+          "session_id": "session-s03-tool-dispatch",
+          "sequence": 6,
+          "timestamp": "2026-08-10T00:00:06Z",
+          "type": "model.request",
+          "actor": {
+            "kind": "harness",
+            "id": "reference-agent"
+          },
+          "payload": {
+            "turn": 2,
+            "message_count": 3,
+            "roles": [
+              "user",
+              "assistant",
+              "tool"
+            ],
+            "tools": [
+              "echo"
+            ]
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s03-tool-dispatch-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-005"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-007",
+          "session_id": "session-s03-tool-dispatch",
+          "sequence": 7,
+          "timestamp": "2026-08-10T00:00:07Z",
+          "type": "model.response",
+          "actor": {
+            "kind": "model",
+            "id": "scripted-model-v1"
+          },
+          "payload": {
+            "turn": 2,
+            "content": "The echo tool returned hello.",
+            "stop": true,
+            "tool_calls": []
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s03-tool-dispatch-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-006"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-008",
+          "session_id": "session-s03-tool-dispatch",
+          "sequence": 8,
+          "timestamp": "2026-08-10T00:00:08Z",
+          "type": "session.stop",
+          "actor": {
+            "kind": "harness",
+            "id": "reference-agent"
+          },
+          "payload": {
+            "reason": "completed",
+            "turns": 2
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s03-tool-dispatch-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-007"
+        }
+      ]
+    },
+    {
+      "id": "run-s04-workspace-tools-golden",
+      "title": {
+        "zh-CN": "S04 File、Shell 与 Edit Tools · Golden Trace",
+        "en": "S04 File, Shell, and Edit Tools · Golden Trace"
+      },
+      "kind": "golden",
+      "lesson_id": "s04-workspace-tools",
+      "run_id": "run-s04-workspace-tools-golden",
+      "source_path": "curriculum/lessons/s04_workspace_tools/golden.trace.jsonl",
+      "download_path": "/data/traces/run-s04-workspace-tools-golden.jsonl",
+      "events": [
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-000",
+          "session_id": "session-s04-workspace-tools",
+          "sequence": 0,
+          "timestamp": "2026-08-10T00:00:00Z",
+          "type": "session.start",
+          "actor": {
+            "kind": "harness",
+            "id": "reference-agent"
+          },
+          "payload": {
+            "max_turns": 8,
+            "tool_count": 1
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s04-workspace-tools-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          }
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-001",
+          "session_id": "session-s04-workspace-tools",
+          "sequence": 1,
+          "timestamp": "2026-08-10T00:00:01Z",
+          "type": "user.message",
+          "actor": {
+            "kind": "user",
+            "id": "learner"
+          },
+          "payload": {
+            "content": "Read the fixture README and summarize it."
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s04-workspace-tools-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-000"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-002",
+          "session_id": "session-s04-workspace-tools",
+          "sequence": 2,
+          "timestamp": "2026-08-10T00:00:02Z",
+          "type": "model.request",
+          "actor": {
+            "kind": "harness",
+            "id": "reference-agent"
+          },
+          "payload": {
+            "turn": 1,
+            "message_count": 1,
+            "roles": [
+              "user"
+            ],
+            "tools": [
+              "read_file"
+            ]
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s04-workspace-tools-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-001"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-003",
+          "session_id": "session-s04-workspace-tools",
+          "sequence": 3,
+          "timestamp": "2026-08-10T00:00:03Z",
+          "type": "model.response",
+          "actor": {
+            "kind": "model",
+            "id": "scripted-model-v1"
+          },
+          "payload": {
+            "turn": 1,
+            "content": "",
+            "stop": false,
+            "tool_calls": [
+              {
+                "id": "call-readme",
+                "name": "read_file",
+                "arguments": {
+                  "path": "README.md"
+                }
+              }
+            ]
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s04-workspace-tools-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-002"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-004",
+          "session_id": "session-s04-workspace-tools",
+          "sequence": 4,
+          "timestamp": "2026-08-10T00:00:04Z",
+          "type": "tool.request",
+          "actor": {
+            "kind": "model",
+            "id": "scripted-model-v1"
+          },
+          "payload": {
+            "tool_call_id": "call-readme",
+            "tool": "read_file",
+            "arguments": {
+              "path": "README.md"
+            }
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s04-workspace-tools-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-003"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-005",
+          "session_id": "session-s04-workspace-tools",
+          "sequence": 5,
+          "timestamp": "2026-08-10T00:00:05Z",
+          "type": "tool.result",
+          "actor": {
+            "kind": "tool",
+            "id": "read_file"
+          },
+          "payload": {
+            "tool_call_id": "call-readme",
+            "tool": "read_file",
+            "ok": true,
+            "result": {
+              "path": "README.md",
+              "content": "# Bounded workspace fixture\n\nThis file is safe to read during the lesson. A path boundary prevents `../` traversal, but it is not a replacement for an operating-system sandbox.\n",
+              "truncated": false
+            },
+            "truncated": false
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s04-workspace-tools-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-004"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-006",
+          "session_id": "session-s04-workspace-tools",
+          "sequence": 6,
+          "timestamp": "2026-08-10T00:00:06Z",
+          "type": "model.request",
+          "actor": {
+            "kind": "harness",
+            "id": "reference-agent"
+          },
+          "payload": {
+            "turn": 2,
+            "message_count": 3,
+            "roles": [
+              "user",
+              "assistant",
+              "tool"
+            ],
+            "tools": [
+              "read_file"
+            ]
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s04-workspace-tools-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-005"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-007",
+          "session_id": "session-s04-workspace-tools",
+          "sequence": 7,
+          "timestamp": "2026-08-10T00:00:07Z",
+          "type": "model.response",
+          "actor": {
+            "kind": "model",
+            "id": "scripted-model-v1"
+          },
+          "payload": {
+            "turn": 2,
+            "content": "The fixture describes a bounded workspace.",
+            "stop": true,
+            "tool_calls": []
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s04-workspace-tools-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-006"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-008",
+          "session_id": "session-s04-workspace-tools",
+          "sequence": 8,
+          "timestamp": "2026-08-10T00:00:08Z",
+          "type": "session.stop",
+          "actor": {
+            "kind": "harness",
+            "id": "reference-agent"
+          },
+          "payload": {
+            "reason": "completed",
+            "turns": 2
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s04-workspace-tools-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-007"
+        }
+      ]
+    },
+    {
+      "id": "run-s05-instructions-golden",
+      "title": {
+        "zh-CN": "S05 Instructions 与项目发现 · Golden Trace",
+        "en": "S05 Instructions and Project Discovery · Golden Trace"
+      },
+      "kind": "golden",
+      "lesson_id": "s05-instructions",
+      "run_id": "run-s05-instructions-golden",
+      "source_path": "curriculum/lessons/s05_instructions/golden.trace.jsonl",
+      "download_path": "/data/traces/run-s05-instructions-golden.jsonl",
+      "events": [
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-000",
+          "session_id": "session-s05-instructions",
+          "sequence": 0,
+          "timestamp": "2026-08-10T00:00:00Z",
+          "type": "session.start",
+          "actor": {
+            "kind": "harness",
+            "id": "reference-agent"
+          },
+          "payload": {
+            "max_turns": 8,
+            "tool_count": 0
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s05-instructions-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          }
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-001",
+          "session_id": "session-s05-instructions",
+          "sequence": 1,
+          "timestamp": "2026-08-10T00:00:01Z",
+          "type": "user.message",
+          "actor": {
+            "kind": "user",
+            "id": "learner"
+          },
+          "payload": {
+            "content": "State the two instructions you will follow."
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s05-instructions-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-000"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-002",
+          "session_id": "session-s05-instructions",
+          "sequence": 2,
+          "timestamp": "2026-08-10T00:00:02Z",
+          "type": "model.request",
+          "actor": {
+            "kind": "harness",
+            "id": "reference-agent"
+          },
+          "payload": {
+            "turn": 1,
+            "message_count": 2,
+            "roles": [
+              "system",
+              "user"
+            ],
+            "tools": []
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s05-instructions-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-001"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-003",
+          "session_id": "session-s05-instructions",
+          "sequence": 3,
+          "timestamp": "2026-08-10T00:00:03Z",
+          "type": "model.response",
+          "actor": {
+            "kind": "model",
+            "id": "scripted-model-v1"
+          },
+          "payload": {
+            "turn": 1,
+            "content": "I will preserve tests and use package-local style.",
+            "stop": true,
+            "tool_calls": []
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s05-instructions-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-002"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-004",
+          "session_id": "session-s05-instructions",
+          "sequence": 4,
+          "timestamp": "2026-08-10T00:00:04Z",
+          "type": "session.stop",
+          "actor": {
+            "kind": "harness",
+            "id": "reference-agent"
+          },
+          "payload": {
+            "reason": "completed",
+            "turns": 1
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s05-instructions-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-003"
+        }
+      ]
+    },
+    {
+      "id": "run-s06-context-budget-golden",
+      "title": {
+        "zh-CN": "S06 Context Budget 与截断 · Golden Trace",
+        "en": "S06 Context Budgets and Truncation · Golden Trace"
+      },
+      "kind": "golden",
+      "lesson_id": "s06-context-budget",
+      "run_id": "run-s06-context-budget-golden",
+      "source_path": "curriculum/lessons/s06_context_budget/golden.trace.jsonl",
+      "download_path": "/data/traces/run-s06-context-budget-golden.jsonl",
+      "events": [
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-000",
+          "session_id": "session-s06-context-budget",
+          "sequence": 0,
+          "timestamp": "2026-08-10T00:00:00Z",
+          "type": "session.start",
+          "actor": {
+            "kind": "harness",
+            "id": "reference-agent"
+          },
+          "payload": {
+            "max_turns": 8,
+            "tool_count": 1
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s06-context-budget-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          }
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-001",
+          "session_id": "session-s06-context-budget",
+          "sequence": 1,
+          "timestamp": "2026-08-10T00:00:01Z",
+          "type": "user.message",
+          "actor": {
+            "kind": "user",
+            "id": "learner"
+          },
+          "payload": {
+            "content": "Fetch the large result, then explain the budget behavior."
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s06-context-budget-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-000"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-002",
+          "session_id": "session-s06-context-budget",
+          "sequence": 2,
+          "timestamp": "2026-08-10T00:00:02Z",
+          "type": "model.request",
+          "actor": {
+            "kind": "harness",
+            "id": "reference-agent"
+          },
+          "payload": {
+            "turn": 1,
+            "message_count": 2,
+            "roles": [
+              "system",
+              "user"
+            ],
+            "tools": [
+              "large_result"
+            ]
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s06-context-budget-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-001"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-003",
+          "session_id": "session-s06-context-budget",
+          "sequence": 3,
+          "timestamp": "2026-08-10T00:00:03Z",
+          "type": "model.response",
+          "actor": {
+            "kind": "model",
+            "id": "scripted-model-v1"
+          },
+          "payload": {
+            "turn": 1,
+            "content": "",
+            "stop": false,
+            "tool_calls": [
+              {
+                "id": "call-large",
+                "name": "large_result",
+                "arguments": {}
+              }
+            ]
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s06-context-budget-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-002"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-004",
+          "session_id": "session-s06-context-budget",
+          "sequence": 4,
+          "timestamp": "2026-08-10T00:00:04Z",
+          "type": "tool.request",
+          "actor": {
+            "kind": "model",
+            "id": "scripted-model-v1"
+          },
+          "payload": {
+            "tool_call_id": "call-large",
+            "tool": "large_result",
+            "arguments": {}
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s06-context-budget-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-003"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-005",
+          "session_id": "session-s06-context-budget",
+          "sequence": 5,
+          "timestamp": "2026-08-10T00:00:05Z",
+          "type": "tool.result",
+          "actor": {
+            "kind": "tool",
+            "id": "large_result"
+          },
+          "payload": {
+            "tool_call_id": "call-large",
+            "tool": "large_result",
+            "ok": true,
+            "result": {
+              "truncated": true,
+              "original_chars": 1055,
+              "preview": "{\"content\": \"context-data-context-data-context-data-context-data-context-data-contex"
+            },
+            "truncated": true
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s06-context-budget-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-004"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-006",
+          "session_id": "session-s06-context-budget",
+          "sequence": 6,
+          "timestamp": "2026-08-10T00:00:06Z",
+          "type": "context.prune",
+          "actor": {
+            "kind": "harness",
+            "id": "reference-agent"
+          },
+          "payload": {
+            "removed_messages": 1,
+            "original_chars": 410,
+            "final_chars": 300
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s06-context-budget-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-005"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-007",
+          "session_id": "session-s06-context-budget",
+          "sequence": 7,
+          "timestamp": "2026-08-10T00:00:07Z",
+          "type": "model.request",
+          "actor": {
+            "kind": "harness",
+            "id": "reference-agent"
+          },
+          "payload": {
+            "turn": 2,
+            "message_count": 3,
+            "roles": [
+              "system",
+              "assistant",
+              "tool"
+            ],
+            "tools": [
+              "large_result"
+            ]
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s06-context-budget-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-006"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-008",
+          "session_id": "session-s06-context-budget",
+          "sequence": 8,
+          "timestamp": "2026-08-10T00:00:08Z",
+          "type": "model.response",
+          "actor": {
+            "kind": "model",
+            "id": "scripted-model-v1"
+          },
+          "payload": {
+            "turn": 2,
+            "content": "The harness truncated the oversized result.",
+            "stop": true,
+            "tool_calls": []
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s06-context-budget-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-007"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-009",
+          "session_id": "session-s06-context-budget",
+          "sequence": 9,
+          "timestamp": "2026-08-10T00:00:09Z",
+          "type": "session.stop",
+          "actor": {
+            "kind": "harness",
+            "id": "reference-agent"
+          },
+          "payload": {
+            "reason": "completed",
+            "turns": 2
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s06-context-budget-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-008"
         }
       ]
     }

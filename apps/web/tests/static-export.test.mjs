@@ -41,7 +41,7 @@ async function collectFiles(directory) {
 }
 
 test("GitHub Pages export contains every content route with repository-safe URLs", async () => {
-  assert.equal(expectedRoutes.length, 44, "the route inventory changed; review the export contract");
+  assert.equal(expectedRoutes.length, 50, "the route inventory changed; review the export contract");
   assert.equal(new Set(expectedRoutes).size, expectedRoutes.length, "route inventory contains duplicates");
 
   for (const route of expectedRoutes) {
@@ -79,6 +79,10 @@ test("GitHub Pages export publishes discoverability metadata and working deep li
     path.join(outputDirectory, "lab/traces/example-tool-roundtrip/index.html"),
     "utf8",
   );
+  const goldenTrace = await readFile(
+    path.join(outputDirectory, "lab/traces/run-s01-agent-loop-golden/index.html"),
+    "utf8",
+  );
   const robots = await readFile(path.join(outputDirectory, "robots.txt"), "utf8");
   const sitemap = await readFile(path.join(outputDirectory, "sitemap.xml"), "utf8");
 
@@ -87,6 +91,7 @@ test("GitHub Pages export publishes discoverability metadata and working deep li
   assert.match(home, new RegExp(`${siteUrl}/og\\.png`));
   assert.doesNotMatch(home, /rel="canonical"/, "a shared root canonical would mislabel deep pages");
   assert.match(trace, new RegExp(`href="${basePath}/data/example-trace\\.jsonl"`));
+  assert.match(goldenTrace, new RegExp(`href="${basePath}/data/traces/run-s01-agent-loop-golden\\.jsonl"`));
   assert.match(robots, new RegExp(`Sitemap: ${siteUrl}/sitemap\\.xml`));
 
   const sitemapUrls = sitemap.match(/<url>/g) ?? [];

@@ -1,5 +1,5 @@
 {
-  "schema_version": "0.1.0",
+  "schema_version": "0.2.0",
   "track": "foundations",
   "title": {
     "zh-CN": "从零构建 Agent Harness",
@@ -18,7 +18,45 @@
       "difficulty": "beginner",
       "code_path": "curriculum/lessons/s01_agent_loop/demo.py",
       "content_paths": {"zh-CN": "curriculum/lessons/s01_agent_loop/lesson.zh.md", "en": "curriculum/lessons/s01_agent_loop/lesson.en.md"},
-      "run": "python3 -m curriculum.lessons.s01_agent_loop.demo"
+      "run": "python3 -m curriculum.lessons.s01_agent_loop.demo",
+      "change_contract": {
+        "previous_lesson_id": null,
+        "summary": {"zh-CN": "建立后续所有章节共享的有界循环基线。", "en": "Establish the bounded-loop baseline shared by every later lesson."},
+        "adds": [
+          {"zh-CN": "显式 session 生命周期与停止原因", "en": "An explicit session lifecycle and stop reason"},
+          {"zh-CN": "Model 与 Harness 之间的 provider-neutral 边界", "en": "A provider-neutral boundary between model and harness"}
+        ],
+        "preserves": [
+          {"zh-CN": "只记录可观察行为，不记录隐藏推理。", "en": "Record observable behavior, never hidden reasoning."}
+        ]
+      },
+      "golden_trace": {
+        "path": "curriculum/lessons/s01_agent_loop/golden.trace.jsonl",
+        "run_id": "run-s01-agent-loop-golden",
+        "expected_event_count": 5,
+        "focus_event_types": ["session.start", "model.request", "model.response", "session.stop"]
+      },
+      "agent_bridge": {
+        "relationship": "direct",
+        "claim_ids": ["codex-source-agent-loop", "pi-source-agent-loop", "reasonix-source-agent-loop"],
+        "notes": {"zh-CN": "三份固定源码快照都提供了可核对的 Agent Loop 结构，但产品协议和恢复策略不同。", "en": "Three pinned source snapshots expose inspectable agent-loop structures, while their product protocols and recovery policies differ."}
+      },
+      "exercise_checks": [
+        {
+          "id": "s01-golden-trace",
+          "level": "observe",
+          "title": {"zh-CN": "复核 Golden Trace", "en": "Verify the Golden Trace"},
+          "acceptance": {"zh-CN": "提交的 JSONL 与示例真实运行完全一致，并通过 Trace Schema。", "en": "The committed JSONL exactly matches a real demo run and passes the trace schema."},
+          "command": "python3 -m curriculum.golden verify s01-agent-loop"
+        },
+        {
+          "id": "s01-loop-contract",
+          "level": "modify",
+          "title": {"zh-CN": "守住循环不变量", "en": "Preserve loop invariants"},
+          "acceptance": {"zh-CN": "正常完成仍产生连续 sequence，并以 session.stop 结束。", "en": "A completed run keeps contiguous sequence numbers and ends with session.stop."},
+          "command": "python3 -m unittest curriculum.tests.test_vertical_slice.VerticalSliceTests.test_s01_minimal_loop -v"
+        }
+      ]
     },
     {
       "id": "s02-events-streaming",
@@ -32,7 +70,45 @@
       "difficulty": "beginner",
       "code_path": "curriculum/lessons/s02_events_streaming/demo.py",
       "content_paths": {"zh-CN": "curriculum/lessons/s02_events_streaming/lesson.zh.md", "en": "curriculum/lessons/s02_events_streaming/lesson.en.md"},
-      "run": "python3 -m curriculum.lessons.s02_events_streaming.demo"
+      "run": "python3 -m curriculum.lessons.s02_events_streaming.demo",
+      "change_contract": {
+        "previous_lesson_id": "s01-agent-loop",
+        "summary": {"zh-CN": "保持同一循环，把单次响应改造成有序的 streaming delta。", "en": "Keep the same loop while turning one response into ordered streaming deltas."},
+        "adds": [
+          {"zh-CN": "逐增量 model.response 事件", "en": "One model.response event per delta"},
+          {"zh-CN": "累积文本与最终 chunk 标记", "en": "Accumulated text and an explicit final-chunk marker"}
+        ],
+        "preserves": [
+          {"zh-CN": "一次模型 turn 最终仍只追加一条 assistant message。", "en": "One model turn still appends exactly one assistant message."}
+        ]
+      },
+      "golden_trace": {
+        "path": "curriculum/lessons/s02_events_streaming/golden.trace.jsonl",
+        "run_id": "run-s02-events-streaming-golden",
+        "expected_event_count": 7,
+        "focus_event_types": ["model.request", "model.response", "session.stop"]
+      },
+      "agent_bridge": {
+        "relationship": "direct",
+        "claim_ids": ["codex-source-event-stream", "pi-source-session-events", "reasonix-source-event-log"],
+        "notes": {"zh-CN": "对照重点是事件边界和可消费协议，不把 UI 流式效果误当成内部事件模型。", "en": "The comparison focuses on event boundaries and consumable protocols, not on inferring internals from streaming UI behavior."}
+      },
+      "exercise_checks": [
+        {
+          "id": "s02-golden-trace",
+          "level": "observe",
+          "title": {"zh-CN": "复核 Streaming Trace", "en": "Verify the streaming trace"},
+          "acceptance": {"zh-CN": "三个 delta 形成三个有序事件，且最后一个明确标记 final。", "en": "Three deltas produce three ordered events and the last is explicitly final."},
+          "command": "python3 -m curriculum.golden verify s02-events-streaming"
+        },
+        {
+          "id": "s02-message-contract",
+          "level": "modify",
+          "title": {"zh-CN": "验证流式消息合同", "en": "Test the streaming message contract"},
+          "acceptance": {"zh-CN": "增量可回放，同时不会污染下一轮的消息历史。", "en": "Deltas remain replayable without polluting the next-turn message history."},
+          "command": "python3 -m unittest curriculum.tests.test_vertical_slice.VerticalSliceTests.test_s02_streaming_becomes_events -v"
+        }
+      ]
     },
     {
       "id": "s03-tool-dispatch",
@@ -46,7 +122,45 @@
       "difficulty": "intermediate",
       "code_path": "curriculum/lessons/s03_tool_dispatch/demo.py",
       "content_paths": {"zh-CN": "curriculum/lessons/s03_tool_dispatch/lesson.zh.md", "en": "curriculum/lessons/s03_tool_dispatch/lesson.en.md"},
-      "run": "python3 -m curriculum.lessons.s03_tool_dispatch.demo"
+      "run": "python3 -m curriculum.lessons.s03_tool_dispatch.demo",
+      "change_contract": {
+        "previous_lesson_id": "s02-events-streaming",
+        "summary": {"zh-CN": "在不改变循环所有权的前提下加入结构化 Tool Roundtrip。", "en": "Add a structured tool roundtrip without changing ownership of the loop."},
+        "adds": [
+          {"zh-CN": "Tool Registry、参数校验与 dispatch", "en": "Tool registry, argument validation, and dispatch"},
+          {"zh-CN": "tool.request 与 tool.result 的可追踪配对", "en": "Traceable pairing of tool.request and tool.result"}
+        ],
+        "preserves": [
+          {"zh-CN": "模型只能请求动作；Harness 决定是否以及如何执行。", "en": "The model only requests actions; the harness decides whether and how to execute them."}
+        ]
+      },
+      "golden_trace": {
+        "path": "curriculum/lessons/s03_tool_dispatch/golden.trace.jsonl",
+        "run_id": "run-s03-tool-dispatch-golden",
+        "expected_event_count": 9,
+        "focus_event_types": ["model.response", "tool.request", "tool.result", "model.request"]
+      },
+      "agent_bridge": {
+        "relationship": "direct",
+        "claim_ids": ["codex-source-tool-router", "pi-source-tool-dispatch", "reasonix-source-tool-dispatch", "reference-harness-controlled-tool-roundtrip"],
+        "notes": {"zh-CN": "Vendor 源码 Claim 与可复现 reference baseline 分开呈现；后者不是 Native Agent 证据。", "en": "Vendor source claims are shown separately from the reproducible reference baseline, which is not native-agent evidence."}
+      },
+      "exercise_checks": [
+        {
+          "id": "s03-golden-trace",
+          "level": "observe",
+          "title": {"zh-CN": "复核 Tool Roundtrip", "en": "Verify the tool roundtrip"},
+          "acceptance": {"zh-CN": "request、result 与第二次模型请求按因果顺序出现。", "en": "The request, result, and second model request appear in causal order."},
+          "command": "python3 -m curriculum.golden verify s03-tool-dispatch"
+        },
+        {
+          "id": "s03-dispatch-contract",
+          "level": "modify",
+          "title": {"zh-CN": "验证 Dispatch 合同", "en": "Test the dispatch contract"},
+          "acceptance": {"zh-CN": "工具结果以绑定 tool_call_id 的 tool message 返回下一轮。", "en": "The tool result returns to the next turn as a tool message bound to tool_call_id."},
+          "command": "python3 -m unittest curriculum.tests.test_vertical_slice.VerticalSliceTests.test_s03_tool_roundtrip -v"
+        }
+      ]
     },
     {
       "id": "s04-workspace-tools",
@@ -60,7 +174,45 @@
       "difficulty": "intermediate",
       "code_path": "curriculum/lessons/s04_workspace_tools/demo.py",
       "content_paths": {"zh-CN": "curriculum/lessons/s04_workspace_tools/lesson.zh.md", "en": "curriculum/lessons/s04_workspace_tools/lesson.en.md"},
-      "run": "python3 -m curriculum.lessons.s04_workspace_tools.demo"
+      "run": "python3 -m curriculum.lessons.s04_workspace_tools.demo",
+      "change_contract": {
+        "previous_lesson_id": "s03-tool-dispatch",
+        "summary": {"zh-CN": "把抽象工具替换为受工作区边界约束的真实文件副作用。", "en": "Replace an abstract tool with real file effects constrained by a workspace boundary."},
+        "adds": [
+          {"zh-CN": "路径规范化、逃逸拒绝与显式工具 allowlist", "en": "Path normalization, escape rejection, and an explicit tool allowlist"},
+          {"zh-CN": "可处置 fixture 中的真实文件读取", "en": "A real file read inside a disposable fixture"}
+        ],
+        "preserves": [
+          {"zh-CN": "工具 Schema 校验不能替代权限与执行边界。", "en": "Tool-schema validation does not replace permissions or execution boundaries."}
+        ]
+      },
+      "golden_trace": {
+        "path": "curriculum/lessons/s04_workspace_tools/golden.trace.jsonl",
+        "run_id": "run-s04-workspace-tools-golden",
+        "expected_event_count": 9,
+        "focus_event_types": ["tool.request", "tool.result", "session.stop"]
+      },
+      "agent_bridge": {
+        "relationship": "adjacent",
+        "claim_ids": ["codex-source-execution-policy", "pi-source-execution-boundary", "reasonix-source-execution-policy", "claude-code-doc-execution-policy"],
+        "notes": {"zh-CN": "这些 Claim 证明相邻的 approval/sandbox 边界；它们不等同于本章教学用的 Path.resolve 实现。", "en": "These claims establish adjacent approval and sandbox boundaries; they do not imply the agents use this lesson's Path.resolve implementation."}
+      },
+      "exercise_checks": [
+        {
+          "id": "s04-golden-trace",
+          "level": "observe",
+          "title": {"zh-CN": "复核工作区读取", "en": "Verify the workspace read"},
+          "acceptance": {"zh-CN": "Golden Trace 只包含 fixture 内的相对路径与干净结果。", "en": "The Golden Trace contains only a fixture-relative path and a clean result."},
+          "command": "python3 -m curriculum.golden verify s04-workspace-tools"
+        },
+        {
+          "id": "s04-boundary-contract",
+          "level": "modify",
+          "title": {"zh-CN": "攻击路径边界", "en": "Challenge the path boundary"},
+          "acceptance": {"zh-CN": "../ 逃逸在任何文件操作发生前被拒绝。", "en": "A ../ escape is rejected before any filesystem operation occurs."},
+          "command": "python3 -m unittest curriculum.tests.test_vertical_slice.VerticalSliceTests.test_workspace_rejects_escape -v"
+        }
+      ]
     },
     {
       "id": "s05-instructions",
@@ -74,7 +226,45 @@
       "difficulty": "intermediate",
       "code_path": "curriculum/lessons/s05_instructions/demo.py",
       "content_paths": {"zh-CN": "curriculum/lessons/s05_instructions/lesson.zh.md", "en": "curriculum/lessons/s05_instructions/lesson.en.md"},
-      "run": "python3 -m curriculum.lessons.s05_instructions.demo"
+      "run": "python3 -m curriculum.lessons.s05_instructions.demo",
+      "change_contract": {
+        "previous_lesson_id": "s04-workspace-tools",
+        "summary": {"zh-CN": "在模型请求前加入可审计、从根到叶组合的项目指令。", "en": "Compile auditable root-to-leaf project instructions before the model request."},
+        "adds": [
+          {"zh-CN": "有界目录遍历与分层 instruction discovery", "en": "Bounded directory traversal and layered instruction discovery"},
+          {"zh-CN": "来源可见、顺序稳定的 system prompt 组合", "en": "Source-visible, deterministically ordered system-prompt composition"}
+        ],
+        "preserves": [
+          {"zh-CN": "项目指令仍由 Harness 发现和编译，而不是由模型自行搜索。", "en": "Project instructions are still discovered and compiled by the harness, not searched for ad hoc by the model."}
+        ]
+      },
+      "golden_trace": {
+        "path": "curriculum/lessons/s05_instructions/golden.trace.jsonl",
+        "run_id": "run-s05-instructions-golden",
+        "expected_event_count": 5,
+        "focus_event_types": ["model.request", "model.response", "session.stop"]
+      },
+      "agent_bridge": {
+        "relationship": "gap",
+        "claim_ids": [],
+        "notes": {"zh-CN": "当前固定 Snapshot 尚无达到本项目证据标准的 instruction precedence Claim；网页必须把它显示为研究缺口，而不是猜测实现。", "en": "Current pinned snapshots do not yet have an instruction-precedence claim at this project's evidence standard; the site must show that research gap instead of guessing."}
+      },
+      "exercise_checks": [
+        {
+          "id": "s05-golden-trace",
+          "level": "observe",
+          "title": {"zh-CN": "复核指令输入", "en": "Verify instruction input"},
+          "acceptance": {"zh-CN": "运行与提交的 Trace 一致，且不泄露本地绝对路径。", "en": "The run matches the committed trace without leaking a local absolute path."},
+          "command": "python3 -m curriculum.golden verify s05-instructions"
+        },
+        {
+          "id": "s05-precedence-contract",
+          "level": "modify",
+          "title": {"zh-CN": "验证 Root-to-leaf 顺序", "en": "Test root-to-leaf precedence"},
+          "acceptance": {"zh-CN": "根级指令稳定出现在 package 级指令之前，外部 cwd 被拒绝。", "en": "Root instructions remain before package instructions and an external cwd is rejected."},
+          "command": "python3 -m unittest curriculum.tests.test_vertical_slice.VerticalSliceTests.test_s05_root_to_leaf_instructions curriculum.tests.test_vertical_slice.VerticalSliceTests.test_instruction_discovery_rejects_external_cwd -v"
+        }
+      ]
     },
     {
       "id": "s06-context-budget",
@@ -88,7 +278,45 @@
       "difficulty": "intermediate",
       "code_path": "curriculum/lessons/s06_context_budget/demo.py",
       "content_paths": {"zh-CN": "curriculum/lessons/s06_context_budget/lesson.zh.md", "en": "curriculum/lessons/s06_context_budget/lesson.en.md"},
-      "run": "python3 -m curriculum.lessons.s06_context_budget.demo"
+      "run": "python3 -m curriculum.lessons.s06_context_budget.demo",
+      "change_contract": {
+        "previous_lesson_id": "s05-instructions",
+        "summary": {"zh-CN": "让有限上下文中的截断与裁剪成为显式、可回放的 Harness 策略。", "en": "Turn truncation and pruning in a finite context window into explicit, replayable harness policy."},
+        "adds": [
+          {"zh-CN": "单工具输出上限与全局输入预算", "en": "A per-tool-output limit and a global input budget"},
+          {"zh-CN": "context.prune 事件与可见的信息损失", "en": "context.prune events and visible information loss"}
+        ],
+        "preserves": [
+          {"zh-CN": "完整事实记录与每轮模型可见投影保持分离。", "en": "The complete factual record remains separate from each model-visible projection."}
+        ]
+      },
+      "golden_trace": {
+        "path": "curriculum/lessons/s06_context_budget/golden.trace.jsonl",
+        "run_id": "run-s06-context-budget-golden",
+        "expected_event_count": 10,
+        "focus_event_types": ["tool.result", "context.prune", "model.request", "session.stop"]
+      },
+      "agent_bridge": {
+        "relationship": "adjacent",
+        "claim_ids": ["codex-source-auto-compaction", "pi-source-context-compaction", "reasonix-source-context-maintenance"],
+        "notes": {"zh-CN": "这些固定源码 Claim 覆盖更高级的 compaction；本章只实现确定性 truncation/pruning，因此不能把两者当作同一机制。", "en": "These pinned source claims cover more advanced compaction; this lesson implements deterministic truncation and pruning, so the mechanisms must not be treated as identical."}
+      },
+      "exercise_checks": [
+        {
+          "id": "s06-golden-trace",
+          "level": "observe",
+          "title": {"zh-CN": "复核预算决策", "en": "Verify budget decisions"},
+          "acceptance": {"zh-CN": "Trace 同时证明 oversized result 被截断，下一次请求前发生 context.prune。", "en": "The trace proves both oversized-result truncation and context.prune before the next request."},
+          "command": "python3 -m curriculum.golden verify s06-context-budget"
+        },
+        {
+          "id": "s06-budget-contract",
+          "level": "modify",
+          "title": {"zh-CN": "验证双层预算", "en": "Test the two-level budget"},
+          "acceptance": {"zh-CN": "单结果上限与历史裁剪独立生效，并产生结构化观测事件。", "en": "Per-result limiting and history pruning act independently and emit structured observations."},
+          "command": "python3 -m unittest curriculum.tests.test_vertical_slice.VerticalSliceTests.test_s06_truncates_and_prunes -v"
+        }
+      ]
     }
   ]
 }

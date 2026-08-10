@@ -119,10 +119,40 @@ export interface Trace {
   title: LocalizedText;
   kind: string;
   experiment_id?: string;
+  lesson_id?: string;
   run_id?: string;
   source_path: string;
   download_path: string;
   events: TraceEvent[];
+}
+
+export interface LessonChangeContract {
+  previous_lesson_id: string | null;
+  summary: LocalizedText;
+  adds: LocalizedText[];
+  preserves: LocalizedText[];
+}
+
+export interface LessonGoldenTrace {
+  path: string;
+  run_id: string;
+  expected_event_count: number;
+  focus_event_types: string[];
+  download_path: string;
+}
+
+export interface LessonAgentBridge {
+  relationship: "direct" | "adjacent" | "gap";
+  claim_ids: string[];
+  notes: LocalizedText;
+}
+
+export interface ExerciseCheck {
+  id: string;
+  level: "observe" | "modify" | "research";
+  title: LocalizedText;
+  acceptance: LocalizedText;
+  command: string;
 }
 
 export interface ExperimentSubject {
@@ -206,6 +236,10 @@ export interface Lesson {
   content_paths: LocalizedText;
   run: string;
   content: LocalizedText;
+  change_contract: LessonChangeContract;
+  golden_trace: LessonGoldenTrace;
+  agent_bridge: LessonAgentBridge;
+  exercise_checks: ExerciseCheck[];
 }
 
 export interface ContentBundle {
@@ -267,6 +301,10 @@ export function findExperiment(experimentId: string): Experiment | undefined {
 
 export function findTrace(traceId: string): Trace | undefined {
   return content.traces.find((trace) => trace.id === traceId);
+}
+
+export function findLesson(lessonId: string): Lesson | undefined {
+  return content.curriculum.lessons.find((lesson) => lesson.id === lessonId);
 }
 
 export function claimsForSnapshot(agentId: string, snapshotId: string): Claim[] {
