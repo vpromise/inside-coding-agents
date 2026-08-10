@@ -41,7 +41,7 @@ async function collectFiles(directory) {
 }
 
 test("GitHub Pages export contains every content route with repository-safe URLs", async () => {
-  assert.equal(expectedRoutes.length, 58, "the route inventory changed; review the export contract");
+  assert.equal(expectedRoutes.length, 70, "the route inventory changed; review the export contract");
   assert.equal(new Set(expectedRoutes).size, expectedRoutes.length, "route inventory contains duplicates");
 
   for (const route of expectedRoutes) {

@@ -32,7 +32,7 @@ test("server-renders the product homepage", async () => {
   assert.match(html, /Inside Coding Agents/);
   assert.match(html, /Open the agent shell/);
   assert.match(html, /TRACE 0\.1/);
-  assert.match(html, /<strong>9<\/strong>.*runnable lessons/);
+  assert.match(html, /<strong>13<\/strong>.*runnable lessons/);
   assert.match(html, /href="\/search"/);
   assert.match(html, /aria-controls="primary-navigation"/);
   assert.match(html, /aria-pressed="true"/);
@@ -118,12 +118,12 @@ test("generated content resolves the shared source graph", async () => {
   const generated = JSON.parse(
     await readFile(new URL("../app/data/content.generated.json", import.meta.url), "utf8"),
   );
-  assert.equal(generated.curriculum.lessons.length, 9);
-  assert.equal(generated.mechanisms.length, 16);
+  assert.equal(generated.curriculum.lessons.length, 13);
+  assert.equal(generated.mechanisms.length, 20);
   assert.equal(generated.agents.length, 5);
   assert.equal(generated.claims.length, 30);
   assert.equal(generated.experiments.length, 1);
-  assert.equal(generated.traces.length, 12);
+  assert.equal(generated.traces.length, 16);
 
   for (const lesson of generated.curriculum.lessons) {
     assert.ok(lesson.estimated_minutes >= 20, `${lesson.id} reading time`);

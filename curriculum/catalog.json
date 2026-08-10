@@ -473,6 +473,214 @@
           "command": "python3 -m unittest curriculum.tests.test_vertical_slice.VerticalSliceTests.test_s09_retrieves_memory_and_loads_skill -v"
         }
       ]
+    },
+    {
+      "id": "s10-approval-policy",
+      "number": "10",
+      "slug": "approval-policy",
+      "title": {"zh-CN": "Approval Policy 与精确授权", "en": "Approval Policy and Exact Authorization"},
+      "summary": {"zh-CN": "在模型请求与真实副作用之间插入 fail-closed 的 allow、ask、deny 决策。", "en": "Insert fail-closed allow, ask, and deny decisions between model requests and real effects."},
+      "mechanism_ids": ["execution-policy"],
+      "status": "implemented",
+      "estimated_minutes": 42,
+      "difficulty": "advanced",
+      "code_path": "curriculum/lessons/s10_approval_policy/demo.py",
+      "content_paths": {"zh-CN": "curriculum/lessons/s10_approval_policy/lesson.zh.md", "en": "curriculum/lessons/s10_approval_policy/lesson.en.md"},
+      "run": "python3 -m curriculum.lessons.s10_approval_policy.demo",
+      "change_contract": {
+        "previous_lesson_id": "s09-memory-skills",
+        "summary": {"zh-CN": "让 skills 和模型只能提出动作，由独立策略层决定是否执行。", "en": "Let skills and models propose actions while an independent policy layer decides whether they execute."},
+        "adds": [
+          {"zh-CN": "绑定 tool 与规范化 arguments 的 ActionRequest fingerprint", "en": "An ActionRequest fingerprint bound to the tool and canonical arguments"},
+          {"zh-CN": "有序 rule、默认拒绝、fresh approver 与 one-shot grant", "en": "Ordered rules, default deny, a fresh approver, and one-shot grants"}
+        ],
+        "preserves": [
+          {"zh-CN": "工具 Schema 只验证形状；它不会授予权限，也不能绕过策略。", "en": "Tool schemas validate shape only; they grant no permission and cannot bypass policy."}
+        ]
+      },
+      "golden_trace": {
+        "path": "curriculum/lessons/s10_approval_policy/golden.trace.jsonl",
+        "run_id": "run-s10-approval-policy-golden",
+        "expected_event_count": 11,
+        "focus_event_types": ["tool.request", "approval.request", "approval.decision", "tool.result"]
+      },
+      "agent_bridge": {
+        "relationship": "direct",
+        "claim_ids": ["codex-source-execution-policy", "pi-source-execution-boundary", "reasonix-source-execution-policy", "claude-code-doc-execution-policy"],
+        "notes": {"zh-CN": "这些固定 Claim 直接覆盖 permission/approval 与 execution boundary，包括 Pi 明确不内置 permission/sandbox 的负向设计证据。", "en": "These pinned claims directly cover permission, approval, and execution boundaries, including Pi's explicit negative design boundary around built-in permissions and sandboxing."}
+      },
+      "exercise_checks": [
+        {
+          "id": "s10-golden-trace",
+          "level": "observe",
+          "title": {"zh-CN": "复核精确授权", "en": "Verify exact authorization"},
+          "acceptance": {"zh-CN": "ask 规则产生 request/decision 对，fingerprint 一致且 grant_scope 为 once。", "en": "An ask rule produces a request/decision pair with one fingerprint and grant_scope once."},
+          "command": "python3 -m curriculum.golden verify s10-approval-policy"
+        },
+        {
+          "id": "s10-policy-contract",
+          "level": "modify",
+          "title": {"zh-CN": "验证 Fail-closed Policy", "en": "Test fail-closed policy"},
+          "acceptance": {"zh-CN": "arguments 改变会改变 fingerprint；ask 缺少 approver 时拒绝且工具不执行。", "en": "Changing arguments changes the fingerprint; ask without an approver denies before execution."},
+          "command": "python3 -m unittest curriculum.tests.test_vertical_slice.VerticalSliceTests.test_s10_binds_approval_to_the_exact_action -v"
+        }
+      ]
+    },
+    {
+      "id": "s11-sandbox-network",
+      "number": "11",
+      "slug": "sandbox-network",
+      "title": {"zh-CN": "OS Sandbox 与 Network Boundary", "en": "OS Sandboxes and Network Boundaries"},
+      "summary": {"zh-CN": "把语义授权编译成可由隔离后端强制执行的最小 capability envelope。", "en": "Compile semantic authorization into a minimal capability envelope enforceable by an isolation backend."},
+      "mechanism_ids": ["execution-policy", "os-sandbox", "network-boundary"],
+      "status": "implemented",
+      "estimated_minutes": 46,
+      "difficulty": "advanced",
+      "code_path": "curriculum/lessons/s11_sandbox_network/demo.py",
+      "content_paths": {"zh-CN": "curriculum/lessons/s11_sandbox_network/lesson.zh.md", "en": "curriculum/lessons/s11_sandbox_network/lesson.en.md"},
+      "run": "python3 -m curriculum.lessons.s11_sandbox_network.demo",
+      "change_contract": {
+        "previous_lesson_id": "s10-approval-policy",
+        "summary": {"zh-CN": "在“允许做什么”之后增加“即使出错也只能做到什么”的强制边界。", "en": "After deciding what may be done, add an enforcement boundary that limits what can happen even when code is wrong."},
+        "adds": [
+          {"zh-CN": "显式 filesystem/process/network capability 与 backend attestation", "en": "Explicit filesystem, process, and network capabilities plus backend attestation"},
+          {"zh-CN": "精确 host:port allowlist 和拒绝通配符/URL 混淆", "en": "Exact host:port allowlists that reject wildcard and URL ambiguity"}
+        ],
+        "preserves": [
+          {"zh-CN": "Approval 与 sandbox 保持两层；语义 allow 不代表 OS enforcement 成功。", "en": "Approval and sandboxing remain separate layers; semantic allow does not prove OS enforcement."}
+        ]
+      },
+      "golden_trace": {
+        "path": "curriculum/lessons/s11_sandbox_network/golden.trace.jsonl",
+        "run_id": "run-s11-sandbox-network-golden",
+        "expected_event_count": 13,
+        "focus_event_types": ["approval.decision", "sandbox.configure", "network.decision", "tool.result"]
+      },
+      "agent_bridge": {
+        "relationship": "direct",
+        "claim_ids": ["codex-source-execution-policy", "pi-source-execution-boundary", "reasonix-source-execution-policy", "claude-code-doc-execution-policy"],
+        "notes": {"zh-CN": "Claim 直接证明产品对 approval 与 OS boundary 的不同组合；Golden Trace 只使用无副作用 simulator，不冒充 Native sandbox 证据。", "en": "The claims directly establish different product combinations of approval and OS boundaries; the Golden Trace uses a no-effect simulator and is not native-sandbox evidence."}
+      },
+      "exercise_checks": [
+        {
+          "id": "s11-golden-trace",
+          "level": "observe",
+          "title": {"zh-CN": "复核双层安全链", "en": "Verify the two-layer safety chain"},
+          "acceptance": {"zh-CN": "approval allow 之后仍出现 sandbox.configure 和 exact network decision。", "en": "sandbox.configure and an exact network decision still appear after approval allows the tool."},
+          "command": "python3 -m curriculum.golden verify s11-sandbox-network"
+        },
+        {
+          "id": "s11-boundary-contract",
+          "level": "modify",
+          "title": {"zh-CN": "攻击 Network Allowlist", "en": "Challenge the network allowlist"},
+          "acceptance": {"zh-CN": "未列出的 host 在 backend 运行前被拒绝，simulator 调用计数不增加。", "en": "An unlisted host is denied before the backend runs and the simulator call count does not increase."},
+          "command": "python3 -m unittest curriculum.tests.test_vertical_slice.VerticalSliceTests.test_s11_denies_unlisted_network_before_backend_execution -v"
+        }
+      ]
+    },
+    {
+      "id": "s12-project-trust",
+      "number": "12",
+      "slug": "project-trust",
+      "title": {"zh-CN": "Project Trust 与 Prompt Injection", "en": "Project Trust and Prompt Injection"},
+      "summary": {"zh-CN": "把 workspace identity、显式信任和 instruction/data authority 分离。", "en": "Separate workspace identity, explicit trust, and instruction-versus-data authority."},
+      "mechanism_ids": ["project-trust", "instruction-discovery"],
+      "status": "implemented",
+      "estimated_minutes": 45,
+      "difficulty": "advanced",
+      "code_path": "curriculum/lessons/s12_project_trust/demo.py",
+      "content_paths": {"zh-CN": "curriculum/lessons/s12_project_trust/lesson.zh.md", "en": "curriculum/lessons/s12_project_trust/lesson.en.md"},
+      "run": "python3 -m curriculum.lessons.s12_project_trust.demo",
+      "change_contract": {
+        "previous_lesson_id": "s11-sandbox-network",
+        "summary": {"zh-CN": "从控制输出副作用扩展到控制哪些输入有资格成为指令。", "en": "Extend safety from controlling output effects to controlling which inputs may become instructions."},
+        "adds": [
+          {"zh-CN": "基于 manifest fingerprint 的 workspace identity 与精确 trust grant", "en": "Manifest-fingerprinted workspace identity and exact trust grants"},
+          {"zh-CN": "按 authority 接受或隔离来源，heuristic 只报警不授权", "en": "Authority-based source acceptance/quarantine where heuristics alert but never authorize"}
+        ],
+        "preserves": [
+          {"zh-CN": "Approval 和 sandbox 仍限制副作用；prompt filtering 不能替代任何一层。", "en": "Approval and sandboxing still constrain effects; prompt filtering replaces neither layer."}
+        ]
+      },
+      "golden_trace": {
+        "path": "curriculum/lessons/s12_project_trust/golden.trace.jsonl",
+        "run_id": "run-s12-project-trust-golden",
+        "expected_event_count": 8,
+        "focus_event_types": ["trust.decision", "instruction.accept", "instruction.quarantine", "model.request"]
+      },
+      "agent_bridge": {
+        "relationship": "gap",
+        "claim_ids": [],
+        "notes": {"zh-CN": "当前固定 Snapshot 没有达到证据标准的跨产品 project-trust/prompt-injection Claim；本章只提供 reference contract，并把产品映射保留为公开缺口。", "en": "Current pinned snapshots lack a cross-product project-trust/prompt-injection claim at this evidence standard; this lesson provides a reference contract and leaves product mapping as an explicit gap."}
+      },
+      "exercise_checks": [
+        {
+          "id": "s12-golden-trace",
+          "level": "observe",
+          "title": {"zh-CN": "复核 Instruction Authority", "en": "Verify instruction authority"},
+          "acceptance": {"zh-CN": "platform/project 来源被接受，external/tool-output 被隔离且不进入 system prompt。", "en": "Platform/project sources are accepted while external/tool-output sources are quarantined outside the system prompt."},
+          "command": "python3 -m curriculum.golden verify s12-project-trust"
+        },
+        {
+          "id": "s12-trust-contract",
+          "level": "modify",
+          "title": {"zh-CN": "验证 Identity-bound Trust", "en": "Test identity-bound trust"},
+          "acceptance": {"zh-CN": "revision 改变导致 fingerprint 改变，旧 grant 不自动继承；关键词检测不改变 authority。", "en": "Changing revision changes the fingerprint and does not inherit the old grant; keyword detection does not change authority."},
+          "command": "python3 -m unittest curriculum.tests.test_vertical_slice.VerticalSliceTests.test_s12_keeps_untrusted_data_out_of_instruction_authority -v"
+        }
+      ]
+    },
+    {
+      "id": "s13-checkpoint-rollback",
+      "number": "13",
+      "slug": "checkpoint-rollback",
+      "title": {"zh-CN": "Git Checkpoint、Diff 与 Rollback", "en": "Git Checkpoints, Diffs, and Rollback"},
+      "summary": {"zh-CN": "在副作用前建立干净基线，审查精确 diff，并只回滚明确路径。", "en": "Create a clean baseline before effects, review the exact diff, and roll back only explicit paths."},
+      "mechanism_ids": ["checkpoint-rollback", "event-stream"],
+      "status": "implemented",
+      "estimated_minutes": 48,
+      "difficulty": "advanced",
+      "code_path": "curriculum/lessons/s13_checkpoint_rollback/demo.py",
+      "content_paths": {"zh-CN": "curriculum/lessons/s13_checkpoint_rollback/lesson.zh.md", "en": "curriculum/lessons/s13_checkpoint_rollback/lesson.en.md"},
+      "run": "python3 -m curriculum.lessons.s13_checkpoint_rollback.demo",
+      "change_contract": {
+        "previous_lesson_id": "s12-project-trust",
+        "summary": {"zh-CN": "为已经获准且被隔离的写操作增加可检查、可撤销的状态边界。", "en": "Add an inspectable, reversible state boundary around writes that were already authorized and isolated."},
+        "adds": [
+          {"zh-CN": "绑定 exact Git root/commit/tree 的 clean checkpoint", "en": "A clean checkpoint bound to the exact Git root, commit, and tree"},
+          {"zh-CN": "显式 path diff、review fingerprint 与 scoped restore", "en": "Explicit-path diffs, a reviewed fingerprint, and scoped restore"}
+        ],
+        "preserves": [
+          {"zh-CN": "Rollback 不是权限：它不授权危险动作，也不保证外部副作用可撤销。", "en": "Rollback is not permission: it authorizes no dangerous action and cannot promise external effects are reversible."}
+        ]
+      },
+      "golden_trace": {
+        "path": "curriculum/lessons/s13_checkpoint_rollback/golden.trace.jsonl",
+        "run_id": "run-s13-checkpoint-rollback-golden",
+        "expected_event_count": 15,
+        "focus_event_types": ["checkpoint.create", "file.patch", "checkpoint.diff", "checkpoint.rollback"]
+      },
+      "agent_bridge": {
+        "relationship": "adjacent",
+        "claim_ids": ["reasonix-source-event-log"],
+        "notes": {"zh-CN": "固定 Reasonix Claim 证明 checkpoint sidecar 与 authoritative event log 的相邻结构，但不证明其 rollback 语义与本章教学实现相同。", "en": "The pinned Reasonix claim establishes adjacent checkpoint-sidecar and authoritative-event-log structure, but does not prove rollback semantics identical to this teaching implementation."}
+      },
+      "exercise_checks": [
+        {
+          "id": "s13-golden-trace",
+          "level": "observe",
+          "title": {"zh-CN": "复核 Reversible Change", "en": "Verify the reversible change"},
+          "acceptance": {"zh-CN": "Trace 依次记录 clean checkpoint、1/1 diff、scoped rollback 和 clean=true。", "en": "The trace records a clean checkpoint, a 1/1 diff, scoped rollback, and clean=true in order."},
+          "command": "python3 -m curriculum.golden verify s13-checkpoint-rollback"
+        },
+        {
+          "id": "s13-rollback-contract",
+          "level": "modify",
+          "title": {"zh-CN": "验证 Scoped Rollback", "en": "Test scoped rollback"},
+          "acceptance": {"zh-CN": "只恢复明确文件，逃逸路径被拒绝，最终内容回到 baseline。", "en": "Only the explicit file is restored, escape paths are rejected, and final content returns to baseline."},
+          "command": "python3 -m unittest curriculum.tests.test_vertical_slice.VerticalSliceTests.test_s13_rolls_back_only_the_reviewed_scoped_diff -v"
+        }
+      ]
     }
   ]
 }

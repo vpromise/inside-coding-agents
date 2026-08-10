@@ -35,17 +35,17 @@ The same material is useful as a beginner's coding-agent tutorial, an engineer's
 
 | View | What it answers | Start here |
 | --- | --- | --- |
-| Academy | How do I build a coding agent from zero? | [Run the nine lessons](curriculum/README.md) |
-| Mechanisms | What design problems do all agent harnesses share? | [Browse 16 mechanisms](content/mechanisms/README.md) |
+| Academy | How do I build a coding agent from zero? | [Run the thirteen lessons](curriculum/README.md) |
+| Mechanisms | What design problems do all agent harnesses share? | [Browse 20 mechanisms](content/mechanisms/README.md) |
 | Agent Atlas | How does a specific agent implement those mechanisms? | [Inspect versioned profiles](content/agents/README.md) |
 | Experiment Lab | Which observations can be reproduced under fixed conditions? | [Replay the controlled baseline](labs/README.md) |
 | Registry | Where are claims, evidence, schemas, and stable IDs stored? | [Read the data model](registry/README.md) |
 | Web | How does the shared graph become a bilingual, searchable site? | [Run the interface](apps/web/README.md) |
 
-### Included in the v0.1 public preview
+### Included in the current public preview
 
-- 9 runnable bilingual long-form tutorials, each with a byte-verified Golden Trace, mental models, guided implementation, failure modes, exercises, production boundaries, and complete source code;
-- 16 cross-agent mechanism records;
+- 13 runnable bilingual long-form tutorials, progressing through agent loops, context, approval, sandbox and network policy, project trust, and scoped Git rollback;
+- 20 cross-agent mechanism records;
 - 5 Agent profiles, 9 immutable snapshots, and 30 reviewed claims;
 - pinned public-source maps for Codex, Pi, and Reasonix;
 - a clean-room, official-document snapshot for Claude Code;

@@ -1,0 +1,18 @@
+{
+  "schema_version": "0.1.0",
+  "id": "checkpoint-rollback",
+  "title": "Checkpoint, Diff, and Rollback",
+  "summary": "Create a version-bound baseline before edits, review a scoped state delta, and restore only the explicitly selected paths when recovery is needed.",
+  "category": "reliability",
+  "status": "core",
+  "prerequisites": ["workspace-tools", "execution-policy", "event-stream"],
+  "reference_lessons": ["s13-checkpoint-rollback"],
+  "agent_implementations": [],
+  "experiments": [],
+  "open_questions": [
+    "How should checkpoints preserve a user's pre-existing dirty work without absorbing it into agent ownership?",
+    "Which non-filesystem effects need compensating actions rather than Git rollback?",
+    "How should concurrent agents detect that a reviewed diff became stale?"
+  ],
+  "reader_layer_status": {"L0": "complete", "L1": "complete", "L2": "partial", "L3": "partial", "L4": "missing"}
+}

@@ -1,0 +1,18 @@
+{
+  "schema_version": "0.1.0",
+  "id": "network-boundary",
+  "title": "Network Boundary",
+  "summary": "Constrain outbound destinations, protocols, resolution, redirects, and credential flow independently from whether a tool is semantically approved.",
+  "category": "safety",
+  "status": "core",
+  "prerequisites": ["execution-policy", "os-sandbox"],
+  "reference_lessons": ["s11-sandbox-network"],
+  "agent_implementations": [],
+  "experiments": [],
+  "open_questions": [
+    "Should policy bind hostnames before or after DNS resolution and redirect handling?",
+    "How can a harness expose proxied, tunneled, and child-process traffic in one trace?",
+    "Which credential scopes remain safe when one destination is allowed?"
+  ],
+  "reader_layer_status": {"L0": "complete", "L1": "complete", "L2": "partial", "L3": "partial", "L4": "missing"}
+}

@@ -6,7 +6,7 @@
   "category": "safety",
   "status": "core",
   "prerequisites": ["tool-dispatch", "path-boundary"],
-  "reference_lessons": ["s03-tool-dispatch", "s04-workspace-tools"],
+  "reference_lessons": ["s03-tool-dispatch", "s04-workspace-tools", "s10-approval-policy", "s11-sandbox-network"],
   "agent_implementations": [
     {
       "agent_id": "codex",
@@ -40,5 +40,5 @@
     "How should approval caches be scoped and revoked?",
     "How can headless execution fail closed without making automation unusable?"
   ],
-  "reader_layer_status": {"L0": "partial", "L1": "missing", "L2": "partial", "L3": "partial", "L4": "partial"}
+  "reader_layer_status": {"L0": "complete", "L1": "complete", "L2": "complete", "L3": "partial", "L4": "partial"}
 }

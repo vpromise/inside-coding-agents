@@ -6,9 +6,9 @@
   "category": "context",
   "status": "core",
   "prerequisites": ["agent-loop"],
-  "reference_lessons": ["s05-instructions"],
+  "reference_lessons": ["s05-instructions", "s12-project-trust"],
   "agent_implementations": [],
   "experiments": [],
   "open_questions": ["How should conflicting instruction scopes be surfaced to users and traces?"],
-  "reader_layer_status": {"L0": "partial", "L1": "complete", "L2": "partial", "L3": "missing", "L4": "missing"}
+  "reader_layer_status": {"L0": "complete", "L1": "complete", "L2": "complete", "L3": "missing", "L4": "missing"}
 }

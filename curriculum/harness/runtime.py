@@ -1,4 +1,4 @@
-"""The reference agent loop introduced progressively in s01-s06."""
+"""The provider-neutral reference loop extended across the progressive course."""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from .context import ContextBudget, ContextCompactor
+from .safety import ApprovalGate
 from .tools import ToolError, ToolRegistry, encode_tool_result
 from .trace import TraceRecorder
 from .types import Message, Model
@@ -36,6 +37,7 @@ class AgentRunner:
         system_prompt: str = "",
         budget: ContextBudget | None = None,
         compactor: ContextCompactor | None = None,
+        approval_gate: ApprovalGate | None = None,
         config: AgentConfig | None = None,
     ) -> None:
         self.model = model
@@ -44,6 +46,7 @@ class AgentRunner:
         self.system_prompt = system_prompt
         self.budget = budget
         self.compactor = compactor
+        self.approval_gate = approval_gate
         self.config = config or AgentConfig()
         self._parent_event_id: str | None = None
 
@@ -173,8 +176,72 @@ class AgentRunner:
                         "arguments": call.arguments,
                     },
                 )
+                decision = None
+                execution_arguments = call.arguments
+                if self.approval_gate is not None:
+                    pending = self.approval_gate.request(call.name, call.arguments)
+                    execution_arguments = pending.request.arguments
+                    self._emit(
+                        "approval.request",
+                        actor_kind="harness",
+                        actor_id=self.config.agent_id,
+                        payload={
+                            "tool_call_id": call.id,
+                            "tool": call.name,
+                            "request_fingerprint": pending.request.fingerprint,
+                            "policy_effect": pending.rule.effect,
+                            "rule_id": pending.rule.id,
+                        },
+                    )
+                    decision = self.approval_gate.resolve(pending)
+                    self._emit(
+                        "approval.decision",
+                        actor_kind="harness",
+                        actor_id=self.config.agent_id,
+                        payload={
+                            "tool_call_id": call.id,
+                            "tool": call.name,
+                            "request_fingerprint": decision.request_fingerprint,
+                            "outcome": decision.outcome,
+                            "policy_effect": decision.policy_effect,
+                            "rule_id": decision.rule_id,
+                            "reason": decision.reason,
+                            "source": decision.source,
+                            "grant_scope": decision.grant_scope,
+                        },
+                    )
+                if decision is not None and not decision.allowed:
+                    encoded = encode_tool_result(
+                        {
+                            "ok": False,
+                            "error": decision.reason,
+                            "error_type": "ApprovalDenied",
+                        }
+                    )
+                    payload = {
+                        "tool_call_id": call.id,
+                        "tool": call.name,
+                        "ok": False,
+                        "error": decision.reason,
+                        "error_type": "ApprovalDenied",
+                    }
+                    messages.append(
+                        Message(
+                            role="tool",
+                            content=encoded,
+                            name=call.name,
+                            tool_call_id=call.id,
+                        )
+                    )
+                    self._emit(
+                        "tool.result",
+                        actor_kind="tool",
+                        actor_id=call.name,
+                        payload=payload,
+                    )
+                    continue
                 try:
-                    value = self.tools.execute(call.name, call.arguments)
+                    value = self.tools.execute(call.name, execution_arguments)
                     truncated = False
                     if self.budget is not None:
                         value, truncated = self.budget.truncate_tool_result(value)

@@ -1,0 +1,18 @@
+{
+  "schema_version": "0.1.0",
+  "id": "project-trust",
+  "title": "Project Trust and Instruction Authority",
+  "summary": "Bind explicit trust to a stable workspace identity and decide which project inputs may become instructions instead of ordinary untrusted data.",
+  "category": "safety",
+  "status": "core",
+  "prerequisites": ["instruction-discovery", "execution-policy"],
+  "reference_lessons": ["s12-project-trust"],
+  "agent_implementations": [],
+  "experiments": [],
+  "open_questions": [
+    "Which repository changes should invalidate an existing trust grant?",
+    "How should nested projects and dependency worktrees compose instruction authority?",
+    "Which prompt-injection signals are useful for review without being mistaken for enforcement?"
+  ],
+  "reader_layer_status": {"L0": "complete", "L1": "complete", "L2": "partial", "L3": "missing", "L4": "missing"}
+}

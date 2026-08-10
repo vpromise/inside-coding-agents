@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 };
 
 const products = [
-  { index: "01", name: "Academy", zh: "从零构建", en: "Build from zero", copyZh: "9 章可运行课程，从 loop 走到 replay、compaction 与 memory。", copyEn: "Nine runnable lessons, from the agent loop to replay, compaction, and memory." },
+  { index: "01", name: "Academy", zh: "从零构建", en: "Build from zero", copyZh: "13 章可运行课程，从 loop、context 走到 approval、sandbox 与 rollback。", copyEn: "Thirteen runnable lessons, from loops and context to approval, sandboxing, and rollback." },
   { index: "02", name: "Mechanisms", zh: "横向拆解", en: "Compare designs", copyZh: "按 loop、context、tools、safety 等设计问题组织。", copyEn: "Organized by shared problems such as loops, context, tools, and safety." },
   { index: "03", name: "Atlas", zh: "版本档案", en: "Versioned records", copyZh: "每条架构事实绑定 Agent snapshot 与 surface。", copyEn: "Every architecture fact is bound to an agent snapshot and surface." },
   { index: "04", name: "Lab", zh: "复现实验", en: "Reproduce experiments", copyZh: "固定 fixture、变量、trace 与失败运行。", copyEn: "Pin fixtures, variables, traces, and failed runs." },
@@ -107,7 +107,7 @@ export default function Home() {
         <div className="page-shell">
           <div className="section-heading section-heading--split section-heading--light">
             <div>
-              <span className="eyebrow">FOUNDATIONS · S01—S06</span>
+              <span className="eyebrow">FOUNDATIONS → SAFETY · S01—S13</span>
               <h2><LocalizedText zh="先亲手造一个，" en="Build one yourself" /><br /><LocalizedText zh="再去评价任何 Agent。" en="before judging any agent." /></h2>
             </div>
             <Link className="text-link text-link--light" href="/learn"><LocalizedText zh="查看学习路线" en="View the learning path" /> <span>→</span></Link>

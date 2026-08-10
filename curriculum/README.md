@@ -1,6 +1,6 @@
 # Coding Agent Curriculum
 
-The curriculum contains nine bilingual, progressively layered lessons and a provider-neutral Python reference harness. The default path is deterministic, makes no network requests, reads no credentials, and requires no model API key.
+The curriculum contains thirteen bilingual, progressively layered lessons and a provider-neutral Python reference harness. The default path is deterministic, uses only disposable local fixtures or no-effect simulators, reads no credentials, makes no real network requests, and requires no model API key.
 
 | Lesson | Mechanism | New idea |
 | --- | --- | --- |
@@ -13,6 +13,10 @@ The curriculum contains nine bilingual, progressively layered lessons and a prov
 | s07 | Session replay | Append-only events rebuild state and preserve branch lineage |
 | s08 | Context compaction | Semantic checkpoints retain provenance while shrinking visible history |
 | s09 | Memory and skills | Source-attributed facts and full skill instructions load on demand |
+| s10 | Approval policy | Exact actions cross ordered allow, ask, and deny decisions |
+| s11 | Sandbox and network | Authorized work compiles into a least-privilege capability envelope |
+| s12 | Project trust | Workspace identity and source authority keep untrusted data out of policy |
+| s13 | Checkpoint and rollback | A clean Git baseline, reviewed diff, and scoped restore make edits recoverable |
 
 Each lesson includes a long-form `lesson.en.md`, a complete Chinese `lesson.zh.md`, an independently runnable `demo.py`, and a deterministic `golden.trace.jsonl`. Shared teaching code lives under `harness/`; deterministic end-to-end tests live under `tests/`. `catalog.json` is the canonical website navigation source.
 
@@ -43,10 +47,11 @@ python3 -m curriculum.lessons.s01_agent_loop.demo
 python3 -m curriculum.lessons.s03_tool_dispatch.demo
 python3 -m curriculum.lessons.s06_context_budget.demo
 python3 -m curriculum.lessons.s09_memory_skills.demo
+python3 -m curriculum.lessons.s13_checkpoint_rollback.demo
 python3 -m curriculum.golden verify
 python3 -m unittest discover -s curriculum/tests -v
 ```
 
-Each demo prints its final answer and Trace 0.1 JSONL events to standard output. It does not create files or access the network.
+Each demo prints its final answer and Trace 0.1 JSONL events to standard output. Lessons that teach files, Git, or network boundaries use disposable fixtures or a no-effect simulator; they never access a real network or read credentials.
 
 The implementation favors readability over framework abstraction. Code duplication may be intentional when it keeps a new mechanism visible to a learner.

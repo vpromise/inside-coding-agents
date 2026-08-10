@@ -1,0 +1,18 @@
+{
+  "schema_version": "0.1.0",
+  "id": "os-sandbox",
+  "title": "Operating-System Sandbox",
+  "summary": "Enforce filesystem, process, and related capability limits below semantic tool policy so compromised or incorrect code cannot exceed its execution envelope.",
+  "category": "safety",
+  "status": "core",
+  "prerequisites": ["execution-policy", "path-boundary"],
+  "reference_lessons": ["s11-sandbox-network"],
+  "agent_implementations": [],
+  "experiments": [],
+  "open_questions": [
+    "Which backend attestations are strong enough to fail closed across operating systems?",
+    "How should sandbox profiles represent child processes, IPC, devices, and inherited descriptors?",
+    "Which observable tests distinguish policy simulation from active kernel enforcement?"
+  ],
+  "reader_layer_status": {"L0": "complete", "L1": "complete", "L2": "partial", "L3": "partial", "L4": "missing"}
+}
