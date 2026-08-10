@@ -1,0 +1,99 @@
+{
+  "schema_version": "0.1.0",
+  "id": "reasonix",
+  "name": "Reasonix",
+  "summary": "An open Go coding-agent engine shared by terminal, desktop, browser, and ACP surfaces, with cache-aware context maintenance, policy gates, checkpoints, plugins, and subagent orchestration.",
+  "coverage_tier": "B",
+  "source_availability": "open",
+  "homepage": "https://reasonix.io/",
+  "upstream": {
+    "documentation": "https://github.com/esengine/DeepSeek-Reasonix/tree/6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993/docs",
+    "release_feed": "https://github.com/esengine/DeepSeek-Reasonix/releases",
+    "repositories": [
+      {
+        "component": "engine-and-clients",
+        "url": "https://github.com/esengine/DeepSeek-Reasonix",
+        "default_branch": "main-v2"
+      }
+    ]
+  },
+  "licenses": [
+    {
+      "component": "engine-and-clients",
+      "spdx": "MIT",
+      "url": "https://github.com/esengine/DeepSeek-Reasonix/blob/6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993/LICENSE"
+    }
+  ],
+  "surfaces": ["cli", "tui", "desktop", "web", "acp", "server"],
+  "model_strategy": ["multi-provider", "openai-compatible", "local-models"],
+  "lifecycle": "active",
+  "tags": ["coding-agent", "go", "cache-aware", "checkpoints", "plugins", "subagents"],
+  "stewards": ["foundation-maintainers"],
+  "snapshots": [
+    {
+      "id": "reasonix-2026-08-10-source",
+      "observed_at": "2026-08-10",
+      "surface": "cli",
+      "version": "1.22.0@6376bd4",
+      "freshness": "current",
+      "docs_captured_at": "2026-08-10",
+      "source_ref": {
+        "repository": "https://github.com/esengine/DeepSeek-Reasonix",
+        "commit": "6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993",
+        "paths": [
+          "internal/agent/run_loop.go",
+          "internal/agent/execute_batch.go",
+          "internal/agent/execute_one.go",
+          "internal/agent/compact.go",
+          "internal/agent/cache_shape.go",
+          "internal/agent/repeat_failure_guard.go",
+          "internal/control/approval.go",
+          "internal/sandbox/sandbox.go",
+          "internal/checkpoint/checkpoint.go",
+          "internal/agent/task.go",
+          "internal/pluginpkg/manifest_v1.go",
+          "internal/plugin/lazy.go",
+          "internal/store/session.go",
+          "internal/agent/session_events.go"
+        ]
+      },
+      "environment": {
+        "os": "source-inspection-only",
+        "runtime": "Go repository; binary not executed",
+        "permission_mode": "source-mapped",
+        "sandbox_mode": "source-mapped",
+        "network_mode": "not-executed"
+      },
+      "claims_path": "registry/claims/reasonix-source-agent-loop.claim.json",
+      "notes": "Clean source inspection pinned to the commit whose release ledger identifies 1.22.0. This snapshot maps the CLI engine only; desktop, browser, and ACP behavior is not assumed identical unless a claim names the shared boundary. A native experiment is still required for Tier A."
+    },
+    {
+      "id": "reasonix-2026-08-10-acp",
+      "observed_at": "2026-08-10",
+      "surface": "acp",
+      "version": "1.22.0@6376bd4",
+      "freshness": "current",
+      "docs_captured_at": "2026-08-10",
+      "source_ref": {
+        "repository": "https://github.com/esengine/DeepSeek-Reasonix",
+        "commit": "6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993",
+        "paths": [
+          "internal/acp/server.go",
+          "internal/acp/protocol.go",
+          "internal/acp/dispatch.go",
+          "internal/acp/service.go",
+          "docs/ACP.md"
+        ]
+      },
+      "environment": {
+        "os": "source-inspection-only",
+        "runtime": "Go ACP implementation; server not executed",
+        "permission_mode": "source-mapped",
+        "sandbox_mode": "shared-engine-boundary-not-executed",
+        "network_mode": "not-executed"
+      },
+      "claims_path": "registry/claims/reasonix-source-acp.claim.json",
+      "notes": "ACP-specific snapshot for NDJSON JSON-RPC framing, event projection, and permission requests. Runtime interoperability remains untested in this project."
+    }
+  ]
+}

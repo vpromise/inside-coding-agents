@@ -1,0 +1,35 @@
+{
+  "schema_version": "0.1.0",
+  "id": "reasonix-source-context-maintenance",
+  "agent_id": "reasonix",
+  "snapshot_id": "reasonix-2026-08-10-source",
+  "mechanism_id": "context-compaction",
+  "surface": "cli",
+  "statement": "Reasonix treats compaction as a low-frequency cache-reset point, uses multiple context thresholds and a recent-tail budget, and records prefix-shape diagnostics that distinguish system, tool-schema, and content-rewrite changes.",
+  "display_text": {
+    "zh-CN": "Reasonix 把 compaction 视为低频 cache-reset point，使用多级上下文阈值与 recent-tail budget，并记录可区分 system、tool schema 与 content rewrite 变化的 prefix-shape diagnostics。",
+    "en": "Reasonix treats compaction as a low-frequency cache-reset point, uses multiple context thresholds and a recent-tail budget, and records prefix-shape diagnostics that distinguish system, tool-schema, and content-rewrite changes."
+  },
+  "status": "reviewed",
+  "evidence": [
+    {
+      "type": "source",
+      "title": "Reasonix cache-aware compaction",
+      "source_url": "https://github.com/esengine/DeepSeek-Reasonix/blob/6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993/internal/agent/compact.go",
+      "captured_at": "2026-08-10",
+      "locator": "compaction thresholds and projection",
+      "commit": "6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993"
+    },
+    {
+      "type": "source",
+      "title": "Reasonix prefix-shape diagnostics",
+      "source_url": "https://github.com/esengine/DeepSeek-Reasonix/blob/6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993/internal/agent/cache_shape.go",
+      "captured_at": "2026-08-10",
+      "locator": "PrefixShape; CaptureShape; CompareShape",
+      "commit": "6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993"
+    }
+  ],
+  "reviewed_at": "2026-08-10",
+  "reviewers": ["foundation-maintainers"],
+  "notes": "The code exposes cache diagnostics; no cost or quality advantage is claimed without a controlled experiment."
+}

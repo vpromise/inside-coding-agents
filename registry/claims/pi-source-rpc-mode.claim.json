@@ -1,0 +1,35 @@
+{
+  "schema_version": "0.1.0",
+  "id": "pi-source-rpc-mode",
+  "agent_id": "pi",
+  "snapshot_id": "pi-2026-08-10-rpc",
+  "mechanism_id": "client-server-protocol",
+  "surface": "server",
+  "statement": "Pi RPC mode accepts typed commands as LF-delimited JSON on stdin and emits responses plus agent events as LF-delimited JSON on stdout, including controls for prompting, steering, sessions, compaction, retry, models, and tools.",
+  "display_text": {
+    "zh-CN": "Pi RPC mode 通过 stdin 接收 LF 分隔的类型化 JSON command，并通过 stdout 输出 LF 分隔的 response 与 agent event；协议覆盖 prompt、steering、session、compaction、retry、model 与 tool 控制。",
+    "en": "Pi RPC mode accepts typed commands as LF-delimited JSON on stdin and emits responses plus agent events as LF-delimited JSON on stdout, including controls for prompting, steering, sessions, compaction, retry, models, and tools."
+  },
+  "status": "reviewed",
+  "evidence": [
+    {
+      "type": "source",
+      "title": "Pi RPC protocol types",
+      "source_url": "https://github.com/earendil-works/pi/blob/936aff00918de1187f085f123c2812d8f2d67745/packages/coding-agent/src/modes/rpc/rpc-types.ts",
+      "captured_at": "2026-08-10",
+      "locator": "RpcCommand; RpcResponse; RPC events",
+      "commit": "936aff00918de1187f085f123c2812d8f2d67745"
+    },
+    {
+      "type": "source",
+      "title": "Pi RPC mode implementation",
+      "source_url": "https://github.com/earendil-works/pi/blob/936aff00918de1187f085f123c2812d8f2d67745/packages/coding-agent/src/modes/rpc/rpc-mode.ts",
+      "captured_at": "2026-08-10",
+      "locator": "RPC command dispatch and JSONL output",
+      "commit": "936aff00918de1187f085f123c2812d8f2d67745"
+    }
+  ],
+  "reviewed_at": "2026-08-10",
+  "reviewers": ["foundation-maintainers"],
+  "notes": "Framing and command coverage are source-backed; cross-language client interoperability has not been reproduced."
+}

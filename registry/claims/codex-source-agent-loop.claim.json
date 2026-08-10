@@ -1,0 +1,35 @@
+{
+  "schema_version": "0.1.0",
+  "id": "codex-source-agent-loop",
+  "agent_id": "codex",
+  "snapshot_id": "codex-2026-08-10-source",
+  "mechanism_id": "agent-loop",
+  "surface": "cli",
+  "statement": "At the pinned Codex source revision, run_turn repeatedly samples the model, executes requested function calls, feeds results into later samples, accepts steering input, and stops when follow-up work is no longer required or a stop/error path wins.",
+  "display_text": {
+    "zh-CN": "在固定的 Codex 源码版本中，run_turn 会反复采样模型、执行函数调用、把结果送入后续采样并接收 steering；当不再需要 follow-up，或 stop/error 路径生效时结束。",
+    "en": "At the pinned Codex source revision, run_turn repeatedly samples the model, executes requested function calls, feeds results into later samples, accepts steering input, and stops when follow-up work is no longer required or a stop/error path wins."
+  },
+  "status": "reviewed",
+  "evidence": [
+    {
+      "type": "source",
+      "title": "Codex core turn loop",
+      "source_url": "https://github.com/openai/codex/blob/89a335ed50258dc9dc5b3d7f410db61b431244f9/codex-rs/core/src/session/turn.rs",
+      "captured_at": "2026-08-10",
+      "locator": "run_turn",
+      "commit": "89a335ed50258dc9dc5b3d7f410db61b431244f9"
+    },
+    {
+      "type": "source",
+      "title": "Codex regular task drains queued input",
+      "source_url": "https://github.com/openai/codex/blob/89a335ed50258dc9dc5b3d7f410db61b431244f9/codex-rs/core/src/tasks/regular.rs",
+      "captured_at": "2026-08-10",
+      "locator": "RegularTask::run",
+      "commit": "89a335ed50258dc9dc5b3d7f410db61b431244f9"
+    }
+  ],
+  "reviewed_at": "2026-08-10",
+  "reviewers": ["foundation-maintainers"],
+  "notes": "This describes the open-source Rust core at one commit, not every hosted Codex surface or a black-box runtime observation."
+}

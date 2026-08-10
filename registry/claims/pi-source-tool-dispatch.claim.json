@@ -1,0 +1,27 @@
+{
+  "schema_version": "0.1.0",
+  "id": "pi-source-tool-dispatch",
+  "agent_id": "pi",
+  "snapshot_id": "pi-2026-08-10-source",
+  "mechanism_id": "tool-dispatch",
+  "surface": "cli",
+  "statement": "Pi validates tool arguments, offers before- and after-tool interception points, and executes a batch sequentially or in parallel according to the configured strategy and individual tool constraints.",
+  "display_text": {
+    "zh-CN": "Pi 会校验工具参数，提供 before/after tool 拦截点，并根据全局策略和单个工具约束，以串行或并行方式执行一批 tool calls。",
+    "en": "Pi validates tool arguments, offers before- and after-tool interception points, and executes a batch sequentially or in parallel according to the configured strategy and individual tool constraints."
+  },
+  "status": "reviewed",
+  "evidence": [
+    {
+      "type": "source",
+      "title": "Pi tool-call execution pipeline",
+      "source_url": "https://github.com/earendil-works/pi/blob/936aff00918de1187f085f123c2812d8f2d67745/packages/agent/src/agent-loop.ts",
+      "captured_at": "2026-08-10",
+      "locator": "executeToolCalls; executeToolCall",
+      "commit": "936aff00918de1187f085f123c2812d8f2d67745"
+    }
+  ],
+  "reviewed_at": "2026-08-10",
+  "reviewers": ["foundation-maintainers"],
+  "notes": "No throughput or race-safety conclusion is inferred from the availability of parallel dispatch."
+}

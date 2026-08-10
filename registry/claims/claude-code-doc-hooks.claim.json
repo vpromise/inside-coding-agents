@@ -1,0 +1,26 @@
+{
+  "schema_version": "0.1.0",
+  "id": "claude-code-doc-hooks",
+  "agent_id": "claude-code",
+  "snapshot_id": "claude-code-2026-08-10-docs",
+  "mechanism_id": "extension-runtime",
+  "surface": "cli",
+  "statement": "Claude Code's official hook contract exposes lifecycle events including pre- and post-tool use, permission requests, session start/end, and stop; PreToolUse hooks can deny a call before normal permission-mode checks, while allow decisions cannot override stricter deny rules.",
+  "display_text": {
+    "zh-CN": "Claude Code 官方 hook contract 暴露 pre/post tool use、permission request、session start/end 与 stop 等事件；PreToolUse hook 可在常规 permission-mode 检查前拒绝调用，而 allow 决策不能越过更严格的 deny rules。",
+    "en": "Claude Code's official hook contract exposes lifecycle events including pre- and post-tool use, permission requests, session start/end, and stop; PreToolUse hooks can deny a call before normal permission-mode checks, while allow decisions cannot override stricter deny rules."
+  },
+  "status": "reviewed",
+  "evidence": [
+    {
+      "type": "official-doc",
+      "title": "Claude Code — Automate actions with hooks",
+      "source_url": "https://code.claude.com/docs/en/hooks-guide",
+      "captured_at": "2026-08-10",
+      "locator": "PreToolUse; Hook events; Hooks and permission modes"
+    }
+  ],
+  "reviewed_at": "2026-08-10",
+  "reviewers": ["foundation-maintainers"],
+  "notes": "Hook ordering and behavior were not reproduced locally; only the documented interface is asserted."
+}

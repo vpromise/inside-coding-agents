@@ -1,0 +1,43 @@
+{
+  "schema_version": "0.1.0",
+  "id": "extension-runtime",
+  "title": "Extension Runtime",
+  "summary": "Load and execute hooks, plugins, skills, custom tools, or provider adapters without collapsing extension code into the core loop.",
+  "category": "extensibility",
+  "status": "core",
+  "prerequisites": ["tool-dispatch", "instruction-discovery"],
+  "reference_lessons": ["s03-tool-dispatch", "s05-instructions"],
+  "agent_implementations": [
+    {
+      "agent_id": "codex",
+      "snapshot_id": "codex-2026-08-10-source",
+      "coverage": "partial",
+      "claim_ids": ["codex-source-extension-runtime"]
+    },
+    {
+      "agent_id": "pi",
+      "snapshot_id": "pi-2026-08-10-source",
+      "coverage": "substantial",
+      "claim_ids": ["pi-source-extension-runtime"]
+    },
+    {
+      "agent_id": "reasonix",
+      "snapshot_id": "reasonix-2026-08-10-source",
+      "coverage": "partial",
+      "claim_ids": ["reasonix-source-extension-runtime"]
+    },
+    {
+      "agent_id": "claude-code",
+      "snapshot_id": "claude-code-2026-08-10-docs",
+      "coverage": "partial",
+      "claim_ids": ["claude-code-doc-hooks"]
+    }
+  ],
+  "experiments": [],
+  "open_questions": [
+    "Which extension capabilities require an explicit trust decision?",
+    "How should hook conflicts and non-deterministic completion order be surfaced?",
+    "Can one portable extension API preserve each harness's safety model?"
+  ],
+  "reader_layer_status": {"L0": "partial", "L1": "missing", "L2": "partial", "L3": "partial", "L4": "partial"}
+}

@@ -1,0 +1,194 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:inside-coding-agents:schema:claim:0.1.0",
+  "title": "Inside Coding Agents Claim",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "id",
+    "agent_id",
+    "snapshot_id",
+    "mechanism_id",
+    "surface",
+    "statement",
+    "status",
+    "evidence",
+    "reviewed_at"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "0.1.0"
+    },
+    "id": {
+      "$ref": "#/$defs/stableId"
+    },
+    "agent_id": {
+      "$ref": "#/$defs/stableId"
+    },
+    "snapshot_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "mechanism_id": {
+      "$ref": "#/$defs/stableId"
+    },
+    "surface": {
+      "type": "string",
+      "minLength": 1
+    },
+    "statement": {
+      "type": "string",
+      "minLength": 1
+    },
+    "display_text": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z]{2}(?:-[A-Z]{2})?$"
+      },
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "status": {
+      "enum": ["draft", "reviewed", "disputed", "stale", "retracted", "superseded"]
+    },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/evidence"
+      }
+    },
+    "reviewed_at": {
+      "type": "string",
+      "format": "date"
+    },
+    "reviewers": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "superseded_by": {
+      "$ref": "#/$defs/stableId"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "$defs": {
+    "stableId": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "title", "captured_at"],
+      "properties": {
+        "type": {
+          "enum": ["source", "official-doc", "reproduced", "inference"]
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "captured_at": {
+          "type": "string",
+          "format": "date"
+        },
+        "locator": {
+          "type": "string"
+        },
+        "commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "experiment_id": {
+          "$ref": "#/$defs/stableId"
+        },
+        "trace_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 1
+        },
+        "supports": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/stableId"
+          }
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "source"
+              }
+            },
+            "required": ["type"]
+          },
+          "then": {
+            "required": ["source_url", "commit"]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "official-doc"
+              }
+            },
+            "required": ["type"]
+          },
+          "then": {
+            "required": ["source_url"]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "reproduced"
+              }
+            },
+            "required": ["type"]
+          },
+          "then": {
+            "required": ["experiment_id", "trace_path"]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "inference"
+              }
+            },
+            "required": ["type"]
+          },
+          "then": {
+            "required": ["rationale", "supports"]
+          }
+        }
+      ]
+    }
+  }
+}

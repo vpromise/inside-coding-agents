@@ -1,0 +1,37 @@
+{
+  "schema_version": "0.1.0",
+  "id": "context-compaction",
+  "title": "Context Compaction",
+  "summary": "Replace an over-budget model-visible history with a smaller projection while preserving enough state, provenance, and recent work to continue safely.",
+  "category": "context",
+  "status": "core",
+  "prerequisites": ["context-budget"],
+  "reference_lessons": ["s06-context-budget"],
+  "agent_implementations": [
+    {
+      "agent_id": "codex",
+      "snapshot_id": "codex-2026-08-10-source",
+      "coverage": "substantial",
+      "claim_ids": ["codex-source-auto-compaction"]
+    },
+    {
+      "agent_id": "pi",
+      "snapshot_id": "pi-2026-08-10-source",
+      "coverage": "substantial",
+      "claim_ids": ["pi-source-context-compaction"]
+    },
+    {
+      "agent_id": "reasonix",
+      "snapshot_id": "reasonix-2026-08-10-source",
+      "coverage": "partial",
+      "claim_ids": ["reasonix-source-context-maintenance"]
+    }
+  ],
+  "experiments": [],
+  "open_questions": [
+    "Which invariants must survive every compaction strategy?",
+    "How should a harness expose information loss and compaction lineage to users?",
+    "Which cache optimizations conflict with the most faithful context projection?"
+  ],
+  "reader_layer_status": {"L0": "partial", "L1": "missing", "L2": "partial", "L3": "partial", "L4": "partial"}
+}

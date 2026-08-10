@@ -1,0 +1,26 @@
+{
+  "schema_version": "0.1.0",
+  "id": "claude-code-doc-execution-policy",
+  "agent_id": "claude-code",
+  "snapshot_id": "claude-code-2026-08-10-docs",
+  "mechanism_id": "execution-policy",
+  "surface": "cli",
+  "statement": "Claude Code's official documentation separates permission rules, which decide tool and resource access, from OS-level sandbox enforcement for Bash filesystem and network access, and recommends using both as defense in depth.",
+  "display_text": {
+    "zh-CN": "Claude Code 官方文档将 permission rules 与 OS-level sandbox enforcement 分开：前者决定工具和资源访问，后者限制 Bash 的文件系统与网络访问，并建议两者共同构成 defense in depth。",
+    "en": "Claude Code's official documentation separates permission rules, which decide tool and resource access, from OS-level sandbox enforcement for Bash filesystem and network access, and recommends using both as defense in depth."
+  },
+  "status": "reviewed",
+  "evidence": [
+    {
+      "type": "official-doc",
+      "title": "Claude Code — Configure permissions",
+      "source_url": "https://code.claude.com/docs/en/permissions",
+      "captured_at": "2026-08-10",
+      "locator": "Permission rule syntax; How permissions interact with sandboxing"
+    }
+  ],
+  "reviewed_at": "2026-08-10",
+  "reviewers": ["foundation-maintainers"],
+  "notes": "Documentation supports the product contract, not the closed core's implementation structure or the behavior of an unobserved machine."
+}

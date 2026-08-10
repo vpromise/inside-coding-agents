@@ -1,0 +1,24 @@
+{
+  "schema_version": "0.1.0",
+  "policy": "Only high or critical advisories listed here may pass CI, and every exception must be current and still observed.",
+  "exceptions": [
+    {
+      "id": "GHSA-w3rx-r6r6-pgpr",
+      "package": "image-size",
+      "severity": "high",
+      "reviewed_at": "2026-08-10",
+      "expires_at": "2026-09-10",
+      "reason": "Vinext 1.0.0-beta.5 hard-pins image-size 2.0.2 and no patched image-size release exists. The site has no upload path and only processes reviewed repository assets during build.",
+      "upstream": "https://github.com/cloudflare/vinext/issues"
+    },
+    {
+      "id": "GHSA-5p2g-fcmc-qvqq",
+      "package": "image-size",
+      "severity": "high",
+      "reviewed_at": "2026-08-10",
+      "expires_at": "2026-09-10",
+      "reason": "Vinext 1.0.0-beta.5 hard-pins image-size 2.0.2 and no patched image-size release exists. The site has no upload path and only processes reviewed repository assets during build.",
+      "upstream": "https://github.com/cloudflare/vinext/issues"
+    }
+  ]
+}

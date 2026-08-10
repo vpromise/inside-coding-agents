@@ -1,0 +1,35 @@
+{
+  "schema_version": "0.1.0",
+  "id": "pi-source-context-compaction",
+  "agent_id": "pi",
+  "snapshot_id": "pi-2026-08-10-source",
+  "mechanism_id": "context-compaction",
+  "surface": "cli",
+  "statement": "Pi triggers compaction against a configurable reserve threshold, summarizes the older branch, keeps recent entries, tracks file operations, and preserves the full append-only session history outside the reduced model context.",
+  "display_text": {
+    "zh-CN": "Pi 会在可配置 reserve threshold 上触发 compaction，总结较旧分支、保留近期 entries、跟踪文件操作，同时把完整 append-only session history 保留在缩减后的模型上下文之外。",
+    "en": "Pi triggers compaction against a configurable reserve threshold, summarizes the older branch, keeps recent entries, tracks file operations, and preserves the full append-only session history outside the reduced model context."
+  },
+  "status": "reviewed",
+  "evidence": [
+    {
+      "type": "source",
+      "title": "Pi compaction implementation",
+      "source_url": "https://github.com/earendil-works/pi/blob/936aff00918de1187f085f123c2812d8f2d67745/packages/coding-agent/src/core/compaction/compaction.ts",
+      "captured_at": "2026-08-10",
+      "locator": "CompactionSettings; shouldCompact; compact",
+      "commit": "936aff00918de1187f085f123c2812d8f2d67745"
+    },
+    {
+      "type": "source",
+      "title": "Pi append-only session tree",
+      "source_url": "https://github.com/earendil-works/pi/blob/936aff00918de1187f085f123c2812d8f2d67745/packages/coding-agent/src/core/session-manager.ts",
+      "captured_at": "2026-08-10",
+      "locator": "SessionManager; appendCompaction; buildContextEntries",
+      "commit": "936aff00918de1187f085f123c2812d8f2d67745"
+    }
+  ],
+  "reviewed_at": "2026-08-10",
+  "reviewers": ["foundation-maintainers"],
+  "notes": "Compaction is explicitly lossy; retained task quality is not yet measured by this project."
+}

@@ -1,0 +1,35 @@
+{
+  "schema_version": "0.1.0",
+  "id": "codex-source-app-server",
+  "agent_id": "codex",
+  "snapshot_id": "codex-2026-08-10-app-server",
+  "mechanism_id": "client-server-protocol",
+  "surface": "server",
+  "statement": "The pinned Codex App Server accepts JSON-RPC requests and notifications over selectable stdio, Unix-socket, or WebSocket transports and dispatches typed requests through dedicated processors.",
+  "display_text": {
+    "zh-CN": "固定版本的 Codex App Server 可通过 stdio、Unix socket 或 WebSocket 接收 JSON-RPC request/notification，并把类型化请求分派给专用 processor。",
+    "en": "The pinned Codex App Server accepts JSON-RPC requests and notifications over selectable stdio, Unix-socket, or WebSocket transports and dispatches typed requests through dedicated processors."
+  },
+  "status": "reviewed",
+  "evidence": [
+    {
+      "type": "source",
+      "title": "Codex App Server runtime and transports",
+      "source_url": "https://github.com/openai/codex/blob/89a335ed50258dc9dc5b3d7f410db61b431244f9/codex-rs/app-server/src/lib.rs",
+      "captured_at": "2026-08-10",
+      "locator": "AppServerTransport startup and JSONRPCMessage dispatch",
+      "commit": "89a335ed50258dc9dc5b3d7f410db61b431244f9"
+    },
+    {
+      "type": "source",
+      "title": "Codex App Server request processor",
+      "source_url": "https://github.com/openai/codex/blob/89a335ed50258dc9dc5b3d7f410db61b431244f9/codex-rs/app-server/src/message_processor.rs",
+      "captured_at": "2026-08-10",
+      "locator": "process_request and typed request processors",
+      "commit": "89a335ed50258dc9dc5b3d7f410db61b431244f9"
+    }
+  ],
+  "reviewed_at": "2026-08-10",
+  "reviewers": ["foundation-maintainers"],
+  "notes": "Wire compatibility, reconnect behavior, and client interoperability have not been reproduced by this project."
+}

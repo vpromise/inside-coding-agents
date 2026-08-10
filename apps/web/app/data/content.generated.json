@@ -1,0 +1,3421 @@
+{
+  "schema_version": "0.3.0",
+  "sources": {
+    "curriculum": "curriculum/catalog.json",
+    "agents": "registry/agents/*.agent.json",
+    "claims": "registry/claims/*.claim.json",
+    "mechanisms": "registry/mechanisms/*.mechanism.json",
+    "experiments": "registry/experiments/*.experiment.json",
+    "experiment_results": "labs/results/**/result.json",
+    "traces": [
+      "registry/examples/example-trace.jsonl",
+      "labs/results/reference-tool-roundtrip-v1/run-001.trace.jsonl",
+      "labs/results/reference-tool-roundtrip-v1/run-002.trace.jsonl"
+    ]
+  },
+  "curriculum": {
+    "schema_version": "0.1.0",
+    "track": "foundations",
+    "title": {
+      "zh-CN": "从零构建 Agent Harness",
+      "en": "Build an Agent Harness from Zero"
+    },
+    "lessons": [
+      {
+        "id": "s01-agent-loop",
+        "number": "01",
+        "slug": "agent-loop",
+        "title": {
+          "zh-CN": "最小 Agent Loop",
+          "en": "The Minimal Agent Loop"
+        },
+        "summary": {
+          "zh-CN": "把一次模型调用变成有明确终止条件的循环。",
+          "en": "Turn one model call into a loop with an explicit stop condition."
+        },
+        "mechanism_ids": [
+          "agent-loop"
+        ],
+        "status": "implemented",
+        "content_paths": {
+          "zh-CN": "curriculum/lessons/s01_agent_loop/lesson.zh.md",
+          "en": "curriculum/lessons/s01_agent_loop/lesson.en.md"
+        },
+        "run": "python3 -m curriculum.lessons.s01_agent_loop.demo",
+        "content": {
+          "zh-CN": "# s01 · 最小 Agent Loop\n\n## 目标\n\n理解 Harness 的最小职责：保存消息、调用模型、判断是否继续，并留下终止原因。\n\n## 心智模型\n\n模型只产生“下一步”。Harness 才拥有循环、状态和停止策略。即使本章只有一次响应，也保留循环结构，因为工具调用会在 s03 把它变成多轮。\n\n## 运行\n\n`python3 -m curriculum.lessons.s01_agent_loop.demo`\n\n观察 `session.start → user.message → model.request → model.response → session.stop`。不要把模型内部推理伪装成 Trace 事件。\n\n## 练习\n\n把 `max_turns` 改为 1，并让 Fake Model 首轮请求工具。验收条件：运行以 `max-turns` 结束，而不是无限循环。\n\n## 边界\n\n本章没有工具、权限、重试或 token 预算。它只建立后续章节不变的控制骨架。\n",
+          "en": "# s01 · The Minimal Agent Loop\n\n## Objective\n\nUnderstand the smallest harness responsibilities: store messages, call a model, decide whether to continue, and preserve a stop reason.\n\n## Mental model\n\nThe model proposes the next step. The harness owns the loop, state, and stop policy. The example keeps a loop even though it receives one response because tool calls make that loop multi-turn in s03.\n\n## Run\n\n`python3 -m curriculum.lessons.s01_agent_loop.demo`\n\nObserve `session.start → user.message → model.request → model.response → session.stop`. Never invent hidden reasoning as trace events.\n\n## Exercise\n\nSet `max_turns` to 1 and make the fake model request a tool. Acceptance: the run stops with `max-turns` instead of looping forever.\n\n## Boundary\n\nThere are no tools, permissions, retries, or token budgets yet. This lesson establishes the control skeleton used by later chapters.\n"
+        }
+      },
+      {
+        "id": "s02-events-streaming",
+        "number": "02",
+        "slug": "events-streaming",
+        "title": {
+          "zh-CN": "Streaming 与事件",
+          "en": "Streaming and Events"
+        },
+        "summary": {
+          "zh-CN": "把流式增量转换成可观察、可回放的事件。",
+          "en": "Convert streaming deltas into observable, replayable events."
+        },
+        "mechanism_ids": [
+          "agent-loop",
+          "event-stream"
+        ],
+        "status": "implemented",
+        "content_paths": {
+          "zh-CN": "curriculum/lessons/s02_events_streaming/lesson.zh.md",
+          "en": "curriculum/lessons/s02_events_streaming/lesson.en.md"
+        },
+        "run": "python3 -m curriculum.lessons.s02_events_streaming.demo",
+        "content": {
+          "zh-CN": "# s02 · Streaming 与事件\n\n## 目标\n\n把 provider 的流式增量转成稳定的 Harness 事件，同时保持最终 assistant message 完整。\n\n## 关键设计\n\n传输 chunk 不是新的会话消息。Reference harness 为每个增量记录 `model.response`，并用 `accumulated` 展示当前可见文本；循环只在流结束后追加一条 assistant message。\n\n## 运行\n\n`python3 -m curriculum.lessons.s02_events_streaming.demo`\n\n## 练习\n\n让第二个 chunk 为空。验收条件：事件仍严格递增，最终内容没有重复，最后一个事件明确标记 `final: true`。\n\n## 工程提醒\n\n生产系统还要处理断流、重复增量、tool-call arguments 的部分 JSON 和取消；这些不应被“字符串拼接”掩盖。\n",
+          "en": "# s02 · Streaming and Events\n\n## Objective\n\nTranslate provider streaming deltas into stable harness events while preserving one complete assistant message.\n\n## Key design\n\nA transport chunk is not a new conversation message. The reference harness records each delta as `model.response`, exposes `accumulated` text, and appends one assistant message only after the stream ends.\n\n## Run\n\n`python3 -m curriculum.lessons.s02_events_streaming.demo`\n\n## Exercise\n\nMake the second chunk empty. Acceptance: sequences remain strict, final content has no duplication, and the last response event has `final: true`.\n\n## Engineering note\n\nProduction systems also handle broken streams, duplicate deltas, partial tool-call JSON, and cancellation. String concatenation must not hide these states.\n"
+        }
+      },
+      {
+        "id": "s03-tool-dispatch",
+        "number": "03",
+        "slug": "tool-dispatch",
+        "title": {
+          "zh-CN": "Tool Registry 与 Dispatch",
+          "en": "Tool Registry and Dispatch"
+        },
+        "summary": {
+          "zh-CN": "验证、执行并记录模型请求的工具调用。",
+          "en": "Validate, execute, and record model-requested tool calls."
+        },
+        "mechanism_ids": [
+          "agent-loop",
+          "tool-dispatch"
+        ],
+        "status": "implemented",
+        "content_paths": {
+          "zh-CN": "curriculum/lessons/s03_tool_dispatch/lesson.zh.md",
+          "en": "curriculum/lessons/s03_tool_dispatch/lesson.en.md"
+        },
+        "run": "python3 -m curriculum.lessons.s03_tool_dispatch.demo",
+        "content": {
+          "zh-CN": "# s03 · Tool Registry 与 Dispatch\n\n## 目标\n\n理解工具描述、参数验证、执行、结果消息和 Trace 之间的完整往返。\n\n## 数据流\n\n模型产生结构化 `ToolCall`。Registry 先检查工具名和参数 Schema，再调用 handler。无论成功或失败，Harness 都把结果作为 `tool` message 回送模型，并记录 request/result 事件。\n\n## 运行\n\n`python3 -m curriculum.lessons.s03_tool_dispatch.demo`\n\n## 练习\n\n给 `echo` 增加一个未声明参数。验收条件：handler 不执行，Trace 中的 `tool.result.ok` 为 `false`，下一轮仍能看到结构化错误。\n\n## 安全边界\n\nSchema validation 不是 authorization。是否允许读文件、运行命令或访问网络，需要独立的 policy 和 sandbox 层。\n",
+          "en": "# s03 · Tool Registry and Dispatch\n\n## Objective\n\nUnderstand the full round trip between tool description, argument validation, execution, result messages, and traces.\n\n## Data flow\n\nThe model produces a structured `ToolCall`. The registry checks the name and argument schema before invoking a handler. Success or failure becomes a `tool` message for the next model turn and a request/result pair in the trace.\n\n## Run\n\n`python3 -m curriculum.lessons.s03_tool_dispatch.demo`\n\n## Exercise\n\nAdd an undeclared argument to `echo`. Acceptance: the handler does not run, `tool.result.ok` is `false`, and the next turn receives a structured error.\n\n## Security boundary\n\nSchema validation is not authorization. File reads, command execution, and network access need separate policy and sandbox layers.\n"
+        }
+      },
+      {
+        "id": "s04-workspace-tools",
+        "number": "04",
+        "slug": "workspace-tools",
+        "title": {
+          "zh-CN": "File、Shell 与 Edit Tools",
+          "en": "File, Shell, and Edit Tools"
+        },
+        "summary": {
+          "zh-CN": "为副作用工具建立工作区路径边界和显式 allowlist。",
+          "en": "Put workspace boundaries and explicit allowlists around side-effecting tools."
+        },
+        "mechanism_ids": [
+          "workspace-tools",
+          "path-boundary"
+        ],
+        "status": "implemented",
+        "content_paths": {
+          "zh-CN": "curriculum/lessons/s04_workspace_tools/lesson.zh.md",
+          "en": "curriculum/lessons/s04_workspace_tools/lesson.en.md"
+        },
+        "run": "python3 -m curriculum.lessons.s04_workspace_tools.demo",
+        "content": {
+          "zh-CN": "# s04 · File、Shell 与 Edit Tools\n\n## 目标\n\n为产生副作用的工具建立最小工作区边界，并区分路径检查与真正的 OS sandbox。\n\n## 运行\n\n`python3 -m curriculum.lessons.s04_workspace_tools.demo`\n\n`Workspace.resolve` 拒绝绝对路径和 `../` 逃逸；command tool 不经过 shell，并要求显式 executable allowlist；edit 只有在旧文本恰好出现一次时执行。\n\n## 练习\n\n尝试读取 `../README.md`。验收条件：在任何文件读取发生前得到 `ToolValidationError`。\n\n## 安全边界\n\n路径约束不能限制子进程、symlink race、网络或系统调用。生产实现仍需要独立 sandbox、权限提示和项目可信度判断。\n",
+          "en": "# s04 · File, Shell, and Edit Tools\n\n## Objective\n\nPlace a minimal workspace boundary around side-effecting tools and distinguish path checks from a real OS sandbox.\n\n## Run\n\n`python3 -m curriculum.lessons.s04_workspace_tools.demo`\n\n`Workspace.resolve` rejects absolute paths and `../` escapes. The command tool avoids a shell and requires an executable allowlist. Editing proceeds only when the old text has exactly one match.\n\n## Exercise\n\nTry to read `../README.md`. Acceptance: a `ToolValidationError` occurs before any file read.\n\n## Security boundary\n\nPath containment cannot constrain subprocesses, symlink races, networks, or system calls. Production still needs a sandbox, approval policy, and project-trust decision.\n"
+        }
+      },
+      {
+        "id": "s05-instructions",
+        "number": "05",
+        "slug": "instructions",
+        "title": {
+          "zh-CN": "Instructions 与项目发现",
+          "en": "Instructions and Project Discovery"
+        },
+        "summary": {
+          "zh-CN": "从工作区根目录到当前目录组合分层指令。",
+          "en": "Compose hierarchical instructions from the workspace root to the current directory."
+        },
+        "mechanism_ids": [
+          "instruction-discovery"
+        ],
+        "status": "implemented",
+        "content_paths": {
+          "zh-CN": "curriculum/lessons/s05_instructions/lesson.zh.md",
+          "en": "curriculum/lessons/s05_instructions/lesson.en.md"
+        },
+        "run": "python3 -m curriculum.lessons.s05_instructions.demo",
+        "content": {
+          "zh-CN": "# s05 · Instructions 与项目发现\n\n## 目标\n\n理解 Harness 如何发现项目约束，以及目录层级为何必须有确定的组合顺序。\n\n## 运行\n\n`python3 -m curriculum.lessons.s05_instructions.demo`\n\n示例从 workspace root 走到当前 package，按 root-to-leaf 顺序读取 `AGENTS.md`。文件大小有上限，cwd 必须位于 workspace 内。\n\n## 练习\n\n在 `fixture/package/child/` 添加第三层指令。验收条件：系统提示中的顺序为 root、package、child。\n\n## 风险\n\n项目指令本身是不可信输入。它不能自动提升权限，也不能覆盖平台安全政策或用户的更高优先级意图。\n",
+          "en": "# s05 · Instructions and Project Discovery\n\n## Objective\n\nUnderstand how a harness discovers project constraints and why directory precedence needs a deterministic order.\n\n## Run\n\n`python3 -m curriculum.lessons.s05_instructions.demo`\n\nThe example walks from the workspace root to the current package and loads `AGENTS.md` files root-to-leaf. Each file is bounded and the current directory must remain inside the workspace.\n\n## Exercise\n\nAdd a third instruction under `fixture/package/child/`. Acceptance: the system prompt orders root, package, then child.\n\n## Risk\n\nRepository instructions are untrusted input. They cannot grant permissions or override platform safety policy and higher-priority user intent.\n"
+        }
+      },
+      {
+        "id": "s06-context-budget",
+        "number": "06",
+        "slug": "context-budget",
+        "title": {
+          "zh-CN": "Context Budget 与截断",
+          "en": "Context Budgets and Truncation"
+        },
+        "summary": {
+          "zh-CN": "让输入裁剪和工具输出截断成为可见策略。",
+          "en": "Make input pruning and tool-output truncation explicit policies."
+        },
+        "mechanism_ids": [
+          "context-budget",
+          "tool-output-truncation"
+        ],
+        "status": "implemented",
+        "content_paths": {
+          "zh-CN": "curriculum/lessons/s06_context_budget/lesson.zh.md",
+          "en": "curriculum/lessons/s06_context_budget/lesson.en.md"
+        },
+        "run": "python3 -m curriculum.lessons.s06_context_budget.demo",
+        "content": {
+          "zh-CN": "# s06 · Context Budget 与截断\n\n## 目标\n\n让上下文裁剪和工具输出截断成为显式、可测试、可观察的 Harness 策略。\n\n## 运行\n\n`python3 -m curriculum.lessons.s06_context_budget.demo`\n\n示例先限制单个 tool result，再在下一次模型调用前压缩消息列表。两次动作分别记录 `tool.result.truncated` 与 `context.prune`。\n\n## 练习\n\n把 `max_input_chars` 降到 120。验收条件：最近的工具结果仍保留可辨识 preview，Trace 报告裁剪前后字符数。\n\n## 局限\n\n字符数只是确定性教学代理，不等于 provider tokenizer。生产 adapter 应使用真实 token 计数，并为 system、user、tool schema 和输出预留分别预算。\n",
+          "en": "# s06 · Context Budgets and Truncation\n\n## Objective\n\nMake context pruning and tool-output truncation explicit, testable, observable harness policies.\n\n## Run\n\n`python3 -m curriculum.lessons.s06_context_budget.demo`\n\nThe example first bounds one tool result and then trims messages before the next model call. The two actions appear separately as `tool.result.truncated` and `context.prune`.\n\n## Exercise\n\nLower `max_input_chars` to 120. Acceptance: the newest tool result retains an identifiable preview and the trace reports before/after character counts.\n\n## Limitation\n\nCharacters are a deterministic teaching proxy, not a provider tokenizer. Production adapters should count real tokens and reserve separate budgets for system, user, tool schemas, and output.\n"
+        }
+      }
+    ]
+  },
+  "agents": [
+    {
+      "schema_version": "0.1.0",
+      "id": "claude-code",
+      "name": "Claude Code",
+      "summary": "Anthropic's terminal coding agent; this Tier B profile is limited to official documentation and the public distribution repository because the product core is not published there.",
+      "coverage_tier": "B",
+      "source_availability": "partial",
+      "homepage": "https://code.claude.com/docs/en/overview",
+      "upstream": {
+        "documentation": "https://code.claude.com/docs/en/overview",
+        "release_feed": "https://github.com/anthropics/claude-code/releases",
+        "repositories": [
+          {
+            "component": "distribution-examples-and-plugins",
+            "url": "https://github.com/anthropics/claude-code",
+            "default_branch": "main"
+          }
+        ]
+      },
+      "licenses": [
+        {
+          "component": "distribution-repository",
+          "spdx": "LicenseRef-Anthropic-Commercial",
+          "url": "https://github.com/anthropics/claude-code/blob/2bb60696142b493eafaeacfe00eac51d16c50c4f/LICENSE.md"
+        }
+      ],
+      "surfaces": [
+        "cli",
+        "tui",
+        "ide",
+        "sdk"
+      ],
+      "model_strategy": [
+        "first-party"
+      ],
+      "lifecycle": "active",
+      "tags": [
+        "coding-agent",
+        "closed-core",
+        "hooks",
+        "permissions",
+        "subagents"
+      ],
+      "stewards": [
+        "foundation-maintainers"
+      ],
+      "snapshots": [
+        {
+          "id": "claude-code-2026-08-10-docs",
+          "observed_at": "2026-08-10",
+          "surface": "cli",
+          "version": "2.1.226-docs-boundary",
+          "freshness": "current",
+          "docs_captured_at": "2026-08-10",
+          "environment": {
+            "os": "not-executed",
+            "runtime": "official-docs observation",
+            "permission_mode": "documented-configurable",
+            "sandbox_mode": "documented-configurable",
+            "network_mode": "not-executed"
+          },
+          "claims_path": "registry/claims/claude-code-doc-execution-policy.claim.json",
+          "notes": "Official-documentation snapshot aligned with public distribution tag v2.1.226. No claim in this snapshot asserts the closed core's file layout, hidden prompts, or internal state machine.",
+          "analysis_content": {
+            "zh-CN": "# Claude Code clean-room 文档快照\n\n这个 snapshot 的强项是产品契约，弱项是内部实现可见性。所有结论来自官方文档，观察日期为 2026-08-10；公开 distribution tag `v2.1.226` 只用于版本对齐，不能被当作 product core 源码。\n\n## 1. Loop — unknown\n\n官方材料确认 Claude Code 是 agentic terminal workflow，但本 snapshot 不声明内部 sampling loop、tool-result continuation、termination enum 或 retry scheduler。后续只能用官方 structured output 或授权黑盒实验描述外部行为。\n\n## 2. Context — partial\n\nsubagent 文档确认 child 使用独立 context window，并描述 auto-compaction、resume 与 startup loading。它不公开主 context reducer 的算法、摘要 prompt 或持久化格式，因此这些保持 unknown。\n\n## 3. Tools — partial\n\n文档公开 tool permission rule syntax、subagent tool allow/deny 与 MCP scope。它支持 capability contract，却不能证明内部 registry、validator 或 dispatcher 的代码结构。\n\n## 4. Safety — documented product contract\n\npermissions 决定 tool/file/domain 是否可访问；sandbox 为 Bash 与 child processes 提供 OS-level filesystem/network enforcement。官方建议同时使用，两者不是替代关系。deny、ask、managed precedence 与 sandbox boundary 的细节必须绑定文档日期。对应 Claim：`claude-code-doc-execution-policy`。\n\n## 5. Reliability — unknown\n\n文档包含错误与 troubleshooting 页面，但本项目还没有版本固定的 retry、partial tool call、crash recovery 或 resume 实验，不能断言内部策略。\n\n## 6. Extensibility — documented product contract\n\nhooks 覆盖 PreToolUse、PostToolUse、PermissionRequest、SessionStart/End、Stop 等 lifecycle。PreToolUse deny 可以在 permission-mode check 前阻止调用，而 allow 不能越过更严格的 deny rule。hook 并发与 merge precedence 是需要实验的失败面。对应 Claim：`claude-code-doc-hooks`。\n\n## 7. Orchestration — documented product contract\n\nsubagent 有独立 context、prompt、tools、model、permission mode、hooks、skills、max turns/depth 与可选 worktree isolation。文档还区分 foreground/background、resume 与 teams，但本 snapshot 不推断 scheduler 实现。对应 Claim：`claude-code-doc-subagents`。\n\n## 8. Interfaces — partial\n\n已知 surface 包括 CLI/TUI、IDE integration 与 Agent SDK。尚未建立版本固定的 protocol Claim，因此不会把 UI 行为写成稳定 wire contract。\n\n## 9. Observability — unknown\n\ntranscript、hook JSON 与 programmatic output 能提供可观察事件，但本项目尚未采集 Native trace，也不知道内部 authoritative event store。页面只展示 evidence ledger，不模拟内部 event bus。\n\n## Tier B 的完成方式\n\n闭源研究不是等待源码，而是把证据边界做得更严格：每个 Claim 绑定官方页面与抓取日期；动态文档变化触发 stale；实验只记录公开输出；不提取隐藏 prompt、chain-of-thought 或私人 telemetry；任何关于“内部为何如此”的解释都标记 inference。\n",
+            "en": "# Claude Code clean-room documentation snapshot\n\nThis snapshot is strong on product contracts and weak on implementation visibility. Every claim comes from official documentation observed on 2026-08-10. Public distribution tag `v2.1.226` aligns the time boundary; it is not product-core source.\n\n## 1. Loop — unknown\n\nOfficial material establishes an agentic terminal workflow, but this snapshot does not assert an internal sampling loop, tool-result continuation mechanism, termination enum, or retry scheduler. Future work can describe external behavior only through official structured output or authorized black-box experiments.\n\n## 2. Context — partial\n\nSubagent documentation establishes separate child context windows and describes auto-compaction, resume, and startup loading. It does not publish the main context reducer algorithm, summary prompt, or persistence format; those remain unknown.\n\n## 3. Tools — partial\n\nDocumentation publishes permission-rule syntax, subagent tool allow/deny controls, and MCP scope. That supports a capability contract, not a claim about internal registry, validator, or dispatcher code.\n\n## 4. Safety — documented product contract\n\nPermissions decide whether tools, files, and domains may be accessed; sandboxing provides OS-level filesystem/network enforcement for Bash and child processes. Official guidance recommends both rather than treating one as a substitute. Deny, ask, managed precedence, and sandbox details remain bound to the documentation date. Claim: `claude-code-doc-execution-policy`.\n\n## 5. Reliability — unknown\n\nOfficial error and troubleshooting pages exist, but this project has no version-pinned experiments for retry, partial tool calls, crash recovery, or resume. Internal policy is not asserted.\n\n## 6. Extensibility — documented product contract\n\nHooks cover lifecycle points including PreToolUse, PostToolUse, PermissionRequest, SessionStart/End, and Stop. A PreToolUse deny can block before permission-mode checks, while allow cannot override stricter deny rules. Concurrent hooks and merge precedence are experiment-worthy failure surfaces. Claim: `claude-code-doc-hooks`.\n\n## 7. Orchestration — documented product contract\n\nSubagents have separate context, prompts, tools, models, permission modes, hooks, skills, turn/depth limits, and optional worktree isolation. Documentation also distinguishes foreground/background execution, resume, and teams; this snapshot does not infer scheduler implementation. Claim: `claude-code-doc-subagents`.\n\n## 8. Interfaces — partial\n\nKnown surfaces include CLI/TUI, IDE integration, and Agent SDK. No version-pinned protocol claim exists yet, so UI behavior is not presented as a stable wire contract.\n\n## 9. Observability — unknown\n\nTranscripts, hook JSON, and programmatic output expose observable events, but this project has not captured a native trace and does not know the authoritative internal event store. The page shows an evidence ledger rather than simulating an internal event bus.\n\n## Completing Tier B well\n\nClosed-source research does not wait for source; it uses stricter boundaries. Every claim binds to an official page and capture date, dynamic documentation changes trigger staleness, experiments record only public output, hidden prompts/chain-of-thought/private telemetry are excluded, and explanations of internal causes are labeled as inference.\n"
+          }
+        }
+      ],
+      "overview_content": {
+        "zh-CN": "# Claude Code\n\nClaude Code 的 product core 未在其公开 distribution repository 中提供，因此本项目采用 Tier B clean-room 边界：只整理官方文档、正式 changelog、公开 examples/plugins 与授权环境中的可观察行为，不猜测内部文件、隐藏 prompt 或状态机。\n\n- 当前 coverage：Tier B，official-doc；\n- 文档观察边界：2026-08-10，公开 distribution tag `v2.1.226`；\n- 已结构化：permissions + sandbox、lifecycle hooks、subagent capability/isolation；\n- 明确 unknown：内部 loop、context reducer、tool dispatcher、retry scheduler、event storage 和隐藏 protocol；\n- 仍缺：脱敏 Native trace、版本固定的黑盒实验与 docs change monitor。\n\nTier B 不是“低质量”标签，而是证据类型不同：公开行为可以被精确描述，但不能从界面或文档倒推出闭源实现。\n",
+        "en": "# Claude Code\n\nClaude Code's product core is not published in its public distribution repository, so this project uses a Tier B clean-room boundary: official documentation, formal changelogs, public examples/plugins, and behavior observable in an authorized environment are allowed; guesses about internal files, hidden prompts, or state machines are not.\n\n- Current coverage: Tier B, official documentation.\n- Documentation boundary: observed 2026-08-10 and aligned with public distribution tag `v2.1.226`.\n- Structured coverage: permissions plus sandboxing, lifecycle hooks, and subagent capabilities/isolation.\n- Explicitly unknown: internal loop, context reducer, tool dispatcher, retry scheduler, event storage, and hidden protocols.\n- Missing: a redacted native trace, version-pinned black-box experiments, and a documentation change monitor.\n\nTier B is not a low-quality label; it records a different evidence boundary. Public behavior can be described precisely, but UI and documentation cannot establish a closed-source implementation.\n"
+      }
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "codex",
+      "name": "Codex",
+      "summary": "OpenAI's coding agent across terminal and other product surfaces; published snapshots keep official product behavior separate from the open-source CLI implementation.",
+      "coverage_tier": "B",
+      "source_availability": "open",
+      "homepage": "https://learn.chatgpt.com/docs/codex/cli",
+      "upstream": {
+        "documentation": "https://learn.chatgpt.com/docs/codex/cli",
+        "release_feed": "https://github.com/openai/codex/releases",
+        "repositories": [
+          {
+            "component": "cli",
+            "url": "https://github.com/openai/codex",
+            "default_branch": "main"
+          }
+        ]
+      },
+      "licenses": [
+        {
+          "component": "cli",
+          "spdx": "Apache-2.0",
+          "url": "https://github.com/openai/codex/blob/89a335ed50258dc9dc5b3d7f410db61b431244f9/LICENSE"
+        }
+      ],
+      "surfaces": [
+        "cli"
+      ],
+      "model_strategy": [
+        "first-party"
+      ],
+      "lifecycle": "active",
+      "tags": [
+        "coding-agent",
+        "terminal",
+        "rust",
+        "source-mapped"
+      ],
+      "stewards": [
+        "foundation-maintainers"
+      ],
+      "snapshots": [
+        {
+          "id": "codex-2026-08-10-cli",
+          "observed_at": "2026-08-10",
+          "surface": "cli",
+          "version": "docs-observation",
+          "freshness": "current",
+          "docs_captured_at": "2026-08-10",
+          "environment": {
+            "os": "not-observed",
+            "runtime": "not-observed",
+            "permission_mode": "documented-configurable",
+            "sandbox_mode": "documented-configurable",
+            "network_mode": "not-observed"
+          },
+          "claims_path": "registry/claims/codex-cli-terminal-loop.claim.json",
+          "notes": "This is an official-documentation snapshot, not a pinned binary or source commit. Version-specific implementation claims remain intentionally unknown.",
+          "analysis_content": {
+            "zh-CN": "# 官方文档观察\n\n这个 snapshot 只回答“Codex CLI 官方承诺用户可以做什么”，不回答内部 Rust core 如何实现。文档把 CLI 描述为留在 terminal 内的连续 coding loop：检查 repository、规划与修改、运行本地工具、在执行中 steering，并在同一 session 中继续 follow-up。\n\n## 可确认\n\n- product surface 是 CLI；\n- loop 对用户呈现为连续 session，而非一次性补全；\n- permission 与 sandbox 可以配置；\n- 用户可以在活动 turn 中 steering。\n\n## 不可由此确认\n\n- exact loop state machine、retry count 与 termination enum；\n- tool registry、approval cache 和 OS sandbox 的源码结构；\n- desktop、IDE 或 cloud 是否运行相同 binary 与 commit；\n- 性能、安全效果或故障恢复能力。\n\n后续 source snapshot 提供实现地图，但两种证据不会合并成一个 Claim：官方产品行为与公开源码实现可能有不同发布节奏。\n",
+            "en": "# Official-documentation observation\n\nThis snapshot answers only what the Codex CLI officially promises users can do; it does not explain how the Rust core implements that behavior. The documentation presents one continuous terminal coding loop for inspecting a repository, planning and editing, running local tools, steering an active turn, and continuing with follow-up work in the same session.\n\n## Confirmed at this boundary\n\n- The product surface is the CLI.\n- The user-facing loop is a continuing session rather than a one-shot completion.\n- Permissions and sandboxing are configurable.\n- Users can steer an active turn.\n\n## Not established here\n\n- The exact loop state machine, retry count, or termination enum.\n- The source structure of the tool registry, approval cache, or OS sandbox.\n- Whether desktop, IDE, or cloud runs the same binary and commit.\n- Performance, security effectiveness, or recovery behavior.\n\nThe later source snapshot adds an implementation map, but the evidence is not merged into one claim: official product behavior and public source can move on different release schedules.\n"
+          }
+        },
+        {
+          "id": "codex-2026-08-10-source",
+          "observed_at": "2026-08-10",
+          "surface": "cli",
+          "version": "source@89a335e",
+          "freshness": "current",
+          "docs_captured_at": "2026-08-10",
+          "source_ref": {
+            "repository": "https://github.com/openai/codex",
+            "commit": "89a335ed50258dc9dc5b3d7f410db61b431244f9",
+            "paths": [
+              "codex-rs/core/src/session/turn.rs",
+              "codex-rs/core/src/tasks/regular.rs",
+              "codex-rs/core/src/tools/registry.rs",
+              "codex-rs/core/src/tools/router.rs",
+              "codex-rs/core/src/tools/approvals.rs",
+              "codex-rs/core/src/tools/sandboxing.rs",
+              "codex-rs/core/src/compact.rs",
+              "codex-rs/core/src/hook_runtime.rs",
+              "codex-rs/core/src/tools/handlers/multi_agents_v2/spawn.rs",
+              "codex-rs/core/src/agent/control/spawn.rs",
+              "codex-rs/protocol/src/protocol.rs"
+            ]
+          },
+          "environment": {
+            "os": "source-inspection-only",
+            "runtime": "Rust workspace; binary not executed",
+            "permission_mode": "source-mapped",
+            "sandbox_mode": "source-mapped",
+            "network_mode": "not-executed"
+          },
+          "claims_path": "registry/claims/codex-source-agent-loop.claim.json",
+          "notes": "Clean source inspection pinned to one public commit. The snapshot does not claim that every hosted Codex surface runs this exact revision, and it has not yet earned Tier A because no native experiment is attached.",
+          "analysis_content": {
+            "zh-CN": "# Codex CLI core 源码地图\n\n本页固定到 commit `89a335e`。它说明公开 Rust core 的结构，不证明某个托管 surface 正在运行该 commit，也不等价于 Native experiment。\n\n```text\nTurn input\n  → context / skills / plugins / hooks\n  → model sampling\n  → assistant item or tool calls\n  → ToolRouter → ToolRegistry → approval → sandbox → runtime\n  → tool results + pending steering\n  → follow-up sample / compaction / stop\n```\n\n## 1. Loop\n\n`run_turn` 是单个用户 turn 的核心循环；`RegularTask::run` 在 turn 结束后继续检查 input queue。模型需要 tool follow-up、用户 steering 或 mailbox delivery 时继续采样；没有 follow-up 时进入 stop hooks 并结束。对应 Claim：`codex-source-agent-loop`。\n\n## 2. Context\n\n第一次采样前会捕获 step context、记录 world state，并注入 skills/plugins。token 状态在采样后重新计算；达到限制且仍需继续时，可选择 local 或 remote compaction，再恢复当前 turn。compaction 是 history replacement，不应被描述为无损 memory。对应 Claim：`codex-source-auto-compaction`。\n\n## 3. Tools\n\n`ToolRouter` 持有模型可见 spec，`ToolRegistry` 持有 runtime 与 exposure。外部工具的保留名和冲突有显式处理，解析后的 tool call 再映射到 runtime。这个分层使“模型看见什么”和“host 能执行什么”成为两个检查点。对应 Claim：`codex-source-tool-router`。\n\n## 4. Safety\n\napproval 与 sandbox 是两层机制。approval path 决定 forbid、ask、skip 等结果；sandbox path 决定如何转换并执行 attempt。源码存在这些边界不代表某次运行启用了 OS sandbox，因此 environment 仍写为 `source-mapped`。对应 Claim：`codex-source-execution-policy`。\n\n## 5. Reliability\n\nturn 代码包含 cancellation、错误事件、token-limit rollover 与 retry session reuse，但本项目尚未把它们拆成通过故障注入验证的独立 Claims。当前状态是 **partial / experiment missing**。\n\n## 6. Extensibility\n\nturn assembly 可以注入 skills 与 plugins；hook runtime 在 session start、pre/post tool use、permission request、stop、compaction 和 session end 等边界运行类型化 hook。扩展点可以影响控制流，因此也属于 trust boundary。对应 Claim：`codex-source-extension-runtime`。\n\n## 7. Orchestration\n\nmulti-agent tools 与 agent control 分层：工具处理模型请求，control 层负责 child spawn 与生命周期。当前只建立 source map，没有并发负载、隔离或取消实验。对应 Claim：`codex-source-subagent-routing`。\n\n## 8. Interfaces\n\nCLI core 与 App Server 属于不同 surface。App Server 的 JSON-RPC/transport 结论放在独立 snapshot，防止把 server protocol 当成 CLI 用户行为。\n\n## 9. Observability\n\nprotocol 定义 turn、item、tool、approval、hook、compaction 与 collaboration 等 typed events，turn 通过 session 边界发送事件。但项目还没有可公开的 Native trace，因此“事件可重放到何种程度”保持 unknown。对应 Claim：`codex-source-event-stream`。\n\n## 结论与缺口\n\n这个 snapshot 已足以比较控制边界和源码组织，但仍是 Tier B。升级 Tier A 至少需要：固定 binary/version 的 Native run、脱敏 trace、一个正式 Experiment、九维关键结论审核，以及外部复现。\n",
+            "en": "# Codex CLI core source map\n\nThis page is pinned to commit `89a335e`. It describes the published Rust core; it does not prove that a hosted surface runs this commit and is not a substitute for a native experiment.\n\n```text\nTurn input\n  → context / skills / plugins / hooks\n  → model sampling\n  → assistant item or tool calls\n  → ToolRouter → ToolRegistry → approval → sandbox → runtime\n  → tool results + pending steering\n  → follow-up sample / compaction / stop\n```\n\n## 1. Loop\n\n`run_turn` owns the core loop for one user turn, while `RegularTask::run` checks the input queue after it returns. Sampling continues for tool follow-up, user steering, or mailbox delivery; otherwise stop hooks run and the turn ends. Claim: `codex-source-agent-loop`.\n\n## 2. Context\n\nBefore the first sample, the core captures step context, records world state, and injects skills/plugins. It recomputes token state after sampling and can choose local or remote compaction before resuming a turn that still has work. Compaction replaces history and must not be described as lossless memory. Claim: `codex-source-auto-compaction`.\n\n## 3. Tools\n\n`ToolRouter` owns model-visible specifications; `ToolRegistry` owns runtimes and exposure. Reserved external names and collisions have explicit handling before a parsed call is resolved to a runtime. This creates two review points: what the model sees and what the host can execute. Claim: `codex-source-tool-router`.\n\n## 4. Safety\n\nApproval and sandboxing are separate layers. The approval path can forbid, ask, or skip; the sandbox path transforms and executes an attempt. The existence of this source boundary does not prove that an OS sandbox was active in an observed run, so the environment remains `source-mapped`. Claim: `codex-source-execution-policy`.\n\n## 5. Reliability\n\nThe turn code includes cancellation, error events, token-limit rollover, and reuse of a turn-scoped client session across retries. These have not yet been isolated into fault-injection experiments and reviewed claims. Status: **partial / experiment missing**.\n\n## 6. Extensibility\n\nTurn assembly can inject skills and plugins. The hook runtime exposes typed boundaries around session start, pre/post tool use, permission requests, stop, compaction, and session end. Because extensions can affect control flow, they are also part of the trust boundary. Claim: `codex-source-extension-runtime`.\n\n## 7. Orchestration\n\nMulti-agent tools and agent control are separated: tool handlers receive model requests while the control layer owns child spawn and lifecycle. Concurrency, isolation, and cancellation behavior remain untested. Claim: `codex-source-subagent-routing`.\n\n## 8. Interfaces\n\nThe CLI core and App Server are different surfaces. JSON-RPC and transport claims live in a separate snapshot so server protocol is not mistaken for CLI user behavior.\n\n## 9. Observability\n\nThe protocol defines typed events for turns, items, tools, approvals, hooks, compaction, and collaboration, and the turn sends events through the session boundary. No publishable native trace exists yet, so replay fidelity remains unknown. Claim: `codex-source-event-stream`.\n\n## Result and gaps\n\nThis snapshot is sufficient for comparing source organization and control boundaries, but remains Tier B. Tier A requires at least a version-pinned native run, a redacted trace, a formal experiment, reviewed coverage across the nine dimensions, and external reproduction.\n"
+          }
+        },
+        {
+          "id": "codex-2026-08-10-app-server",
+          "observed_at": "2026-08-10",
+          "surface": "server",
+          "version": "source@89a335e",
+          "freshness": "current",
+          "source_ref": {
+            "repository": "https://github.com/openai/codex",
+            "commit": "89a335ed50258dc9dc5b3d7f410db61b431244f9",
+            "paths": [
+              "codex-rs/app-server/src/lib.rs",
+              "codex-rs/app-server/src/message_processor.rs",
+              "codex-rs/app-server/src/transport.rs"
+            ]
+          },
+          "environment": {
+            "os": "source-inspection-only",
+            "runtime": "Rust workspace; server not executed",
+            "permission_mode": "not-executed",
+            "sandbox_mode": "not-executed",
+            "network_mode": "not-executed"
+          },
+          "claims_path": "registry/claims/codex-source-app-server.claim.json",
+          "notes": "Separate server-surface snapshot for the public App Server transport and JSON-RPC dispatch boundary; it is not evidence about a particular desktop or IDE client release.",
+          "analysis_content": {
+            "zh-CN": "# App Server interface snapshot\n\n这个 snapshot 只覆盖 Codex App Server，不代表任一 desktop 或 IDE client 的完整实现。\n\n## Boundary\n\nApp Server 在固定 commit 上提供 JSON-RPC message loop，并支持 stdio、Unix socket 与 WebSocket transport。连接层负责 framing 与连接生命周期，message processor 将 wire request 转换为 typed request，再分派给 thread、turn、config、MCP、plugin、filesystem 等 processor。\n\n## 为什么单独建 snapshot\n\n- `surface=server`，不能与 `surface=cli` 的用户行为混写；\n- protocol capability 不证明某个 client 已采用；\n- server source 可见，不代表 client source 或 hosted service 可见；\n- transport 存在不等于 reconnect、ordering 与 backward compatibility 已通过实验。\n\n对应 Claim：`codex-source-app-server`。下一步是用公开 client contract 做 initialize → thread → turn → event → cancel 的确定性协议实验。\n",
+            "en": "# App Server interface snapshot\n\nThis snapshot covers Codex App Server only; it is not a complete description of any desktop or IDE client.\n\n## Boundary\n\nAt the pinned commit, App Server runs a JSON-RPC message loop over stdio, Unix-socket, or WebSocket transports. The connection layer owns framing and connection lifecycle; the message processor converts wire requests into typed requests and dispatches them to processors for threads, turns, configuration, MCP, plugins, filesystems, and other domains.\n\n## Why this is a separate snapshot\n\n- `surface=server` must not be mixed with `surface=cli` behavior.\n- A protocol capability does not prove that a particular client adopted it.\n- Published server source does not imply published client or hosted-service source.\n- Available transports do not establish reconnect, ordering, or backward compatibility without experiments.\n\nClaim: `codex-source-app-server`. The next step is a deterministic public-contract experiment across initialize → thread → turn → event → cancel.\n"
+          }
+        }
+      ],
+      "overview_content": {
+        "zh-CN": "# Codex\n\n本页只描述稳定身份和 snapshot 导航。Codex 有多个产品 surface；Registry 把 CLI 官方文档、开源 CLI core 与 App Server 分成独立 snapshot，不把桌面、IDE、cloud 或源码观察混入同一结论。\n\n- 当前 coverage：Tier B，partial；\n- Snapshot：CLI docs、CLI source、App Server source；\n- Evidence：official-doc + pinned source；\n- 已覆盖：loop、tools、context compaction、execution policy、hooks/plugins、subagents、event model、App Server；\n- 仍缺：脱敏 Native trace、正式实验、真实 OS sandbox 观察和外部复现，因此不能标为 Tier A。\n",
+        "en": "# Codex\n\nThis page contains stable identity and snapshot navigation only. Codex has several product surfaces; the Registry separates CLI documentation, the open CLI core, and App Server into distinct snapshots instead of mixing desktop, IDE, cloud, and source observations into one claim boundary.\n\n- Current coverage: Tier B, partial.\n- Snapshots: CLI docs, CLI source, and App Server source.\n- Evidence: official documentation plus pinned source.\n- Covered: loop, tools, context compaction, execution policy, hooks/plugins, subagents, event model, and App Server.\n- Missing: a redacted native trace, formal experiment, observed OS-sandbox behavior, and external reproduction. The profile therefore remains Tier B.\n"
+      }
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "pi",
+      "name": "Pi",
+      "summary": "A deliberately minimal, multi-provider terminal coding harness whose agent core, session tree, compaction, tools, RPC mode, and extension runtime are published in one monorepo.",
+      "coverage_tier": "B",
+      "source_availability": "open",
+      "homepage": "https://github.com/earendil-works/pi",
+      "upstream": {
+        "documentation": "https://github.com/earendil-works/pi/tree/936aff00918de1187f085f123c2812d8f2d67745/packages/coding-agent/docs",
+        "release_feed": "https://github.com/earendil-works/pi/releases",
+        "repositories": [
+          {
+            "component": "monorepo",
+            "url": "https://github.com/earendil-works/pi",
+            "default_branch": "main"
+          }
+        ]
+      },
+      "licenses": [
+        {
+          "component": "monorepo",
+          "spdx": "MIT",
+          "url": "https://github.com/earendil-works/pi/blob/936aff00918de1187f085f123c2812d8f2d67745/LICENSE"
+        }
+      ],
+      "surfaces": [
+        "cli",
+        "tui",
+        "sdk",
+        "server"
+      ],
+      "model_strategy": [
+        "multi-provider",
+        "openai-compatible",
+        "local-models"
+      ],
+      "lifecycle": "active",
+      "tags": [
+        "coding-agent",
+        "typescript",
+        "minimal-core",
+        "extension-first",
+        "session-tree"
+      ],
+      "stewards": [
+        "foundation-maintainers"
+      ],
+      "snapshots": [
+        {
+          "id": "pi-2026-08-10-source",
+          "observed_at": "2026-08-10",
+          "surface": "cli",
+          "version": "0.84.1@936aff0",
+          "freshness": "current",
+          "docs_captured_at": "2026-08-10",
+          "source_ref": {
+            "repository": "https://github.com/earendil-works/pi",
+            "commit": "936aff00918de1187f085f123c2812d8f2d67745",
+            "paths": [
+              "packages/agent/src/agent-loop.ts",
+              "packages/agent/src/agent.ts",
+              "packages/coding-agent/src/core/agent-session.ts",
+              "packages/coding-agent/src/core/compaction/compaction.ts",
+              "packages/coding-agent/src/core/session-manager.ts",
+              "packages/coding-agent/src/core/extensions/runner.ts",
+              "packages/coding-agent/docs/security.md",
+              "packages/coding-agent/README.md"
+            ]
+          },
+          "environment": {
+            "os": "source-inspection-only",
+            "runtime": "TypeScript monorepo; binary not executed",
+            "permission_mode": "no-built-in-permission-system",
+            "sandbox_mode": "external-boundary-required",
+            "network_mode": "not-executed"
+          },
+          "claims_path": "registry/claims/pi-source-agent-loop.claim.json",
+          "notes": "Clean source inspection of package version 0.84.1 pinned to one commit. Negative safety claims describe the documented core boundary, not every third-party Pi extension. A native experiment is still required for Tier A.",
+          "analysis_content": {
+            "zh-CN": "# Pi coding-agent 源码地图\n\n本页固定到 package `0.84.1`、commit `936aff0`。研究对象是官方 monorepo 中的 agent core 与 coding-agent CLI，不包含第三方 Pi packages 的行为。\n\n```text\nAgent wrapper\n  → agent-loop (model / tools / steering / follow-up)\n  → AgentEvent stream\n  → AgentSession\n      ├─ SessionManager: append-only JSONL tree\n      ├─ compaction / branch summary\n      ├─ built-in tools\n      └─ ExtensionRunner / resources / UI\n```\n\n## 1. Loop\n\n底层 `runLoop` 有清晰的双层结构：内层处理 tool calls 与 steering，外层在 Agent 本来要停止时检查 follow-up queue。`Agent` wrapper 保存 transcript、queue mode、model 与 tools，并把事件交给订阅者。对应 Claim：`pi-source-agent-loop`。\n\n## 2. Context\n\ncoding-agent 根据 provider usage 与估算 token 计算阈值，保留 recent tail，把较老区域压成 summary，并记录 read/modified files。compaction 改变模型可见 projection，但完整 session tree 仍在 JSONL 中。对应 Claim：`pi-source-context-compaction`。\n\n## 3. Tools\n\n工具参数先验证，再经过 before hook；batch 可按配置并行或串行，完成后经过 after hook，并将 normalized result 放回 context。对因 length stop 而可能被截断的参数，loop 选择失败这些 calls，而不是执行不完整输入。对应 Claim：`pi-source-tool-dispatch`。\n\n## 4. Safety\n\n这里最重要的是一个负结论：Pi core 没有内建 permission system 或 OS sandbox。project trust 只决定是否加载 project-local settings、packages 与 extensions；工具仍继承 host process 权限。真正隔离必须放在 container、VM、micro-VM 或 policy sandbox。对应 Claim：`pi-source-execution-boundary`。\n\n## 5. Reliability\n\n源码包含 provider retry、auto retry、abort、截断 tool-call 防护与 session migration，但本项目尚未完成统一 failure taxonomy 和故障注入。因此该维度仍为 **partial**，不能从存在 retry 代码推导恢复成功率。\n\n## 6. Extensibility\n\nExtensionRunner 是产品层的主要扩展边界。extensions 可以添加/替换 tools、commands、UI、providers，拦截 tool calls，改变 context transform 与 compaction。扩展与 Pi 同权限运行，因此 capability 与 trust 必须一起评估。对应 Claim：`pi-source-extension-runtime`。\n\n## 7. Orchestration\n\nPi 有意不在 core 中规定 subagent 模型。官方建议用独立 Pi 进程、tmux、extension 或 package 组合自己的方案。这是架构选择：core 更小，但进程所有权、权限继承、workspace isolation 与 merge policy 由集成者承担。对应 Claim：`pi-source-orchestration-boundary`。\n\n## 8. Interfaces\n\n交互式 TUI、print/JSON 与 RPC 是不同模式。RPC 的 command/response/event contract 放在独立 server snapshot，避免把 process integration 与交互 UI 混写。\n\n## 9. Observability\n\nlive `AgentEvent` 支持 UI 更新；`SessionManager` 把 entry 作为带 `id/parentId` 的 append-only JSONL tree 保存。branch 只移动 leaf，新写入形成新分支，不删除旧路径。对应 Claim：`pi-source-session-events`。\n\n## 设计取舍\n\nPi 展示了一种强烈的 minimal-core 路线：少做平台政策，多暴露组合点。优点是机制边界易读、定制成本低；代价是安全、subagent 与 MCP 等行为可能因 extension stack 不同而显著变化。比较 Pi 时必须同时记录“core version + loaded extensions + outer sandbox”。\n",
+            "en": "# Pi coding-agent source map\n\nThis page is pinned to package `0.84.1` at commit `936aff0`. The research target is the agent core and coding-agent CLI in the official monorepo, not the behavior of third-party Pi packages.\n\n```text\nAgent wrapper\n  → agent-loop (model / tools / steering / follow-up)\n  → AgentEvent stream\n  → AgentSession\n      ├─ SessionManager: append-only JSONL tree\n      ├─ compaction / branch summary\n      ├─ built-in tools\n      └─ ExtensionRunner / resources / UI\n```\n\n## 1. Loop\n\nThe low-level `runLoop` has a clear two-level shape: the inner loop handles tool calls and steering, while the outer loop checks the follow-up queue when the agent would otherwise stop. The `Agent` wrapper stores the transcript, queue modes, model, and tools and forwards events to subscribers. Claim: `pi-source-agent-loop`.\n\n## 2. Context\n\nThe coding-agent layer combines provider usage with token estimates, keeps a recent tail, summarizes an older region, and records read/modified files. Compaction changes the model-visible projection while the full session tree remains in JSONL. Claim: `pi-source-context-compaction`.\n\n## 3. Tools\n\nArguments are validated before a before-hook. A batch runs sequentially or in parallel according to configuration, then passes normalized results through an after-hook and back into context. When a length stop may have truncated tool arguments, the loop fails those calls instead of executing incomplete input. Claim: `pi-source-tool-dispatch`.\n\n## 4. Safety\n\nThe key result is negative: Pi core has no built-in permission system or OS sandbox. Project trust controls loading of project-local settings, packages, and extensions; tools still inherit host-process permissions. Isolation must come from a container, VM, micro-VM, or policy sandbox. Claim: `pi-source-execution-boundary`.\n\n## 5. Reliability\n\nThe source includes provider retry, auto retry, abort, truncated-call protection, and session migration. This project has not yet produced a shared failure taxonomy or fault-injection runs, so the dimension remains **partial**; retry code does not establish recovery success.\n\n## 6. Extensibility\n\n`ExtensionRunner` is the main product-layer extension boundary. Extensions can add or replace tools, commands, UI, and providers; intercept calls; and change context transformation or compaction. Extensions run with Pi's process permissions, so capability and trust must be evaluated together. Claim: `pi-source-extension-runtime`.\n\n## 7. Orchestration\n\nPi intentionally avoids prescribing a subagent model in core. Official guidance points to separate Pi processes, tmux, extensions, or packages. This keeps core small but makes the integrator responsible for process ownership, permission inheritance, workspace isolation, and merge policy. Claim: `pi-source-orchestration-boundary`.\n\n## 8. Interfaces\n\nInteractive TUI, print/JSON, and RPC are separate modes. The RPC command/response/event contract has its own server snapshot so process integration is not mixed with interactive UI behavior.\n\n## 9. Observability\n\nLive `AgentEvent` supports UI updates. `SessionManager` persists entries as an append-only JSONL tree with `id/parentId`; branching moves the leaf and later writes form a new path without deleting the old one. Claim: `pi-source-session-events`.\n\n## Design tradeoff\n\nPi demonstrates a strong minimal-core path: prescribe fewer platform policies and expose more composition points. The benefit is readable mechanism boundaries and low customization friction; the cost is that safety, subagent, and MCP behavior can vary materially with the extension stack. A meaningful Pi comparison must record core version, loaded extensions, and the outer sandbox.\n"
+          }
+        },
+        {
+          "id": "pi-2026-08-10-rpc",
+          "observed_at": "2026-08-10",
+          "surface": "server",
+          "version": "0.84.1@936aff0",
+          "freshness": "current",
+          "docs_captured_at": "2026-08-10",
+          "source_ref": {
+            "repository": "https://github.com/earendil-works/pi",
+            "commit": "936aff00918de1187f085f123c2812d8f2d67745",
+            "paths": [
+              "packages/coding-agent/src/modes/rpc/rpc-mode.ts",
+              "packages/coding-agent/src/modes/rpc/rpc-types.ts",
+              "packages/coding-agent/src/modes/rpc/rpc-client.ts",
+              "packages/coding-agent/docs/rpc.md"
+            ]
+          },
+          "environment": {
+            "os": "source-inspection-only",
+            "runtime": "TypeScript RPC implementation; process not executed",
+            "permission_mode": "inherits-cli-boundary",
+            "sandbox_mode": "external-boundary-required",
+            "network_mode": "not-executed"
+          },
+          "claims_path": "registry/claims/pi-source-rpc-mode.claim.json",
+          "notes": "RPC-specific snapshot. Its JSONL transport is source-mapped independently from Pi's interactive CLI behavior.",
+          "analysis_content": {
+            "zh-CN": "# Pi RPC snapshot\n\nRPC mode 是给非 Node integration 使用的 process boundary，不是网络 daemon。command 以严格 LF-delimited JSON 写入 stdin；response 与 agent events 从 stdout 输出，业务日志不能污染 framing channel。\n\n协议覆盖：prompt、steer、follow-up、abort、model/thinking、queue mode、compaction、retry、bash、session tree、fork/clone 与 command discovery。客户端可以订阅事件并在 `agent_settled` 后判断一次 run 已空闲。\n\n## 已确认与未知\n\n- 已确认：typed command union、JSONL framing、request id、async event path；\n- 未确认：跨语言 client 的兼容性、backpressure、大消息边界、crash/restart 与协议演进策略；\n- 安全：RPC 不新增 sandbox，仍继承 CLI core 的外部隔离要求。\n\n对应 Claim：`pi-source-rpc-mode`。下一步应提供一个不依赖 provider key 的 scripted RPC fixture，验证 prompt → tool events → settle → session tree。\n",
+            "en": "# Pi RPC snapshot\n\nRPC mode is a process boundary for non-Node integrations, not a network daemon. Commands are written to stdin as strict LF-delimited JSON; responses and agent events leave through stdout, so business logs must not corrupt the framing channel.\n\nThe protocol covers prompts, steering, follow-up, abort, model/thinking controls, queue modes, compaction, retry, Bash, session trees, fork/clone, and command discovery. A client can subscribe to events and use `agent_settled` to determine that a run is idle.\n\n## Confirmed and unknown\n\n- Confirmed: typed command union, JSONL framing, request IDs, and asynchronous event flow.\n- Unknown: cross-language compatibility, backpressure, large-message boundaries, crash/restart behavior, and protocol evolution policy.\n- Safety: RPC adds no sandbox; it inherits the CLI core's requirement for an external isolation boundary.\n\nClaim: `pi-source-rpc-mode`. The next step is a provider-free scripted RPC fixture covering prompt → tool events → settle → session tree.\n"
+          }
+        }
+      ],
+      "overview_content": {
+        "zh-CN": "# Pi\n\nPi 的代表性不在于“功能最多”，而在于它把最小 agent core 与 coding-agent 产品层拆得很清楚：底层包负责模型循环、事件和工具调用，上层负责 session tree、compaction、TUI、RPC、资源加载与 extensions。\n\n- 当前 coverage：Tier B，source-backed；\n- 版本边界：coding-agent `0.84.1`，commit `936aff0`；\n- 研究价值：minimal core、extension-first、append-only session tree、明确的安全非目标；\n- 关键安全边界：project trust 只保护项目级配置与 extension 的加载，不是 sandbox；默认工具继承启动 Pi 的用户与进程权限；\n- 仍缺：Native trace、隔离环境内的安全实验、RPC 跨语言复现与外部 reviewer。\n\nPi 很适合回答一个基础问题：哪些能力必须进入 harness core，哪些可以留给 extension 或操作系统。它的“没有内建 subagents / MCP / permission popups”是有意的产品边界，不应误写成实现遗漏，也不应误解为生态中无法增加这些能力。\n",
+        "en": "# Pi\n\nPi is representative not because it includes the most features, but because it draws a clear line between a minimal agent core and the coding-agent product layer. The lower package owns the model loop, events, and tool calls; the upper layer owns the session tree, compaction, TUI, RPC, resource loading, and extensions.\n\n- Current coverage: Tier B, source-backed.\n- Version boundary: coding-agent `0.84.1` at commit `936aff0`.\n- Research value: minimal core, extension-first design, append-only session tree, and explicit security non-goals.\n- Key safety boundary: project trust protects loading of project-local configuration and extensions; it is not a sandbox. Built-in tools inherit the permissions of the user and process that launched Pi.\n- Missing: a native trace, safety experiments inside an isolated environment, cross-language RPC reproduction, and an external reviewer.\n\nPi is useful for asking which capabilities truly belong in a harness core and which can remain in extensions or the operating system. Its lack of built-in subagents, MCP, and permission popups is an intentional product boundary—not evidence that those capabilities cannot exist in the ecosystem.\n"
+      }
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "reasonix",
+      "name": "Reasonix",
+      "summary": "An open Go coding-agent engine shared by terminal, desktop, browser, and ACP surfaces, with cache-aware context maintenance, policy gates, checkpoints, plugins, and subagent orchestration.",
+      "coverage_tier": "B",
+      "source_availability": "open",
+      "homepage": "https://reasonix.io/",
+      "upstream": {
+        "documentation": "https://github.com/esengine/DeepSeek-Reasonix/tree/6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993/docs",
+        "release_feed": "https://github.com/esengine/DeepSeek-Reasonix/releases",
+        "repositories": [
+          {
+            "component": "engine-and-clients",
+            "url": "https://github.com/esengine/DeepSeek-Reasonix",
+            "default_branch": "main-v2"
+          }
+        ]
+      },
+      "licenses": [
+        {
+          "component": "engine-and-clients",
+          "spdx": "MIT",
+          "url": "https://github.com/esengine/DeepSeek-Reasonix/blob/6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993/LICENSE"
+        }
+      ],
+      "surfaces": [
+        "cli",
+        "tui",
+        "desktop",
+        "web",
+        "acp",
+        "server"
+      ],
+      "model_strategy": [
+        "multi-provider",
+        "openai-compatible",
+        "local-models"
+      ],
+      "lifecycle": "active",
+      "tags": [
+        "coding-agent",
+        "go",
+        "cache-aware",
+        "checkpoints",
+        "plugins",
+        "subagents"
+      ],
+      "stewards": [
+        "foundation-maintainers"
+      ],
+      "snapshots": [
+        {
+          "id": "reasonix-2026-08-10-source",
+          "observed_at": "2026-08-10",
+          "surface": "cli",
+          "version": "1.22.0@6376bd4",
+          "freshness": "current",
+          "docs_captured_at": "2026-08-10",
+          "source_ref": {
+            "repository": "https://github.com/esengine/DeepSeek-Reasonix",
+            "commit": "6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993",
+            "paths": [
+              "internal/agent/run_loop.go",
+              "internal/agent/execute_batch.go",
+              "internal/agent/execute_one.go",
+              "internal/agent/compact.go",
+              "internal/agent/cache_shape.go",
+              "internal/agent/repeat_failure_guard.go",
+              "internal/control/approval.go",
+              "internal/sandbox/sandbox.go",
+              "internal/checkpoint/checkpoint.go",
+              "internal/agent/task.go",
+              "internal/pluginpkg/manifest_v1.go",
+              "internal/plugin/lazy.go",
+              "internal/store/session.go",
+              "internal/agent/session_events.go"
+            ]
+          },
+          "environment": {
+            "os": "source-inspection-only",
+            "runtime": "Go repository; binary not executed",
+            "permission_mode": "source-mapped",
+            "sandbox_mode": "source-mapped",
+            "network_mode": "not-executed"
+          },
+          "claims_path": "registry/claims/reasonix-source-agent-loop.claim.json",
+          "notes": "Clean source inspection pinned to the commit whose release ledger identifies 1.22.0. This snapshot maps the CLI engine only; desktop, browser, and ACP behavior is not assumed identical unless a claim names the shared boundary. A native experiment is still required for Tier A.",
+          "analysis_content": {
+            "zh-CN": "# Reasonix CLI engine 源码地图\n\n本页固定到 release ledger `1.22.0`、commit `6376bd4`。只做源码观察；没有启动 binary、provider、sandbox backend 或 plugin process。\n\n```text\nuser turn\n  → delivery / permission / context state\n  → frozen sampling request + cache-shape capture\n  → bounded stream recovery\n  → clean response commit\n  → batch scheduler → per-call gate → tool\n  → native event log / checkpoint / next round\n```\n\n## 1. Loop\n\n`runToolLoop` 把每个 round 分成 sampling、commit、final/tool dispatch。provider attempt 只有 clean terminal result 才进入 session，避免失败的 speculative attempt 先污染 history。max steps、grace round、steer 与 final readiness 是 host-owned state。对应 Claim：`reasonix-source-agent-loop`。\n\n## 2. Context\n\ncontext maintenance 使用 soft、snip、compact、force 等阈值，并为 recent tail 设置固定预算。`PrefixShape` 对 system prompt、tool schemas 与 provider-visible rewrite 做 hash/原因记录，目的是解释 cache hit/miss，而不是用缓存指标替代正确性。对应 Claim：`reasonix-source-context-maintenance`。\n\n## 3. Tools\n\nbatch scheduler 与 single-call executor 分离。前者决定并行/串行与 batch lifecycle；后者建立 per-call context、检查 capability/policy、调用 tool、规范化结果并记录 failure。对应 Claim：`reasonix-source-tool-dispatch`。\n\n## 4. Safety\n\npermission policy、runtime approval posture 与 OS sandbox 是不同层。Ask/Auto/DontAsk/Yolo 仍受显式 deny、fresh human decision 与 headless gate 约束；shell sandbox 在 macOS/Linux 有后端，在要求 enforce 但不可用时 fail closed。Windows 的 Bash OS sandbox 在该 commit 明确不可用。对应 Claim：`reasonix-source-execution-policy`。\n\n## 5. Reliability\n\nsampling recovery 在同一个冻结 request 上做有限重试，只有最终采用的 clean attempt 会提交。另一个 guard 对语义相同的 write-like failure 建 signature，达到阈值后中断；部分 stale-state failure 可以先做无副作用复查。对应 Claim：`reasonix-source-retry-recovery`。\n\ncheckpoint、snapshot conflict、tail repair 与 delivery evidence 还有大量源码，但未完成端到端实验，不能在本 snapshot 宣布已验证。\n\n## 6. Extensibility\n\nplugin manifest 可以贡献 hooks、MCP servers 等资源。lazy MCP tool 通过 cached schema 或 connect stub 保持 provider-visible prefix 尽量稳定，再在需要时启动 process、对账 live safety metadata。对应 Claim：`reasonix-source-extension-runtime`。\n\n## 7. Orchestration\n\nchild agent 有独立 session temp、过滤后的 tool registry、read-only profile 与 depth cap；parent-only job/orchestration tools 会隐藏，direct MCP schema 改由稳定 capability proxy 暴露。对应 Claim：`reasonix-source-subagents`。\n\n## 8. Interfaces\n\n同一 engine 被多个 frontend 使用，但本 snapshot 只绑定 CLI。ACP 的 NDJSON JSON-RPC、event projection 与 permission request 在独立 snapshot 中审核；desktop/web 尚无本项目 Claim。\n\n## 9. Observability\n\nappend-only `.events.jsonl` 是 transcript authority；model-visible context、event/display indexes、conflict log、checkpoints 与 jobs 是不同 sidecars。这种 separation 让 authoritative events 与可重建 projection 不必混为一份大 JSON。对应 Claim：`reasonix-source-event-log`。\n\n## 结论与实验要求\n\nReasonix 在一个 repo 中展示了很多 production-oriented 机制，但源码数量不是成熟度评分。Tier A 仍需要至少完成：真实 stream interruption、repeat failure、compaction/cache、sandbox deny、checkpoint restore 与 Native trace normalization 中的一条端到端链路，并由外部贡献者复现。\n",
+            "en": "# Reasonix CLI engine source map\n\nThis page is pinned to release ledger `1.22.0` at commit `6376bd4`. It is source inspection only: no binary, provider, sandbox backend, or plugin process was started.\n\n```text\nuser turn\n  → delivery / permission / context state\n  → frozen sampling request + cache-shape capture\n  → bounded stream recovery\n  → clean response commit\n  → batch scheduler → per-call gate → tool\n  → native event log / checkpoint / next round\n```\n\n## 1. Loop\n\n`runToolLoop` divides each round into sampling, commit, and final/tool dispatch. A provider attempt enters the session only after a clean terminal result, preventing a failed speculative attempt from mutating history first. Max steps, grace rounds, steering, and final readiness are host-owned state. Claim: `reasonix-source-agent-loop`.\n\n## 2. Context\n\nContext maintenance uses soft, snip, compact, and force thresholds plus a fixed recent-tail budget. `PrefixShape` hashes the system prompt and tool schemas and records provider-visible rewrite reasons to explain cache hits or misses—not to replace correctness with cache metrics. Claim: `reasonix-source-context-maintenance`.\n\n## 3. Tools\n\nBatch scheduling and single-call execution are separated. The former decides parallel/sequential behavior and batch lifecycle; the latter creates per-call context, checks capabilities and policy, invokes the tool, normalizes results, and records failure state. Claim: `reasonix-source-tool-dispatch`.\n\n## 4. Safety\n\nPermission policy, runtime approval posture, and OS sandboxing are distinct layers. Ask/Auto/DontAsk/Yolo remain subject to explicit deny rules, fresh human decisions, and headless gates. Shell sandbox backends exist for macOS/Linux and fail closed when enforcement is requested but unavailable. The source explicitly says Windows lacks an OS-level Bash sandbox at this commit. Claim: `reasonix-source-execution-policy`.\n\n## 5. Reliability\n\nSampling recovery performs bounded attempts against one frozen request and commits only the selected clean attempt. A separate guard signs semantically identical write-like failures and stops after a threshold; some stale-state failures can first run a side-effect-free recheck. Claim: `reasonix-source-retry-recovery`.\n\nCheckpoint, snapshot-conflict, tail-repair, and delivery-evidence code also exists, but no end-to-end experiment has validated those paths here.\n\n## 6. Extensibility\n\nPlugin manifests can contribute hooks, MCP servers, and other resources. Lazy MCP tools use cached schemas or a connect stub to keep the provider-visible prefix stable, then start a process and reconcile live safety metadata when needed. Claim: `reasonix-source-extension-runtime`.\n\n## 7. Orchestration\n\nChild agents receive a private session temp, filtered tool registry, read-only profile option, and depth cap. Parent-only job/orchestration tools are hidden, and direct MCP schemas are replaced by a stable capability proxy. Claim: `reasonix-source-subagents`.\n\n## 8. Interfaces\n\nMultiple frontends use the engine, but this snapshot binds only the CLI. ACP's NDJSON JSON-RPC, event projection, and permission requests are reviewed in a separate snapshot; this project has no desktop/web claims yet.\n\n## 9. Observability\n\nThe append-only `.events.jsonl` file is transcript authority. Model-visible context, event/display indexes, conflict logs, checkpoints, and jobs live in separate sidecars. This separates authoritative events from rebuildable projections instead of combining everything into one large JSON object. Claim: `reasonix-source-event-log`.\n\n## Result and experiment requirement\n\nReasonix exposes many production-oriented mechanisms in one repository, but source volume is not a maturity score. Tier A still requires at least one end-to-end path across real stream interruption, repeated failure, compaction/cache, sandbox denial, checkpoint restore, or native-trace normalization, plus external reproduction.\n"
+          }
+        },
+        {
+          "id": "reasonix-2026-08-10-acp",
+          "observed_at": "2026-08-10",
+          "surface": "acp",
+          "version": "1.22.0@6376bd4",
+          "freshness": "current",
+          "docs_captured_at": "2026-08-10",
+          "source_ref": {
+            "repository": "https://github.com/esengine/DeepSeek-Reasonix",
+            "commit": "6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993",
+            "paths": [
+              "internal/acp/server.go",
+              "internal/acp/protocol.go",
+              "internal/acp/dispatch.go",
+              "internal/acp/service.go",
+              "docs/ACP.md"
+            ]
+          },
+          "environment": {
+            "os": "source-inspection-only",
+            "runtime": "Go ACP implementation; server not executed",
+            "permission_mode": "source-mapped",
+            "sandbox_mode": "shared-engine-boundary-not-executed",
+            "network_mode": "not-executed"
+          },
+          "claims_path": "registry/claims/reasonix-source-acp.claim.json",
+          "notes": "ACP-specific snapshot for NDJSON JSON-RPC framing, event projection, and permission requests. Runtime interoperability remains untested in this project.",
+          "analysis_content": {
+            "zh-CN": "# Reasonix ACP snapshot\n\nACP 是 editor/client 与 Reasonix engine 之间的独立 interface surface。固定源码使用 stdin/stdout 上的 NDJSON JSON-RPC 2.0；request 与 notification 可并发处理，写入由 mutex 串行化，避免 frame 交错。\n\nevent adapter 将 engine event 投影为 ACP `session/update`。当工具需要批准时，server 发出 `session/request_permission`，并把 client 的选择解析回 runtime decision。todo、tool progress、compaction notice 与 extension UI 需要各自的 projection policy，不能假定 engine event 与 ACP event 一一对应。\n\n## 已确认\n\n- framing、message size cap 与 request correlation；\n- prompt/cancel 等并发请求不会由单一长 turn 阻塞 read loop；\n- approval request 与 session update 有明确 adapter；\n- ACP session metadata 保存 work mode 与 tool approval mode。\n\n## 仍未知\n\n- 与具体 editor 的版本兼容；\n- client disconnect/reconnect 下的完整语义；\n- 大 trace 的 backpressure 与 memory；\n- permission UI 是否能准确表达所有 Reasonix-specific decision。\n\n对应 Claim：`reasonix-source-acp`。只有接入真实 ACP client、保存脱敏 wire trace 并验证 cancel/approval/reconnect 后，才能升级 evidence。\n",
+            "en": "# Reasonix ACP snapshot\n\nACP is a separate interface surface between an editor/client and the Reasonix engine. The pinned source uses NDJSON JSON-RPC 2.0 over stdin/stdout. Requests and notifications may run concurrently, while writes are serialized by a mutex so frames cannot interleave.\n\nAn event adapter projects engine events into ACP `session/update`. When a tool needs approval, the server sends `session/request_permission` and resolves the client's choice back into a runtime decision. Todos, tool progress, compaction notices, and extension UI each need a projection policy; engine events and ACP events are not assumed to be one-to-one.\n\n## Confirmed\n\n- Framing, message-size cap, and request correlation.\n- Prompt/cancel concurrency is not blocked by one long-running turn in the read loop.\n- Approval requests and session updates have explicit adapters.\n- ACP session metadata persists work mode and tool-approval mode.\n\n## Still unknown\n\n- Compatibility with specific editor versions.\n- Full semantics across disconnect and reconnect.\n- Backpressure and memory behavior for large traces.\n- Whether permission UI expresses every Reasonix-specific decision accurately.\n\nClaim: `reasonix-source-acp`. Evidence can be upgraded only after integrating a real ACP client, saving a redacted wire trace, and testing cancellation, approval, and reconnect.\n"
+          }
+        }
+      ],
+      "overview_content": {
+        "zh-CN": "# Reasonix\n\nReasonix 将同一套 Go engine 暴露给 terminal、desktop、browser 与 ACP surface。其源码把 cache-aware context maintenance、approval、OS sandbox、checkpoint、plugin/MCP、subagent 和 append-only session event log 都放在可检查的边界中，因此适合研究“长时运行 harness 如何同时处理性能、安全和恢复”。\n\n- 当前 coverage：Tier B，source-backed；\n- 版本边界：release ledger `1.22.0`，commit `6376bd4`；\n- Snapshot：CLI engine 与 ACP 分离；\n- 研究价值：prefix-cache diagnostics、多阶段 context maintenance、stream recovery、repeat-failure guard、child tool filtering、session authority；\n- 仍缺：真实 provider 失败注入、OS sandbox 执行、checkpoint 回滚、ACP editor interoperability 与外部复现。\n\n源码结构丰富不等于实验结论成立。本档案只说明固定 commit 明确实现了哪些机制，不据此声称缓存成本更低、恢复成功率更高或安全边界在所有平台都已生效。\n",
+        "en": "# Reasonix\n\nReasonix exposes one Go engine through terminal, desktop, browser, and ACP surfaces. Its public source gives cache-aware context maintenance, approvals, an OS sandbox, checkpoints, plugins/MCP, subagents, and an append-only session event log inspectable boundaries, making it useful for studying how long-running harnesses combine performance, safety, and recovery.\n\n- Current coverage: Tier B, source-backed.\n- Version boundary: release ledger `1.22.0` at commit `6376bd4`.\n- Snapshots: CLI engine and ACP are separated.\n- Research value: prefix-cache diagnostics, staged context maintenance, stream recovery, repeated-failure guards, child-tool filtering, and session authority.\n- Missing: real provider failure injection, OS-sandbox execution, checkpoint rollback, ACP editor interoperability, and external reproduction.\n\nA rich source tree does not prove an experimental outcome. This profile records what the pinned commit implements; it does not claim lower cache cost, higher recovery success, or effective enforcement on every platform.\n"
+      }
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "reference-harness",
+      "name": "Reference Harness",
+      "summary": "The project's dependency-free, deterministic teaching harness and controlled-experiment baseline; it is not a production coding-agent product.",
+      "coverage_tier": "C",
+      "source_availability": "open",
+      "homepage": "https://github.com/vpromise/inside-coding-agents",
+      "upstream": {
+        "repositories": [
+          {
+            "component": "reference-harness",
+            "url": "https://github.com/vpromise/inside-coding-agents",
+            "default_branch": "main"
+          }
+        ]
+      },
+      "surfaces": [
+        "sdk"
+      ],
+      "model_strategy": [
+        "local-models"
+      ],
+      "lifecycle": "active",
+      "tags": [
+        "reference",
+        "deterministic",
+        "teaching",
+        "controlled"
+      ],
+      "stewards": [
+        "foundation-maintainers"
+      ],
+      "snapshots": [
+        {
+          "id": "reference-harness-2026-08-10-controlled",
+          "observed_at": "2026-08-10",
+          "surface": "sdk",
+          "version": "0.1.0",
+          "freshness": "current",
+          "environment": {
+            "os": "temporary fixture workspace",
+            "runtime": "Python 3.11+ standard library",
+            "permission_mode": "read-only tool registry",
+            "sandbox_mode": "path boundary only; not an OS sandbox",
+            "network_mode": "off by design; no network tool"
+          },
+          "claims_path": "registry/claims/reference-harness-controlled-tool-roundtrip.claim.json",
+          "notes": "A controlled, scripted baseline used to validate the Lab pipeline. It must not be compared with a native vendor agent or presented as production-grade isolation.",
+          "analysis_content": {
+            "zh-CN": "# Reference Harness 0.1 controlled snapshot\n\n## Loop\n\n`AgentRunner` 记录 session start，循环请求 Scripted Model，执行工具调用，把工具结果加入下一轮消息，并在无工具调用时停止。\n\n## Context\n\n本实验只有固定的 system、user、assistant 与 tool message；没有 compaction，也不把隐藏推理记录到 Trace。\n\n## Tools\n\n工具先经过声明参数校验，再进入只读 `read_file` handler。fixture 被复制到临时 workspace，规范输入不会被运行过程修改。\n\n## Safety\n\n没有 shell、写文件或网络工具。路径边界阻止绝对路径和 workspace escape，但它不提供 OS 级隔离。\n\n## Reliability\n\n两次 repetition 必须通过事件顺序、工具结果、最终答案、fixture 不变和确定性重放五项指标。\n\n## Extensibility\n\nModel 和 ToolRegistry 都是小接口；Native adapter 可替换输入边界，但不能把本实验结果冒充 Native 证据。\n\n## Orchestration\n\n该 snapshot 没有 subagent。此维度保持 unknown。\n\n## Interfaces\n\n公开入口是 `python3 labs/runner.py reference-tool-roundtrip-v1`，`--check` 只比较重建结果，不写文件。\n\n## Observability\n\n每次运行产生符合 Trace 0.1 的 JSONL、结构化 Result 和可读报告；网页从这些规范产物生成实验页和逐事件回放。\n",
+            "en": "# Reference Harness 0.1 controlled snapshot\n\n## Loop\n\n`AgentRunner` records session start, requests turns from Scripted Model, executes tool calls, appends tool results to the next request, and stops when a turn has no tool calls.\n\n## Context\n\nThis experiment has fixed system, user, assistant, and tool messages. It performs no compaction and records no hidden reasoning in Trace.\n\n## Tools\n\nArguments are checked against the declared tool schema before the read-only `read_file` handler runs. The fixture is copied into a temporary workspace, so the canonical input is not mutated.\n\n## Safety\n\nNo shell, write, or network tool is exposed. The path boundary rejects absolute paths and workspace escape, but it is not operating-system isolation.\n\n## Reliability\n\nBoth repetitions must pass event-order, tool-result, final-answer, fixture-integrity, and deterministic-replay metrics.\n\n## Extensibility\n\nModel and ToolRegistry are deliberately small interfaces. A native adapter can replace the input boundary, but this controlled result cannot be relabeled as native evidence.\n\n## Orchestration\n\nThis snapshot has no subagent support. The dimension remains unknown.\n\n## Interfaces\n\nThe public entry point is `python3 labs/runner.py reference-tool-roundtrip-v1`; `--check` rebuilds and compares artifacts without writing them.\n\n## Observability\n\nEach run emits Trace 0.1 JSONL, a structured Result, and a readable report. The site projects those canonical artifacts into an experiment page and per-event replay.\n"
+          }
+        }
+      ],
+      "overview_content": {
+        "zh-CN": "# Reference Harness\n\nReference Harness 是本项目为教学和受控实验提供的最小基线，不是要与 Codex、Claude Code 或其他生产级 Agent 竞争的产品。它把模型替身、agent loop、工具注册、workspace 路径边界和 Trace recorder 保持在一个无外部依赖的 Python 实现中。\n\n- 当前 coverage：Tier C，项目内受控基线；\n- 研究用途：隔离并验证 Registry、Experiment、Result、Trace 与网页回放之间的契约；\n- 模型边界：Scripted Model 只返回预先声明的 turn，不代表真实模型能力；\n- 安全边界：Workspace 只限制路径解析，不是操作系统 sandbox；\n- 可复现性：固定 prompt、fixture digest、运行时间、两次 repetition 与规范化 trace fingerprint。\n\n它首先回答“实验基础设施本身是否工作”。在这个基线通过后，Native adapter 才能把真实 Agent 的公开行为接入同一套证据链。\n",
+        "en": "# Reference Harness\n\nReference Harness is the project's minimal teaching and controlled-experiment baseline, not a product intended to compete with Codex, Claude Code, or another production agent. It keeps the scripted model double, agent loop, tool registry, workspace path boundary, and Trace recorder in a dependency-free Python implementation.\n\n- Current coverage: Tier C, project-owned controlled baseline;\n- Research role: validate the contract between Registry, Experiment, Result, Trace, and web replay;\n- Model boundary: Scripted Model returns predeclared turns and says nothing about real model capability;\n- Safety boundary: Workspace constrains path resolution but is not an operating-system sandbox;\n- Reproducibility: pinned prompt and fixture digests, fixed timestamps, two repetitions, and a normalized trace fingerprint.\n\nIt answers whether the experiment infrastructure itself works. Native adapters can then connect observable behavior from real agents to the same evidence chain.\n"
+      }
+    }
+  ],
+  "claims": [
+    {
+      "schema_version": "0.1.0",
+      "id": "claude-code-doc-execution-policy",
+      "agent_id": "claude-code",
+      "snapshot_id": "claude-code-2026-08-10-docs",
+      "mechanism_id": "execution-policy",
+      "surface": "cli",
+      "statement": "Claude Code's official documentation separates permission rules, which decide tool and resource access, from OS-level sandbox enforcement for Bash filesystem and network access, and recommends using both as defense in depth.",
+      "display_text": {
+        "zh-CN": "Claude Code 官方文档将 permission rules 与 OS-level sandbox enforcement 分开：前者决定工具和资源访问，后者限制 Bash 的文件系统与网络访问，并建议两者共同构成 defense in depth。",
+        "en": "Claude Code's official documentation separates permission rules, which decide tool and resource access, from OS-level sandbox enforcement for Bash filesystem and network access, and recommends using both as defense in depth."
+      },
+      "status": "reviewed",
+      "evidence": [
+        {
+          "type": "official-doc",
+          "title": "Claude Code — Configure permissions",
+          "source_url": "https://code.claude.com/docs/en/permissions",
+          "captured_at": "2026-08-10",
+          "locator": "Permission rule syntax; How permissions interact with sandboxing"
+        }
+      ],
+      "reviewed_at": "2026-08-10",
+      "reviewers": [
+        "foundation-maintainers"
+      ],
+      "notes": "Documentation supports the product contract, not the closed core's implementation structure or the behavior of an unobserved machine."
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "claude-code-doc-hooks",
+      "agent_id": "claude-code",
+      "snapshot_id": "claude-code-2026-08-10-docs",
+      "mechanism_id": "extension-runtime",
+      "surface": "cli",
+      "statement": "Claude Code's official hook contract exposes lifecycle events including pre- and post-tool use, permission requests, session start/end, and stop; PreToolUse hooks can deny a call before normal permission-mode checks, while allow decisions cannot override stricter deny rules.",
+      "display_text": {
+        "zh-CN": "Claude Code 官方 hook contract 暴露 pre/post tool use、permission request、session start/end 与 stop 等事件；PreToolUse hook 可在常规 permission-mode 检查前拒绝调用，而 allow 决策不能越过更严格的 deny rules。",
+        "en": "Claude Code's official hook contract exposes lifecycle events including pre- and post-tool use, permission requests, session start/end, and stop; PreToolUse hooks can deny a call before normal permission-mode checks, while allow decisions cannot override stricter deny rules."
+      },
+      "status": "reviewed",
+      "evidence": [
+        {
+          "type": "official-doc",
+          "title": "Claude Code — Automate actions with hooks",
+          "source_url": "https://code.claude.com/docs/en/hooks-guide",
+          "captured_at": "2026-08-10",
+          "locator": "PreToolUse; Hook events; Hooks and permission modes"
+        }
+      ],
+      "reviewed_at": "2026-08-10",
+      "reviewers": [
+        "foundation-maintainers"
+      ],
+      "notes": "Hook ordering and behavior were not reproduced locally; only the documented interface is asserted."
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "claude-code-doc-subagents",
+      "agent_id": "claude-code",
+      "snapshot_id": "claude-code-2026-08-10-docs",
+      "mechanism_id": "subagent-orchestration",
+      "surface": "cli",
+      "statement": "Claude Code's official documentation describes subagents with separate context windows, configurable prompts, tools, models, permissions, hooks, skills, depth and turn limits, and optional temporary Git worktree isolation.",
+      "display_text": {
+        "zh-CN": "Claude Code 官方文档描述的 subagent 具有独立 context window，可配置 prompt、tools、model、permissions、hooks、skills、depth/turn limits，并可选择临时 Git worktree isolation。",
+        "en": "Claude Code's official documentation describes subagents with separate context windows, configurable prompts, tools, models, permissions, hooks, skills, depth and turn limits, and optional temporary Git worktree isolation."
+      },
+      "status": "reviewed",
+      "evidence": [
+        {
+          "type": "official-doc",
+          "title": "Claude Code — Create custom subagents",
+          "source_url": "https://code.claude.com/docs/en/sub-agents",
+          "captured_at": "2026-08-10",
+          "locator": "Configure subagents; Control capabilities; Work with subagents; worktree isolation"
+        }
+      ],
+      "reviewed_at": "2026-08-10",
+      "reviewers": [
+        "foundation-maintainers"
+      ],
+      "notes": "The claim intentionally avoids closed-source scheduling, hidden prompt, or internal state-machine assertions."
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "codex-cli-terminal-loop",
+      "agent_id": "codex",
+      "snapshot_id": "codex-2026-08-10-cli",
+      "mechanism_id": "agent-loop",
+      "surface": "cli",
+      "statement": "Official Codex CLI documentation presents one terminal loop for exploring code, planning changes, editing files, running local tools, steering an active turn, and continuing follow-up work in the same session.",
+      "display_text": {
+        "zh-CN": "Codex CLI 官方文档将其描述为一个终端内的连续工作循环：探索代码、规划修改、编辑文件、运行本地工具、在执行中 steering，并在同一 session 中继续后续工作。"
+      },
+      "status": "reviewed",
+      "evidence": [
+        {
+          "type": "official-doc",
+          "title": "Codex CLI — Inspect, edit, and run code from your terminal",
+          "source_url": "https://learn.chatgpt.com/docs/codex/cli",
+          "captured_at": "2026-08-10",
+          "locator": "Work against your local repository; Keep the coding loop in your terminal",
+          "notes": "Supports the documented product behavior only; it does not establish internal loop implementation details."
+        }
+      ],
+      "reviewed_at": "2026-08-10",
+      "reviewers": [
+        "foundation-maintainers"
+      ],
+      "notes": "Source-code mapping, request protocol, retry behavior, and exact termination logic are not asserted by this claim."
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "codex-source-agent-loop",
+      "agent_id": "codex",
+      "snapshot_id": "codex-2026-08-10-source",
+      "mechanism_id": "agent-loop",
+      "surface": "cli",
+      "statement": "At the pinned Codex source revision, run_turn repeatedly samples the model, executes requested function calls, feeds results into later samples, accepts steering input, and stops when follow-up work is no longer required or a stop/error path wins.",
+      "display_text": {
+        "zh-CN": "在固定的 Codex 源码版本中，run_turn 会反复采样模型、执行函数调用、把结果送入后续采样并接收 steering；当不再需要 follow-up，或 stop/error 路径生效时结束。",
+        "en": "At the pinned Codex source revision, run_turn repeatedly samples the model, executes requested function calls, feeds results into later samples, accepts steering input, and stops when follow-up work is no longer required or a stop/error path wins."
+      },
+      "status": "reviewed",
+      "evidence": [
+        {
+          "type": "source",
+          "title": "Codex core turn loop",
+          "source_url": "https://github.com/openai/codex/blob/89a335ed50258dc9dc5b3d7f410db61b431244f9/codex-rs/core/src/session/turn.rs",
+          "captured_at": "2026-08-10",
+          "locator": "run_turn",
+          "commit": "89a335ed50258dc9dc5b3d7f410db61b431244f9"
+        },
+        {
+          "type": "source",
+          "title": "Codex regular task drains queued input",
+          "source_url": "https://github.com/openai/codex/blob/89a335ed50258dc9dc5b3d7f410db61b431244f9/codex-rs/core/src/tasks/regular.rs",
+          "captured_at": "2026-08-10",
+          "locator": "RegularTask::run",
+          "commit": "89a335ed50258dc9dc5b3d7f410db61b431244f9"
+        }
+      ],
+      "reviewed_at": "2026-08-10",
+      "reviewers": [
+        "foundation-maintainers"
+      ],
+      "notes": "This describes the open-source Rust core at one commit, not every hosted Codex surface or a black-box runtime observation."
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "codex-source-app-server",
+      "agent_id": "codex",
+      "snapshot_id": "codex-2026-08-10-app-server",
+      "mechanism_id": "client-server-protocol",
+      "surface": "server",
+      "statement": "The pinned Codex App Server accepts JSON-RPC requests and notifications over selectable stdio, Unix-socket, or WebSocket transports and dispatches typed requests through dedicated processors.",
+      "display_text": {
+        "zh-CN": "固定版本的 Codex App Server 可通过 stdio、Unix socket 或 WebSocket 接收 JSON-RPC request/notification，并把类型化请求分派给专用 processor。",
+        "en": "The pinned Codex App Server accepts JSON-RPC requests and notifications over selectable stdio, Unix-socket, or WebSocket transports and dispatches typed requests through dedicated processors."
+      },
+      "status": "reviewed",
+      "evidence": [
+        {
+          "type": "source",
+          "title": "Codex App Server runtime and transports",
+          "source_url": "https://github.com/openai/codex/blob/89a335ed50258dc9dc5b3d7f410db61b431244f9/codex-rs/app-server/src/lib.rs",
+          "captured_at": "2026-08-10",
+          "locator": "AppServerTransport startup and JSONRPCMessage dispatch",
+          "commit": "89a335ed50258dc9dc5b3d7f410db61b431244f9"
+        },
+        {
+          "type": "source",
+          "title": "Codex App Server request processor",
+          "source_url": "https://github.com/openai/codex/blob/89a335ed50258dc9dc5b3d7f410db61b431244f9/codex-rs/app-server/src/message_processor.rs",
+          "captured_at": "2026-08-10",
+          "locator": "process_request and typed request processors",
+          "commit": "89a335ed50258dc9dc5b3d7f410db61b431244f9"
+        }
+      ],
+      "reviewed_at": "2026-08-10",
+      "reviewers": [
+        "foundation-maintainers"
+      ],
+      "notes": "Wire compatibility, reconnect behavior, and client interoperability have not been reproduced by this project."
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "codex-source-auto-compaction",
+      "agent_id": "codex",
+      "snapshot_id": "codex-2026-08-10-source",
+      "mechanism_id": "context-compaction",
+      "surface": "cli",
+      "statement": "The pinned Codex turn loop checks context limits before and after sampling and can replace history through local or remote compaction before resuming the same turn.",
+      "display_text": {
+        "zh-CN": "固定版本的 Codex turn loop 会在采样前后检查上下文限制，并可通过本地或远程 compaction 替换 history，然后继续同一 turn。",
+        "en": "The pinned Codex turn loop checks context limits before and after sampling and can replace history through local or remote compaction before resuming the same turn."
+      },
+      "status": "reviewed",
+      "evidence": [
+        {
+          "type": "source",
+          "title": "Codex pre- and mid-turn compaction routing",
+          "source_url": "https://github.com/openai/codex/blob/89a335ed50258dc9dc5b3d7f410db61b431244f9/codex-rs/core/src/session/turn.rs",
+          "captured_at": "2026-08-10",
+          "locator": "run_pre_sampling_compact; run_auto_compact",
+          "commit": "89a335ed50258dc9dc5b3d7f410db61b431244f9"
+        },
+        {
+          "type": "source",
+          "title": "Codex local compaction history replacement",
+          "source_url": "https://github.com/openai/codex/blob/89a335ed50258dc9dc5b3d7f410db61b431244f9/codex-rs/core/src/compact.rs",
+          "captured_at": "2026-08-10",
+          "locator": "run_compact_task_inner_impl; build_compacted_history",
+          "commit": "89a335ed50258dc9dc5b3d7f410db61b431244f9"
+        }
+      ],
+      "reviewed_at": "2026-08-10",
+      "reviewers": [
+        "foundation-maintainers"
+      ],
+      "notes": "No quality or losslessness claim is made; the native experiment needed to characterize behavior is still missing."
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "codex-source-event-stream",
+      "agent_id": "codex",
+      "snapshot_id": "codex-2026-08-10-source",
+      "mechanism_id": "event-stream",
+      "surface": "cli",
+      "statement": "The pinned Codex protocol defines typed events for turn lifecycle, streamed content, tools, approvals, compaction, hooks, and collaborative-agent activity, and the turn implementation emits those events through the session boundary.",
+      "display_text": {
+        "zh-CN": "固定版本的 Codex protocol 为 turn 生命周期、流式内容、工具、approval、compaction、hooks 与协作 Agent 活动定义了类型化事件，turn 实现通过 session 边界发送这些事件。",
+        "en": "The pinned Codex protocol defines typed events for turn lifecycle, streamed content, tools, approvals, compaction, hooks, and collaborative-agent activity, and the turn implementation emits those events through the session boundary."
+      },
+      "status": "reviewed",
+      "evidence": [
+        {
+          "type": "source",
+          "title": "Codex protocol event model",
+          "source_url": "https://github.com/openai/codex/blob/89a335ed50258dc9dc5b3d7f410db61b431244f9/codex-rs/protocol/src/protocol.rs",
+          "captured_at": "2026-08-10",
+          "locator": "EventMsg",
+          "commit": "89a335ed50258dc9dc5b3d7f410db61b431244f9"
+        },
+        {
+          "type": "source",
+          "title": "Codex turn event emission",
+          "source_url": "https://github.com/openai/codex/blob/89a335ed50258dc9dc5b3d7f410db61b431244f9/codex-rs/core/src/session/turn.rs",
+          "captured_at": "2026-08-10",
+          "locator": "send_event and emit_turn_item lifecycle calls",
+          "commit": "89a335ed50258dc9dc5b3d7f410db61b431244f9"
+        }
+      ],
+      "reviewed_at": "2026-08-10",
+      "reviewers": [
+        "foundation-maintainers"
+      ],
+      "notes": "The project has not yet captured and normalized a native Codex event stream, so replay fidelity is unknown."
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "codex-source-execution-policy",
+      "agent_id": "codex",
+      "snapshot_id": "codex-2026-08-10-source",
+      "mechanism_id": "execution-policy",
+      "surface": "cli",
+      "statement": "The pinned Codex core models approval decisions separately from sandbox transformation, with policy-dependent outcomes that can forbid, request approval for, skip approval for, or sandbox a tool attempt.",
+      "display_text": {
+        "zh-CN": "固定版本的 Codex core 将 approval decision 与 sandbox transformation 分离；根据策略，工具尝试可以被禁止、请求批准、跳过批准或进入 sandbox。",
+        "en": "The pinned Codex core models approval decisions separately from sandbox transformation, with policy-dependent outcomes that can forbid, request approval for, skip approval for, or sandbox a tool attempt."
+      },
+      "status": "reviewed",
+      "evidence": [
+        {
+          "type": "source",
+          "title": "Codex approval resolution",
+          "source_url": "https://github.com/openai/codex/blob/89a335ed50258dc9dc5b3d7f410db61b431244f9/codex-rs/core/src/tools/approvals.rs",
+          "captured_at": "2026-08-10",
+          "locator": "ApprovalAction; approval precedence and resolution",
+          "commit": "89a335ed50258dc9dc5b3d7f410db61b431244f9"
+        },
+        {
+          "type": "source",
+          "title": "Codex sandbox attempt policy",
+          "source_url": "https://github.com/openai/codex/blob/89a335ed50258dc9dc5b3d7f410db61b431244f9/codex-rs/core/src/tools/sandboxing.rs",
+          "captured_at": "2026-08-10",
+          "locator": "ExecApprovalRequirement; SandboxAttempt; ToolRuntime",
+          "commit": "89a335ed50258dc9dc5b3d7f410db61b431244f9"
+        }
+      ],
+      "reviewed_at": "2026-08-10",
+      "reviewers": [
+        "foundation-maintainers"
+      ],
+      "notes": "This source map does not assert that a specific operating-system sandbox was active in any unobserved run."
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "codex-source-extension-runtime",
+      "agent_id": "codex",
+      "snapshot_id": "codex-2026-08-10-source",
+      "mechanism_id": "extension-runtime",
+      "surface": "cli",
+      "statement": "At the pinned revision, Codex assembles selected skills and plugins into turn context and runs typed lifecycle hooks around session start, tool use, permissions, stop, compaction, and session end.",
+      "display_text": {
+        "zh-CN": "在固定版本中，Codex 会把选中的 skills 与 plugins 组装进 turn context，并在 session start、tool use、permission、stop、compaction 和 session end 周围运行类型化 hooks。",
+        "en": "At the pinned revision, Codex assembles selected skills and plugins into turn context and runs typed lifecycle hooks around session start, tool use, permissions, stop, compaction, and session end."
+      },
+      "status": "reviewed",
+      "evidence": [
+        {
+          "type": "source",
+          "title": "Codex turn-time skill and plugin assembly",
+          "source_url": "https://github.com/openai/codex/blob/89a335ed50258dc9dc5b3d7f410db61b431244f9/codex-rs/core/src/session/turn.rs",
+          "captured_at": "2026-08-10",
+          "locator": "build_skills_and_plugins and hook calls",
+          "commit": "89a335ed50258dc9dc5b3d7f410db61b431244f9"
+        },
+        {
+          "type": "source",
+          "title": "Codex lifecycle hook runtime",
+          "source_url": "https://github.com/openai/codex/blob/89a335ed50258dc9dc5b3d7f410db61b431244f9/codex-rs/core/src/hook_runtime.rs",
+          "captured_at": "2026-08-10",
+          "locator": "run_*_hooks functions",
+          "commit": "89a335ed50258dc9dc5b3d7f410db61b431244f9"
+        }
+      ],
+      "reviewed_at": "2026-08-10",
+      "reviewers": [
+        "foundation-maintainers"
+      ]
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "codex-source-subagent-routing",
+      "agent_id": "codex",
+      "snapshot_id": "codex-2026-08-10-source",
+      "mechanism_id": "subagent-orchestration",
+      "surface": "cli",
+      "statement": "The pinned Codex core registers multi-agent tools for spawning and communicating with child agents and implements spawn through a dedicated agent-control boundary rather than inside the main sampling loop.",
+      "display_text": {
+        "zh-CN": "固定版本的 Codex core 注册了用于创建与通信的 multi-agent 工具，并通过独立 agent-control 边界实现 spawn，而不是把子 Agent 生命周期直接塞进主采样循环。",
+        "en": "The pinned Codex core registers multi-agent tools for spawning and communicating with child agents and implements spawn through a dedicated agent-control boundary rather than inside the main sampling loop."
+      },
+      "status": "reviewed",
+      "evidence": [
+        {
+          "type": "source",
+          "title": "Codex multi-agent spawn tool",
+          "source_url": "https://github.com/openai/codex/blob/89a335ed50258dc9dc5b3d7f410db61b431244f9/codex-rs/core/src/tools/handlers/multi_agents_v2/spawn.rs",
+          "captured_at": "2026-08-10",
+          "locator": "spawn tool handler",
+          "commit": "89a335ed50258dc9dc5b3d7f410db61b431244f9"
+        },
+        {
+          "type": "source",
+          "title": "Codex agent-control spawn boundary",
+          "source_url": "https://github.com/openai/codex/blob/89a335ed50258dc9dc5b3d7f410db61b431244f9/codex-rs/core/src/agent/control/spawn.rs",
+          "captured_at": "2026-08-10",
+          "locator": "child agent spawn control",
+          "commit": "89a335ed50258dc9dc5b3d7f410db61b431244f9"
+        }
+      ],
+      "reviewed_at": "2026-08-10",
+      "reviewers": [
+        "foundation-maintainers"
+      ],
+      "notes": "Scheduling fairness, worktree isolation, and behavior under real concurrent load remain untested here."
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "codex-source-tool-router",
+      "agent_id": "codex",
+      "snapshot_id": "codex-2026-08-10-source",
+      "mechanism_id": "tool-dispatch",
+      "surface": "cli",
+      "statement": "The pinned Codex core separates model-visible tool specifications in ToolRouter from runtime registration and collision handling in ToolRegistry, then resolves each parsed call to its registered runtime.",
+      "display_text": {
+        "zh-CN": "固定版本的 Codex core 将模型可见的工具规格放在 ToolRouter，将 runtime 注册与命名冲突处理放在 ToolRegistry，并在解析调用后解析到已注册 runtime。",
+        "en": "The pinned Codex core separates model-visible tool specifications in ToolRouter from runtime registration and collision handling in ToolRegistry, then resolves each parsed call to its registered runtime."
+      },
+      "status": "reviewed",
+      "evidence": [
+        {
+          "type": "source",
+          "title": "Codex ToolRouter",
+          "source_url": "https://github.com/openai/codex/blob/89a335ed50258dc9dc5b3d7f410db61b431244f9/codex-rs/core/src/tools/router.rs",
+          "captured_at": "2026-08-10",
+          "locator": "ToolRouter",
+          "commit": "89a335ed50258dc9dc5b3d7f410db61b431244f9"
+        },
+        {
+          "type": "source",
+          "title": "Codex ToolRegistry",
+          "source_url": "https://github.com/openai/codex/blob/89a335ed50258dc9dc5b3d7f410db61b431244f9/codex-rs/core/src/tools/registry.rs",
+          "captured_at": "2026-08-10",
+          "locator": "ToolRegistry registration and lookup",
+          "commit": "89a335ed50258dc9dc5b3d7f410db61b431244f9"
+        }
+      ],
+      "reviewed_at": "2026-08-10",
+      "reviewers": [
+        "foundation-maintainers"
+      ]
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "pi-source-agent-loop",
+      "agent_id": "pi",
+      "snapshot_id": "pi-2026-08-10-source",
+      "mechanism_id": "agent-loop",
+      "surface": "cli",
+      "statement": "Pi's pinned agent core uses an inner loop for model/tool/steering turns and an outer loop for queued follow-up messages, emitting explicit agent, turn, message, and tool lifecycle events throughout.",
+      "display_text": {
+        "zh-CN": "固定版本的 Pi agent core 使用内层循环处理 model/tool/steering turn，外层循环处理排队的 follow-up message，并持续发送 agent、turn、message 与 tool 生命周期事件。",
+        "en": "Pi's pinned agent core uses an inner loop for model/tool/steering turns and an outer loop for queued follow-up messages, emitting explicit agent, turn, message, and tool lifecycle events throughout."
+      },
+      "status": "reviewed",
+      "evidence": [
+        {
+          "type": "source",
+          "title": "Pi agent loop",
+          "source_url": "https://github.com/earendil-works/pi/blob/936aff00918de1187f085f123c2812d8f2d67745/packages/agent/src/agent-loop.ts",
+          "captured_at": "2026-08-10",
+          "locator": "runLoop",
+          "commit": "936aff00918de1187f085f123c2812d8f2d67745"
+        },
+        {
+          "type": "source",
+          "title": "Pi stateful Agent wrapper",
+          "source_url": "https://github.com/earendil-works/pi/blob/936aff00918de1187f085f123c2812d8f2d67745/packages/agent/src/agent.ts",
+          "captured_at": "2026-08-10",
+          "locator": "Agent and PendingMessageQueue",
+          "commit": "936aff00918de1187f085f123c2812d8f2d67745"
+        }
+      ],
+      "reviewed_at": "2026-08-10",
+      "reviewers": [
+        "foundation-maintainers"
+      ],
+      "notes": "This maps the reusable agent package and its coding-agent integration; no provider call was made."
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "pi-source-context-compaction",
+      "agent_id": "pi",
+      "snapshot_id": "pi-2026-08-10-source",
+      "mechanism_id": "context-compaction",
+      "surface": "cli",
+      "statement": "Pi triggers compaction against a configurable reserve threshold, summarizes the older branch, keeps recent entries, tracks file operations, and preserves the full append-only session history outside the reduced model context.",
+      "display_text": {
+        "zh-CN": "Pi 会在可配置 reserve threshold 上触发 compaction，总结较旧分支、保留近期 entries、跟踪文件操作，同时把完整 append-only session history 保留在缩减后的模型上下文之外。",
+        "en": "Pi triggers compaction against a configurable reserve threshold, summarizes the older branch, keeps recent entries, tracks file operations, and preserves the full append-only session history outside the reduced model context."
+      },
+      "status": "reviewed",
+      "evidence": [
+        {
+          "type": "source",
+          "title": "Pi compaction implementation",
+          "source_url": "https://github.com/earendil-works/pi/blob/936aff00918de1187f085f123c2812d8f2d67745/packages/coding-agent/src/core/compaction/compaction.ts",
+          "captured_at": "2026-08-10",
+          "locator": "CompactionSettings; shouldCompact; compact",
+          "commit": "936aff00918de1187f085f123c2812d8f2d67745"
+        },
+        {
+          "type": "source",
+          "title": "Pi append-only session tree",
+          "source_url": "https://github.com/earendil-works/pi/blob/936aff00918de1187f085f123c2812d8f2d67745/packages/coding-agent/src/core/session-manager.ts",
+          "captured_at": "2026-08-10",
+          "locator": "SessionManager; appendCompaction; buildContextEntries",
+          "commit": "936aff00918de1187f085f123c2812d8f2d67745"
+        }
+      ],
+      "reviewed_at": "2026-08-10",
+      "reviewers": [
+        "foundation-maintainers"
+      ],
+      "notes": "Compaction is explicitly lossy; retained task quality is not yet measured by this project."
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "pi-source-execution-boundary",
+      "agent_id": "pi",
+      "snapshot_id": "pi-2026-08-10-source",
+      "mechanism_id": "execution-policy",
+      "surface": "cli",
+      "statement": "Pi explicitly does not provide an in-process permission system or built-in sandbox for model-invoked filesystem, process, network, or credential access; isolation must come from a container, VM, micro-VM, or other operating-system boundary.",
+      "display_text": {
+        "zh-CN": "Pi 明确不为模型调用的文件系统、进程、网络或凭据访问提供进程内 permission system 或内建 sandbox；隔离必须由 container、VM、micro-VM 或其他操作系统边界提供。",
+        "en": "Pi explicitly does not provide an in-process permission system or built-in sandbox for model-invoked filesystem, process, network, or credential access; isolation must come from a container, VM, micro-VM, or other operating-system boundary."
+      },
+      "status": "reviewed",
+      "evidence": [
+        {
+          "type": "source",
+          "title": "Pi repository security boundary",
+          "source_url": "https://github.com/earendil-works/pi/blob/936aff00918de1187f085f123c2812d8f2d67745/README.md",
+          "captured_at": "2026-08-10",
+          "locator": "Security",
+          "commit": "936aff00918de1187f085f123c2812d8f2d67745"
+        },
+        {
+          "type": "source",
+          "title": "Pi coding-agent security model",
+          "source_url": "https://github.com/earendil-works/pi/blob/936aff00918de1187f085f123c2812d8f2d67745/packages/coding-agent/docs/security.md",
+          "captured_at": "2026-08-10",
+          "locator": "Project trust; No built-in sandbox; Recommended isolation",
+          "commit": "936aff00918de1187f085f123c2812d8f2d67745"
+        }
+      ],
+      "reviewed_at": "2026-08-10",
+      "reviewers": [
+        "foundation-maintainers"
+      ],
+      "notes": "Project trust guards loading of project-local configuration and extensions; the source explicitly says it is not a sandbox. Third-party extensions may add policy, but that does not change the core boundary."
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "pi-source-extension-runtime",
+      "agent_id": "pi",
+      "snapshot_id": "pi-2026-08-10-source",
+      "mechanism_id": "extension-runtime",
+      "surface": "cli",
+      "statement": "Pi's coding-agent layer uses an extension runner to dispatch lifecycle events and lets extensions add or replace tools, commands, UI, providers, context transforms, and compaction behavior without modifying the low-level agent loop.",
+      "display_text": {
+        "zh-CN": "Pi 的 coding-agent 层通过 extension runner 分派生命周期事件；extension 可以新增或替换工具、命令、UI、provider、context transform 与 compaction 行为，而无需修改底层 agent loop。",
+        "en": "Pi's coding-agent layer uses an extension runner to dispatch lifecycle events and lets extensions add or replace tools, commands, UI, providers, context transforms, and compaction behavior without modifying the low-level agent loop."
+      },
+      "status": "reviewed",
+      "evidence": [
+        {
+          "type": "source",
+          "title": "Pi extension runner",
+          "source_url": "https://github.com/earendil-works/pi/blob/936aff00918de1187f085f123c2812d8f2d67745/packages/coding-agent/src/core/extensions/runner.ts",
+          "captured_at": "2026-08-10",
+          "locator": "ExtensionRunner",
+          "commit": "936aff00918de1187f085f123c2812d8f2d67745"
+        },
+        {
+          "type": "source",
+          "title": "Pi extension-first product contract",
+          "source_url": "https://github.com/earendil-works/pi/blob/936aff00918de1187f085f123c2812d8f2d67745/packages/coding-agent/README.md",
+          "captured_at": "2026-08-10",
+          "locator": "Extensions; What Pi intentionally omits",
+          "commit": "936aff00918de1187f085f123c2812d8f2d67745"
+        }
+      ],
+      "reviewed_at": "2026-08-10",
+      "reviewers": [
+        "foundation-maintainers"
+      ],
+      "notes": "Extensions are trusted local code in the Pi security model; extensibility is not treated as isolation."
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "pi-source-orchestration-boundary",
+      "agent_id": "pi",
+      "snapshot_id": "pi-2026-08-10-source",
+      "mechanism_id": "subagent-orchestration",
+      "surface": "cli",
+      "statement": "Pi intentionally omits a built-in subagent orchestration policy; its official project guidance points users to separate Pi processes or extensions so delegation semantics remain outside the minimal core.",
+      "display_text": {
+        "zh-CN": "Pi 有意不在 core 中内建 subagent orchestration policy；官方项目说明建议使用独立 Pi 进程或 extensions，因此 delegation 语义留在 minimal core 之外。",
+        "en": "Pi intentionally omits a built-in subagent orchestration policy; its official project guidance points users to separate Pi processes or extensions so delegation semantics remain outside the minimal core."
+      },
+      "status": "reviewed",
+      "evidence": [
+        {
+          "type": "source",
+          "title": "Pi intentionally omitted features",
+          "source_url": "https://github.com/earendil-works/pi/blob/936aff00918de1187f085f123c2812d8f2d67745/packages/coding-agent/README.md",
+          "captured_at": "2026-08-10",
+          "locator": "What Pi intentionally omits — No sub-agents",
+          "commit": "936aff00918de1187f085f123c2812d8f2d67745"
+        }
+      ],
+      "reviewed_at": "2026-08-10",
+      "reviewers": [
+        "foundation-maintainers"
+      ],
+      "notes": "This is a negative core-design claim, not a claim that the Pi ecosystem lacks subagent packages."
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "pi-source-rpc-mode",
+      "agent_id": "pi",
+      "snapshot_id": "pi-2026-08-10-rpc",
+      "mechanism_id": "client-server-protocol",
+      "surface": "server",
+      "statement": "Pi RPC mode accepts typed commands as LF-delimited JSON on stdin and emits responses plus agent events as LF-delimited JSON on stdout, including controls for prompting, steering, sessions, compaction, retry, models, and tools.",
+      "display_text": {
+        "zh-CN": "Pi RPC mode 通过 stdin 接收 LF 分隔的类型化 JSON command，并通过 stdout 输出 LF 分隔的 response 与 agent event；协议覆盖 prompt、steering、session、compaction、retry、model 与 tool 控制。",
+        "en": "Pi RPC mode accepts typed commands as LF-delimited JSON on stdin and emits responses plus agent events as LF-delimited JSON on stdout, including controls for prompting, steering, sessions, compaction, retry, models, and tools."
+      },
+      "status": "reviewed",
+      "evidence": [
+        {
+          "type": "source",
+          "title": "Pi RPC protocol types",
+          "source_url": "https://github.com/earendil-works/pi/blob/936aff00918de1187f085f123c2812d8f2d67745/packages/coding-agent/src/modes/rpc/rpc-types.ts",
+          "captured_at": "2026-08-10",
+          "locator": "RpcCommand; RpcResponse; RPC events",
+          "commit": "936aff00918de1187f085f123c2812d8f2d67745"
+        },
+        {
+          "type": "source",
+          "title": "Pi RPC mode implementation",
+          "source_url": "https://github.com/earendil-works/pi/blob/936aff00918de1187f085f123c2812d8f2d67745/packages/coding-agent/src/modes/rpc/rpc-mode.ts",
+          "captured_at": "2026-08-10",
+          "locator": "RPC command dispatch and JSONL output",
+          "commit": "936aff00918de1187f085f123c2812d8f2d67745"
+        }
+      ],
+      "reviewed_at": "2026-08-10",
+      "reviewers": [
+        "foundation-maintainers"
+      ],
+      "notes": "Framing and command coverage are source-backed; cross-language client interoperability has not been reproduced."
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "pi-source-session-events",
+      "agent_id": "pi",
+      "snapshot_id": "pi-2026-08-10-source",
+      "mechanism_id": "event-stream",
+      "surface": "cli",
+      "statement": "Pi combines a live typed AgentEvent stream with an append-only JSONL session tree whose entries carry id and parentId, allowing the active context to move between branches without deleting prior history.",
+      "display_text": {
+        "zh-CN": "Pi 将实时类型化 AgentEvent stream 与 append-only JSONL session tree 结合；entry 带有 id 与 parentId，使活动上下文可以在分支间移动而不删除旧历史。",
+        "en": "Pi combines a live typed AgentEvent stream with an append-only JSONL session tree whose entries carry id and parentId, allowing the active context to move between branches without deleting prior history."
+      },
+      "status": "reviewed",
+      "evidence": [
+        {
+          "type": "source",
+          "title": "Pi AgentEvent emission",
+          "source_url": "https://github.com/earendil-works/pi/blob/936aff00918de1187f085f123c2812d8f2d67745/packages/agent/src/agent-loop.ts",
+          "captured_at": "2026-08-10",
+          "locator": "agentLoop and runLoop event emission",
+          "commit": "936aff00918de1187f085f123c2812d8f2d67745"
+        },
+        {
+          "type": "source",
+          "title": "Pi append-only JSONL session tree",
+          "source_url": "https://github.com/earendil-works/pi/blob/936aff00918de1187f085f123c2812d8f2d67745/packages/coding-agent/src/core/session-manager.ts",
+          "captured_at": "2026-08-10",
+          "locator": "SessionEntryBase; SessionManager; getTree; branch",
+          "commit": "936aff00918de1187f085f123c2812d8f2d67745"
+        }
+      ],
+      "reviewed_at": "2026-08-10",
+      "reviewers": [
+        "foundation-maintainers"
+      ],
+      "notes": "The native JSONL format has not yet been converted into this project's normalized Trace schema."
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "pi-source-tool-dispatch",
+      "agent_id": "pi",
+      "snapshot_id": "pi-2026-08-10-source",
+      "mechanism_id": "tool-dispatch",
+      "surface": "cli",
+      "statement": "Pi validates tool arguments, offers before- and after-tool interception points, and executes a batch sequentially or in parallel according to the configured strategy and individual tool constraints.",
+      "display_text": {
+        "zh-CN": "Pi 会校验工具参数，提供 before/after tool 拦截点，并根据全局策略和单个工具约束，以串行或并行方式执行一批 tool calls。",
+        "en": "Pi validates tool arguments, offers before- and after-tool interception points, and executes a batch sequentially or in parallel according to the configured strategy and individual tool constraints."
+      },
+      "status": "reviewed",
+      "evidence": [
+        {
+          "type": "source",
+          "title": "Pi tool-call execution pipeline",
+          "source_url": "https://github.com/earendil-works/pi/blob/936aff00918de1187f085f123c2812d8f2d67745/packages/agent/src/agent-loop.ts",
+          "captured_at": "2026-08-10",
+          "locator": "executeToolCalls; executeToolCall",
+          "commit": "936aff00918de1187f085f123c2812d8f2d67745"
+        }
+      ],
+      "reviewed_at": "2026-08-10",
+      "reviewers": [
+        "foundation-maintainers"
+      ],
+      "notes": "No throughput or race-safety conclusion is inferred from the availability of parallel dispatch."
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "reasonix-source-acp",
+      "agent_id": "reasonix",
+      "snapshot_id": "reasonix-2026-08-10-acp",
+      "mechanism_id": "client-server-protocol",
+      "surface": "acp",
+      "statement": "Reasonix ACP uses an NDJSON JSON-RPC 2.0 connection over stdin/stdout, runs requests and notifications concurrently, maps engine events to session updates, and forwards gated tool decisions as client permission requests.",
+      "display_text": {
+        "zh-CN": "Reasonix ACP 通过 stdin/stdout 使用 NDJSON JSON-RPC 2.0 connection，并发处理 request/notification，把 engine events 映射为 session updates，并把受控工具决策转发为 client permission request。",
+        "en": "Reasonix ACP uses an NDJSON JSON-RPC 2.0 connection over stdin/stdout, runs requests and notifications concurrently, maps engine events to session updates, and forwards gated tool decisions as client permission requests."
+      },
+      "status": "reviewed",
+      "evidence": [
+        {
+          "type": "source",
+          "title": "Reasonix ACP connection",
+          "source_url": "https://github.com/esengine/DeepSeek-Reasonix/blob/6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993/internal/acp/server.go",
+          "captured_at": "2026-08-10",
+          "locator": "Conn; Serve; JSON-RPC framing",
+          "commit": "6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993"
+        },
+        {
+          "type": "source",
+          "title": "Reasonix ACP event and approval projection",
+          "source_url": "https://github.com/esengine/DeepSeek-Reasonix/blob/6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993/internal/acp/dispatch.go",
+          "captured_at": "2026-08-10",
+          "locator": "updateSink; requestPermission",
+          "commit": "6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993"
+        }
+      ],
+      "reviewed_at": "2026-08-10",
+      "reviewers": [
+        "foundation-maintainers"
+      ],
+      "notes": "Protocol interoperability with a real editor client remains an explicit experiment gap."
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "reasonix-source-agent-loop",
+      "agent_id": "reasonix",
+      "snapshot_id": "reasonix-2026-08-10-source",
+      "mechanism_id": "agent-loop",
+      "surface": "cli",
+      "statement": "The pinned Reasonix engine runs a bounded tool-round loop that captures a cache prefix shape, streams a provider turn, commits only a clean terminal attempt, then either finalizes or dispatches the committed tool calls before the next round.",
+      "display_text": {
+        "zh-CN": "固定版本的 Reasonix engine 运行有边界的 tool-round loop：先捕获 cache prefix shape，再流式采样 provider，仅提交 clean terminal attempt，随后 finalize 或分派已提交的 tool calls。",
+        "en": "The pinned Reasonix engine runs a bounded tool-round loop that captures a cache prefix shape, streams a provider turn, commits only a clean terminal attempt, then either finalizes or dispatches the committed tool calls before the next round."
+      },
+      "status": "reviewed",
+      "evidence": [
+        {
+          "type": "source",
+          "title": "Reasonix run loop",
+          "source_url": "https://github.com/esengine/DeepSeek-Reasonix/blob/6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993/internal/agent/run_loop.go",
+          "captured_at": "2026-08-10",
+          "locator": "runToolLoop",
+          "commit": "6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993"
+        }
+      ],
+      "reviewed_at": "2026-08-10",
+      "reviewers": [
+        "foundation-maintainers"
+      ],
+      "notes": "This is a source-level engine claim. It does not establish live DeepSeek or other provider behavior."
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "reasonix-source-context-maintenance",
+      "agent_id": "reasonix",
+      "snapshot_id": "reasonix-2026-08-10-source",
+      "mechanism_id": "context-compaction",
+      "surface": "cli",
+      "statement": "Reasonix treats compaction as a low-frequency cache-reset point, uses multiple context thresholds and a recent-tail budget, and records prefix-shape diagnostics that distinguish system, tool-schema, and content-rewrite changes.",
+      "display_text": {
+        "zh-CN": "Reasonix 把 compaction 视为低频 cache-reset point，使用多级上下文阈值与 recent-tail budget，并记录可区分 system、tool schema 与 content rewrite 变化的 prefix-shape diagnostics。",
+        "en": "Reasonix treats compaction as a low-frequency cache-reset point, uses multiple context thresholds and a recent-tail budget, and records prefix-shape diagnostics that distinguish system, tool-schema, and content-rewrite changes."
+      },
+      "status": "reviewed",
+      "evidence": [
+        {
+          "type": "source",
+          "title": "Reasonix cache-aware compaction",
+          "source_url": "https://github.com/esengine/DeepSeek-Reasonix/blob/6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993/internal/agent/compact.go",
+          "captured_at": "2026-08-10",
+          "locator": "compaction thresholds and projection",
+          "commit": "6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993"
+        },
+        {
+          "type": "source",
+          "title": "Reasonix prefix-shape diagnostics",
+          "source_url": "https://github.com/esengine/DeepSeek-Reasonix/blob/6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993/internal/agent/cache_shape.go",
+          "captured_at": "2026-08-10",
+          "locator": "PrefixShape; CaptureShape; CompareShape",
+          "commit": "6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993"
+        }
+      ],
+      "reviewed_at": "2026-08-10",
+      "reviewers": [
+        "foundation-maintainers"
+      ],
+      "notes": "The code exposes cache diagnostics; no cost or quality advantage is claimed without a controlled experiment."
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "reasonix-source-event-log",
+      "agent_id": "reasonix",
+      "snapshot_id": "reasonix-2026-08-10-source",
+      "mechanism_id": "event-stream",
+      "surface": "cli",
+      "statement": "Reasonix designates an append-only events JSONL file as transcript authority and keeps derived context, event-index, display-index, conflict, checkpoint, and job artifacts in separate sidecars.",
+      "display_text": {
+        "zh-CN": "Reasonix 将 append-only events JSONL 指定为 transcript authority，并把派生的 context、event index、display index、conflict、checkpoint 与 job artifacts 放在独立 sidecars 中。",
+        "en": "Reasonix designates an append-only events JSONL file as transcript authority and keeps derived context, event-index, display-index, conflict, checkpoint, and job artifacts in separate sidecars."
+      },
+      "status": "reviewed",
+      "evidence": [
+        {
+          "type": "source",
+          "title": "Reasonix session artifact authority",
+          "source_url": "https://github.com/esengine/DeepSeek-Reasonix/blob/6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993/internal/store/session.go",
+          "captured_at": "2026-08-10",
+          "locator": "SessionEventLog and session sidecars",
+          "commit": "6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993"
+        },
+        {
+          "type": "source",
+          "title": "Reasonix native session events",
+          "source_url": "https://github.com/esengine/DeepSeek-Reasonix/blob/6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993/internal/agent/session_events.go",
+          "captured_at": "2026-08-10",
+          "locator": "native event append and projection",
+          "commit": "6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993"
+        }
+      ],
+      "reviewed_at": "2026-08-10",
+      "reviewers": [
+        "foundation-maintainers"
+      ],
+      "notes": "The project has not yet imported a Reasonix native trace or tested crash-tail repair."
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "reasonix-source-execution-policy",
+      "agent_id": "reasonix",
+      "snapshot_id": "reasonix-2026-08-10-source",
+      "mechanism_id": "execution-policy",
+      "surface": "cli",
+      "statement": "Reasonix separates permission and approval posture from OS-level shell confinement: approval modes preserve explicit deny and fresh-decision rules, while an enforced but unavailable shell sandbox fails closed instead of running unwrapped.",
+      "display_text": {
+        "zh-CN": "Reasonix 将 permission/approval posture 与 OS-level shell confinement 分离：approval mode 保留显式 deny 与 fresh-decision 规则；当要求 enforce 但 sandbox 不可用时，shell 会 fail closed 而不是无隔离运行。",
+        "en": "Reasonix separates permission and approval posture from OS-level shell confinement: approval modes preserve explicit deny and fresh-decision rules, while an enforced but unavailable shell sandbox fails closed instead of running unwrapped."
+      },
+      "status": "reviewed",
+      "evidence": [
+        {
+          "type": "source",
+          "title": "Reasonix approval manager and headless gates",
+          "source_url": "https://github.com/esengine/DeepSeek-Reasonix/blob/6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993/internal/control/approval.go",
+          "captured_at": "2026-08-10",
+          "locator": "approvalManager; BuildHeadlessApprovalGate",
+          "commit": "6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993"
+        },
+        {
+          "type": "source",
+          "title": "Reasonix OS sandbox contract",
+          "source_url": "https://github.com/esengine/DeepSeek-Reasonix/blob/6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993/internal/sandbox/sandbox.go",
+          "captured_at": "2026-08-10",
+          "locator": "package contract; Spec; UnavailableMessage",
+          "commit": "6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993"
+        }
+      ],
+      "reviewed_at": "2026-08-10",
+      "reviewers": [
+        "foundation-maintainers"
+      ],
+      "notes": "Platform enforcement was not executed. The source states that Windows has no OS-level Bash sandbox in this revision."
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "reasonix-source-extension-runtime",
+      "agent_id": "reasonix",
+      "snapshot_id": "reasonix-2026-08-10-source",
+      "mechanism_id": "extension-runtime",
+      "surface": "cli",
+      "statement": "Reasonix plugin manifests can contribute hooks and MCP servers, while lazy MCP placeholders keep cached tool metadata stable and defer process startup or live schema reconciliation until needed.",
+      "display_text": {
+        "zh-CN": "Reasonix plugin manifest 可以贡献 hooks 与 MCP servers；lazy MCP placeholder 会保持缓存的工具元数据稳定，并将进程启动或 live schema reconciliation 延迟到需要时。",
+        "en": "Reasonix plugin manifests can contribute hooks and MCP servers, while lazy MCP placeholders keep cached tool metadata stable and defer process startup or live schema reconciliation until needed."
+      },
+      "status": "reviewed",
+      "evidence": [
+        {
+          "type": "source",
+          "title": "Reasonix plugin manifest contract",
+          "source_url": "https://github.com/esengine/DeepSeek-Reasonix/blob/6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993/internal/pluginpkg/manifest_v1.go",
+          "captured_at": "2026-08-10",
+          "locator": "Manifest contributions, hooks, and MCP servers",
+          "commit": "6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993"
+        },
+        {
+          "type": "source",
+          "title": "Reasonix lazy MCP toolset",
+          "source_url": "https://github.com/esengine/DeepSeek-Reasonix/blob/6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993/internal/plugin/lazy.go",
+          "captured_at": "2026-08-10",
+          "locator": "lazyTool; LazyToolset; schema cache reconciliation",
+          "commit": "6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993"
+        }
+      ],
+      "reviewed_at": "2026-08-10",
+      "reviewers": [
+        "foundation-maintainers"
+      ],
+      "notes": "No third-party plugin was installed or executed."
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "reasonix-source-retry-recovery",
+      "agent_id": "reasonix",
+      "snapshot_id": "reasonix-2026-08-10-source",
+      "mechanism_id": "retry-recovery",
+      "surface": "cli",
+      "statement": "Reasonix replays one frozen sampling payload across bounded stream-recovery attempts, commits only the selected clean attempt, and separately breaks repeated identical write-like failures after a small threshold unless a safe state recheck clears the signature.",
+      "display_text": {
+        "zh-CN": "Reasonix 会在有限次 stream-recovery attempt 中重放同一个冻结 sampling payload，只提交选定的 clean attempt；对重复的相同 write-like failure 则在小阈值后中断，除非安全的状态复查清除该 signature。",
+        "en": "Reasonix replays one frozen sampling payload across bounded stream-recovery attempts, commits only the selected clean attempt, and separately breaks repeated identical write-like failures after a small threshold unless a safe state recheck clears the signature."
+      },
+      "status": "reviewed",
+      "evidence": [
+        {
+          "type": "source",
+          "title": "Reasonix sampling recovery",
+          "source_url": "https://github.com/esengine/DeepSeek-Reasonix/blob/6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993/internal/agent/run_loop.go",
+          "captured_at": "2026-08-10",
+          "locator": "streamWithSamplingRecovery",
+          "commit": "6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993"
+        },
+        {
+          "type": "source",
+          "title": "Reasonix repeated failure guard",
+          "source_url": "https://github.com/esengine/DeepSeek-Reasonix/blob/6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993/internal/agent/repeat_failure_guard.go",
+          "captured_at": "2026-08-10",
+          "locator": "repeat failure threshold, signatures, and state recheck",
+          "commit": "6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993"
+        }
+      ],
+      "reviewed_at": "2026-08-10",
+      "reviewers": [
+        "foundation-maintainers"
+      ],
+      "notes": "This supports the control-flow design only; the project has not injected live network or provider failures."
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "reasonix-source-subagents",
+      "agent_id": "reasonix",
+      "snapshot_id": "reasonix-2026-08-10-source",
+      "mechanism_id": "subagent-orchestration",
+      "surface": "cli",
+      "statement": "Reasonix constructs a filtered child tool registry, supports a read-only child profile, caps recursive delegation by depth, hides parent-only orchestration and job tools, and gives each child a private temporary-session boundary.",
+      "display_text": {
+        "zh-CN": "Reasonix 会构造过滤后的 child tool registry，支持只读 child profile，按深度限制递归 delegation，隐藏 parent-only orchestration/job tools，并为每个 child 提供私有临时 session 边界。",
+        "en": "Reasonix constructs a filtered child tool registry, supports a read-only child profile, caps recursive delegation by depth, hides parent-only orchestration and job tools, and gives each child a private temporary-session boundary."
+      },
+      "status": "reviewed",
+      "evidence": [
+        {
+          "type": "source",
+          "title": "Reasonix subagent tool and context boundaries",
+          "source_url": "https://github.com/esengine/DeepSeek-Reasonix/blob/6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993/internal/agent/task.go",
+          "captured_at": "2026-08-10",
+          "locator": "withSubagentSessionTemp; SubagentToolRegistryForDepth; read-only profile",
+          "commit": "6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993"
+        }
+      ],
+      "reviewed_at": "2026-08-10",
+      "reviewers": [
+        "foundation-maintainers"
+      ],
+      "notes": "This source map does not yet cover scheduler fairness, merge quality, or real concurrent mutation behavior."
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "reasonix-source-tool-dispatch",
+      "agent_id": "reasonix",
+      "snapshot_id": "reasonix-2026-08-10-source",
+      "mechanism_id": "tool-dispatch",
+      "surface": "cli",
+      "statement": "Reasonix separates batch scheduling from single-call execution, so concurrency decisions, per-call context, capability gates, tool invocation, results, and failure bookkeeping cross explicit boundaries.",
+      "display_text": {
+        "zh-CN": "Reasonix 将 batch scheduling 与 single-call execution 分离，使并发决策、per-call context、capability gate、工具调用、结果与失败记账经过明确边界。",
+        "en": "Reasonix separates batch scheduling from single-call execution, so concurrency decisions, per-call context, capability gates, tool invocation, results, and failure bookkeeping cross explicit boundaries."
+      },
+      "status": "reviewed",
+      "evidence": [
+        {
+          "type": "source",
+          "title": "Reasonix batch tool execution",
+          "source_url": "https://github.com/esengine/DeepSeek-Reasonix/blob/6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993/internal/agent/execute_batch.go",
+          "captured_at": "2026-08-10",
+          "locator": "executeBatch",
+          "commit": "6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993"
+        },
+        {
+          "type": "source",
+          "title": "Reasonix single tool-call execution",
+          "source_url": "https://github.com/esengine/DeepSeek-Reasonix/blob/6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993/internal/agent/execute_one.go",
+          "captured_at": "2026-08-10",
+          "locator": "executeOne",
+          "commit": "6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993"
+        }
+      ],
+      "reviewed_at": "2026-08-10",
+      "reviewers": [
+        "foundation-maintainers"
+      ],
+      "notes": "The claim maps boundaries, not correctness under every concurrent workload."
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "reference-harness-controlled-tool-roundtrip",
+      "agent_id": "reference-harness",
+      "snapshot_id": "reference-harness-2026-08-10-controlled",
+      "mechanism_id": "tool-dispatch",
+      "surface": "sdk",
+      "statement": "In the controlled reference experiment, the project harness validates and executes one declared read_file call, records the successful tool result between two model turns, and produces the same normalized trace fingerprint across two repetitions.",
+      "display_text": {
+        "zh-CN": "在受控参考实验中，项目 Harness 校验并执行一次声明过的 read_file 调用，在两次模型回合之间记录成功结果，并在两次重复运行中产生相同的规范化 Trace 指纹。",
+        "en": "In the controlled reference experiment, the project harness validates and executes one declared read_file call, records the successful result between two model turns, and produces the same normalized trace fingerprint across two repetitions."
+      },
+      "status": "reviewed",
+      "evidence": [
+        {
+          "type": "reproduced",
+          "title": "Reference tool roundtrip controlled run",
+          "captured_at": "2026-08-10",
+          "experiment_id": "reference-tool-roundtrip-v1",
+          "trace_path": "labs/results/reference-tool-roundtrip-v1/run-001.trace.jsonl",
+          "notes": "The scripted model and read-only fixture isolate the harness pipeline. This is not evidence about any vendor agent."
+        }
+      ],
+      "reviewed_at": "2026-08-10",
+      "reviewers": [
+        "foundation-maintainers"
+      ],
+      "notes": "The claim is intentionally limited to the committed controlled fixture, runner, and normalized trace output."
+    }
+  ],
+  "mechanisms": [
+    {
+      "schema_version": "0.1.0",
+      "id": "agent-loop",
+      "title": "Agent Loop",
+      "summary": "Own the repeated transition from user intent to model response, tool effects, updated context, and an explicit stop reason.",
+      "category": "loop",
+      "status": "core",
+      "prerequisites": [],
+      "reference_lessons": [
+        "s01-agent-loop",
+        "s02-events-streaming",
+        "s03-tool-dispatch"
+      ],
+      "agent_implementations": [
+        {
+          "agent_id": "codex",
+          "snapshot_id": "codex-2026-08-10-cli",
+          "coverage": "partial",
+          "claim_ids": [
+            "codex-cli-terminal-loop"
+          ],
+          "notes": "Official-documentation mapping only. A pinned source map and native trace are still required for Tier A."
+        },
+        {
+          "agent_id": "codex",
+          "snapshot_id": "codex-2026-08-10-source",
+          "coverage": "substantial",
+          "claim_ids": [
+            "codex-source-agent-loop"
+          ]
+        },
+        {
+          "agent_id": "pi",
+          "snapshot_id": "pi-2026-08-10-source",
+          "coverage": "substantial",
+          "claim_ids": [
+            "pi-source-agent-loop"
+          ]
+        },
+        {
+          "agent_id": "reasonix",
+          "snapshot_id": "reasonix-2026-08-10-source",
+          "coverage": "substantial",
+          "claim_ids": [
+            "reasonix-source-agent-loop"
+          ]
+        }
+      ],
+      "experiments": [],
+      "open_questions": [
+        "Which termination reasons should be portable across provider and Agent adapters?",
+        "How should streaming tool-call arguments appear without leaking provider-specific wire formats?",
+        "Which retry decisions belong inside the loop versus a provider adapter?"
+      ],
+      "reader_layer_status": {
+        "L0": "complete",
+        "L1": "complete",
+        "L2": "partial",
+        "L3": "partial",
+        "L4": "partial"
+      },
+      "content": {
+        "zh-CN": "# Agent Loop\n\n## L0 · 直觉\n\n模型不是 Agent。模型只回答“下一步做什么”，Harness 负责把回答变成动作、把动作结果放回上下文，并决定继续还是停止。\n\n```text\n用户意图 → 模型响应 → 工具请求 → 策略判断 → 工具结果\n    ↑                                           │\n    └──────────── 更新上下文并继续 ─────────────┘\n```\n\n一个可信的 loop 必须能回答三件事：现在是什么状态、为什么继续、为什么停止。\n\n## L1 · 可运行参考\n\n运行 `python3 -m curriculum.lessons.s03_tool_dispatch.demo`。Fake Model 先请求 `echo`，Registry 验证并执行，结果作为 tool message 回到第二次模型调用。整个过程输出 Trace 0.1 JSONL。\n\n## L2 · 工程约束\n\n- 为总轮数、wall time、token 和工具调用设置独立预算；\n- tool validation、authorization、execution 和 result normalization 分层；\n- stream 中断、模型错误与工具错误使用不同恢复策略；\n- cancellation 和 steering 必须成为 loop 状态，而不是 UI 特例；\n- stop reason 进入 Trace，不能只存在于日志字符串。\n\n## L3 · Agent 映射\n\n截至 2026-08-10 的官方文档把 Codex CLI 描述为一个终端内的连续工作循环，支持探索、规划、编辑、运行本地工具、steering 和同 session follow-up。当前 Claim 只证明产品表面行为；源码映射、请求协议、重试和终止逻辑仍标记为未知。\n\n## L4 · 研究入口\n\n合成 Controlled trace 证明本项目的事件和工具往返契约可以运行，但不能替代真实 Agent 的 Native trace。下一步实验需要固定 Agent 版本、模型、权限、sandbox、fixture 和不可见字段。\n",
+        "en": "# Agent Loop\n\n## L0 · Intuition\n\nA model is not an agent. The model answers “what next”; the harness turns that answer into effects, adds results to context, and decides whether to continue or stop.\n\n```text\nUser intent → Model response → Tool request → Policy → Tool result\n     ↑                                             │\n     └────────── Update context and continue ──────┘\n```\n\nA trustworthy loop can answer three questions: what state it is in, why it continues, and why it stops.\n\n## L1 · Runnable reference\n\nRun `python3 -m curriculum.lessons.s03_tool_dispatch.demo`. The fake model requests `echo`, the registry validates and executes it, and the result becomes a tool message for the second model call. The run prints Trace 0.1 JSONL.\n\n## L2 · Engineering constraints\n\n- Bound turns, wall time, tokens, and tool calls independently.\n- Separate validation, authorization, execution, and result normalization.\n- Give stream failures, model failures, and tool failures different recovery paths.\n- Treat cancellation and steering as loop state, not UI exceptions.\n- Put the stop reason in the trace, not only in an incidental log string.\n\n## L3 · Agent mapping\n\nOfficial documentation observed on 2026-08-10 presents Codex CLI as one terminal loop for exploration, planning, editing, local tools, steering, and same-session follow-up. The current claim supports product-surface behavior only; source mapping, request protocol, retry behavior, and termination logic remain unknown.\n\n## L4 · Research entry\n\nThe synthetic controlled trace proves this project's event and tool round-trip contract runs, but it cannot substitute for a native Agent trace. The next experiment must pin Agent version, model, permissions, sandbox, fixture, and visibility gaps.\n"
+      }
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "client-server-protocol",
+      "title": "Client–Server Protocol",
+      "summary": "Expose the harness loop, sessions, events, approvals, and configuration to terminal, IDE, desktop, or automation clients through a stable transport boundary.",
+      "category": "interfaces",
+      "status": "core",
+      "prerequisites": [
+        "agent-loop",
+        "event-stream"
+      ],
+      "reference_lessons": [
+        "s01-agent-loop",
+        "s02-events-streaming"
+      ],
+      "agent_implementations": [
+        {
+          "agent_id": "codex",
+          "snapshot_id": "codex-2026-08-10-app-server",
+          "coverage": "partial",
+          "claim_ids": [
+            "codex-source-app-server"
+          ]
+        },
+        {
+          "agent_id": "pi",
+          "snapshot_id": "pi-2026-08-10-rpc",
+          "coverage": "partial",
+          "claim_ids": [
+            "pi-source-rpc-mode"
+          ]
+        },
+        {
+          "agent_id": "reasonix",
+          "snapshot_id": "reasonix-2026-08-10-acp",
+          "coverage": "partial",
+          "claim_ids": [
+            "reasonix-source-acp"
+          ]
+        }
+      ],
+      "experiments": [],
+      "open_questions": [
+        "Which lifecycle events and approval semantics are portable across clients?",
+        "How should protocol compatibility be versioned independently of product releases?",
+        "Where should session authority live when multiple clients can reconnect?"
+      ],
+      "reader_layer_status": {
+        "L0": "partial",
+        "L1": "missing",
+        "L2": "partial",
+        "L3": "partial",
+        "L4": "partial"
+      },
+      "content": {
+        "zh-CN": null,
+        "en": null
+      }
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "context-budget",
+      "title": "Context Budget",
+      "summary": "Allocate finite input space across instructions, conversation, tools, memory, and output reserve.",
+      "category": "context",
+      "status": "core",
+      "prerequisites": [
+        "agent-loop"
+      ],
+      "reference_lessons": [
+        "s06-context-budget"
+      ],
+      "agent_implementations": [],
+      "experiments": [],
+      "open_questions": [
+        "Which budget decisions should be replayable across tokenizers?"
+      ],
+      "reader_layer_status": {
+        "L0": "partial",
+        "L1": "complete",
+        "L2": "partial",
+        "L3": "missing",
+        "L4": "missing"
+      },
+      "content": {
+        "zh-CN": null,
+        "en": null
+      }
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "context-compaction",
+      "title": "Context Compaction",
+      "summary": "Replace an over-budget model-visible history with a smaller projection while preserving enough state, provenance, and recent work to continue safely.",
+      "category": "context",
+      "status": "core",
+      "prerequisites": [
+        "context-budget"
+      ],
+      "reference_lessons": [
+        "s06-context-budget"
+      ],
+      "agent_implementations": [
+        {
+          "agent_id": "codex",
+          "snapshot_id": "codex-2026-08-10-source",
+          "coverage": "substantial",
+          "claim_ids": [
+            "codex-source-auto-compaction"
+          ]
+        },
+        {
+          "agent_id": "pi",
+          "snapshot_id": "pi-2026-08-10-source",
+          "coverage": "substantial",
+          "claim_ids": [
+            "pi-source-context-compaction"
+          ]
+        },
+        {
+          "agent_id": "reasonix",
+          "snapshot_id": "reasonix-2026-08-10-source",
+          "coverage": "partial",
+          "claim_ids": [
+            "reasonix-source-context-maintenance"
+          ]
+        }
+      ],
+      "experiments": [],
+      "open_questions": [
+        "Which invariants must survive every compaction strategy?",
+        "How should a harness expose information loss and compaction lineage to users?",
+        "Which cache optimizations conflict with the most faithful context projection?"
+      ],
+      "reader_layer_status": {
+        "L0": "partial",
+        "L1": "missing",
+        "L2": "partial",
+        "L3": "partial",
+        "L4": "partial"
+      },
+      "content": {
+        "zh-CN": null,
+        "en": null
+      }
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "event-stream",
+      "title": "Event Stream",
+      "summary": "Translate provider deltas and harness transitions into ordered, replayable events.",
+      "category": "observability",
+      "status": "core",
+      "prerequisites": [
+        "agent-loop"
+      ],
+      "reference_lessons": [
+        "s02-events-streaming"
+      ],
+      "agent_implementations": [
+        {
+          "agent_id": "codex",
+          "snapshot_id": "codex-2026-08-10-source",
+          "coverage": "partial",
+          "claim_ids": [
+            "codex-source-event-stream"
+          ]
+        },
+        {
+          "agent_id": "pi",
+          "snapshot_id": "pi-2026-08-10-source",
+          "coverage": "substantial",
+          "claim_ids": [
+            "pi-source-session-events"
+          ]
+        },
+        {
+          "agent_id": "reasonix",
+          "snapshot_id": "reasonix-2026-08-10-source",
+          "coverage": "substantial",
+          "claim_ids": [
+            "reasonix-source-event-log"
+          ]
+        }
+      ],
+      "experiments": [],
+      "open_questions": [
+        "Which streaming payload fields can be portable without erasing provider-specific semantics?"
+      ],
+      "reader_layer_status": {
+        "L0": "partial",
+        "L1": "complete",
+        "L2": "partial",
+        "L3": "missing",
+        "L4": "missing"
+      },
+      "content": {
+        "zh-CN": null,
+        "en": null
+      }
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "execution-policy",
+      "title": "Execution Policy",
+      "summary": "Decide which tool actions may run, which require a human or policy decision, and which must be constrained by an operating-system boundary.",
+      "category": "safety",
+      "status": "core",
+      "prerequisites": [
+        "tool-dispatch",
+        "path-boundary"
+      ],
+      "reference_lessons": [
+        "s03-tool-dispatch",
+        "s04-workspace-tools"
+      ],
+      "agent_implementations": [
+        {
+          "agent_id": "codex",
+          "snapshot_id": "codex-2026-08-10-source",
+          "coverage": "substantial",
+          "claim_ids": [
+            "codex-source-execution-policy"
+          ]
+        },
+        {
+          "agent_id": "pi",
+          "snapshot_id": "pi-2026-08-10-source",
+          "coverage": "substantial",
+          "claim_ids": [
+            "pi-source-execution-boundary"
+          ],
+          "notes": "Substantial coverage describes a clearly documented negative boundary, not a built-in sandbox implementation."
+        },
+        {
+          "agent_id": "reasonix",
+          "snapshot_id": "reasonix-2026-08-10-source",
+          "coverage": "partial",
+          "claim_ids": [
+            "reasonix-source-execution-policy"
+          ]
+        },
+        {
+          "agent_id": "claude-code",
+          "snapshot_id": "claude-code-2026-08-10-docs",
+          "coverage": "partial",
+          "claim_ids": [
+            "claude-code-doc-execution-policy"
+          ]
+        }
+      ],
+      "experiments": [],
+      "open_questions": [
+        "Which decisions belong to semantic permissions and which require OS enforcement?",
+        "How should approval caches be scoped and revoked?",
+        "How can headless execution fail closed without making automation unusable?"
+      ],
+      "reader_layer_status": {
+        "L0": "partial",
+        "L1": "missing",
+        "L2": "partial",
+        "L3": "partial",
+        "L4": "partial"
+      },
+      "content": {
+        "zh-CN": null,
+        "en": null
+      }
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "extension-runtime",
+      "title": "Extension Runtime",
+      "summary": "Load and execute hooks, plugins, skills, custom tools, or provider adapters without collapsing extension code into the core loop.",
+      "category": "extensibility",
+      "status": "core",
+      "prerequisites": [
+        "tool-dispatch",
+        "instruction-discovery"
+      ],
+      "reference_lessons": [
+        "s03-tool-dispatch",
+        "s05-instructions"
+      ],
+      "agent_implementations": [
+        {
+          "agent_id": "codex",
+          "snapshot_id": "codex-2026-08-10-source",
+          "coverage": "partial",
+          "claim_ids": [
+            "codex-source-extension-runtime"
+          ]
+        },
+        {
+          "agent_id": "pi",
+          "snapshot_id": "pi-2026-08-10-source",
+          "coverage": "substantial",
+          "claim_ids": [
+            "pi-source-extension-runtime"
+          ]
+        },
+        {
+          "agent_id": "reasonix",
+          "snapshot_id": "reasonix-2026-08-10-source",
+          "coverage": "partial",
+          "claim_ids": [
+            "reasonix-source-extension-runtime"
+          ]
+        },
+        {
+          "agent_id": "claude-code",
+          "snapshot_id": "claude-code-2026-08-10-docs",
+          "coverage": "partial",
+          "claim_ids": [
+            "claude-code-doc-hooks"
+          ]
+        }
+      ],
+      "experiments": [],
+      "open_questions": [
+        "Which extension capabilities require an explicit trust decision?",
+        "How should hook conflicts and non-deterministic completion order be surfaced?",
+        "Can one portable extension API preserve each harness's safety model?"
+      ],
+      "reader_layer_status": {
+        "L0": "partial",
+        "L1": "missing",
+        "L2": "partial",
+        "L3": "partial",
+        "L4": "partial"
+      },
+      "content": {
+        "zh-CN": null,
+        "en": null
+      }
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "instruction-discovery",
+      "title": "Instruction Discovery",
+      "summary": "Discover, order, bound, and attribute project instructions before model execution.",
+      "category": "context",
+      "status": "core",
+      "prerequisites": [
+        "agent-loop"
+      ],
+      "reference_lessons": [
+        "s05-instructions"
+      ],
+      "agent_implementations": [],
+      "experiments": [],
+      "open_questions": [
+        "How should conflicting instruction scopes be surfaced to users and traces?"
+      ],
+      "reader_layer_status": {
+        "L0": "partial",
+        "L1": "complete",
+        "L2": "partial",
+        "L3": "missing",
+        "L4": "missing"
+      },
+      "content": {
+        "zh-CN": null,
+        "en": null
+      }
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "path-boundary",
+      "title": "Workspace Path Boundary",
+      "summary": "Reject absolute paths and traversal before a file tool touches the filesystem.",
+      "category": "safety",
+      "status": "core",
+      "prerequisites": [
+        "workspace-tools"
+      ],
+      "reference_lessons": [
+        "s04-workspace-tools"
+      ],
+      "agent_implementations": [],
+      "experiments": [],
+      "open_questions": [
+        "How should adapters represent symlink and mount visibility across operating systems?"
+      ],
+      "reader_layer_status": {
+        "L0": "partial",
+        "L1": "complete",
+        "L2": "partial",
+        "L3": "missing",
+        "L4": "missing"
+      },
+      "content": {
+        "zh-CN": null,
+        "en": null
+      }
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "retry-recovery",
+      "title": "Retry and Recovery",
+      "summary": "Classify failures, bound retries, avoid duplicate side effects, and preserve enough state for a safe continuation or explicit pause.",
+      "category": "reliability",
+      "status": "core",
+      "prerequisites": [
+        "agent-loop",
+        "tool-dispatch"
+      ],
+      "reference_lessons": [
+        "s01-agent-loop",
+        "s03-tool-dispatch"
+      ],
+      "agent_implementations": [
+        {
+          "agent_id": "reasonix",
+          "snapshot_id": "reasonix-2026-08-10-source",
+          "coverage": "partial",
+          "claim_ids": [
+            "reasonix-source-retry-recovery"
+          ]
+        }
+      ],
+      "experiments": [],
+      "open_questions": [
+        "Which retries are safe before a provider response is committed?",
+        "How should repeated tool failures be recognized without suppressing legitimate retries?",
+        "What state must be persisted so recovery never replays a mutation accidentally?"
+      ],
+      "reader_layer_status": {
+        "L0": "partial",
+        "L1": "missing",
+        "L2": "partial",
+        "L3": "partial",
+        "L4": "partial"
+      },
+      "content": {
+        "zh-CN": null,
+        "en": null
+      }
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "subagent-orchestration",
+      "title": "Subagent Orchestration",
+      "summary": "Delegate bounded work into isolated contexts, control capabilities and lifecycle, and merge results without confusing ownership or workspace state.",
+      "category": "orchestration",
+      "status": "emerging",
+      "prerequisites": [
+        "agent-loop",
+        "execution-policy"
+      ],
+      "reference_lessons": [
+        "s01-agent-loop"
+      ],
+      "agent_implementations": [
+        {
+          "agent_id": "codex",
+          "snapshot_id": "codex-2026-08-10-source",
+          "coverage": "partial",
+          "claim_ids": [
+            "codex-source-subagent-routing"
+          ]
+        },
+        {
+          "agent_id": "pi",
+          "snapshot_id": "pi-2026-08-10-source",
+          "coverage": "substantial",
+          "claim_ids": [
+            "pi-source-orchestration-boundary"
+          ],
+          "notes": "The source-backed result is an intentional absence from core plus documented extension points."
+        },
+        {
+          "agent_id": "reasonix",
+          "snapshot_id": "reasonix-2026-08-10-source",
+          "coverage": "partial",
+          "claim_ids": [
+            "reasonix-source-subagents"
+          ]
+        },
+        {
+          "agent_id": "claude-code",
+          "snapshot_id": "claude-code-2026-08-10-docs",
+          "coverage": "partial",
+          "claim_ids": [
+            "claude-code-doc-subagents"
+          ]
+        }
+      ],
+      "experiments": [],
+      "open_questions": [
+        "Which context, permissions, and instructions should a child inherit?",
+        "When is a worktree a sufficient isolation boundary?",
+        "How should cancellation, partial results, and nested delegation be represented in traces?"
+      ],
+      "reader_layer_status": {
+        "L0": "partial",
+        "L1": "missing",
+        "L2": "partial",
+        "L3": "partial",
+        "L4": "partial"
+      },
+      "content": {
+        "zh-CN": null,
+        "en": null
+      }
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "tool-dispatch",
+      "title": "Tool Dispatch",
+      "summary": "Validate, authorize, execute, normalize, and record model-requested tool calls.",
+      "category": "tools",
+      "status": "core",
+      "prerequisites": [
+        "agent-loop"
+      ],
+      "reference_lessons": [
+        "s03-tool-dispatch"
+      ],
+      "agent_implementations": [
+        {
+          "agent_id": "codex",
+          "snapshot_id": "codex-2026-08-10-source",
+          "coverage": "substantial",
+          "claim_ids": [
+            "codex-source-tool-router"
+          ]
+        },
+        {
+          "agent_id": "pi",
+          "snapshot_id": "pi-2026-08-10-source",
+          "coverage": "substantial",
+          "claim_ids": [
+            "pi-source-tool-dispatch"
+          ]
+        },
+        {
+          "agent_id": "reasonix",
+          "snapshot_id": "reasonix-2026-08-10-source",
+          "coverage": "partial",
+          "claim_ids": [
+            "reasonix-source-tool-dispatch"
+          ]
+        },
+        {
+          "agent_id": "reference-harness",
+          "snapshot_id": "reference-harness-2026-08-10-controlled",
+          "coverage": "substantial",
+          "claim_ids": [
+            "reference-harness-controlled-tool-roundtrip"
+          ],
+          "notes": "Controlled project baseline only; this implementation is not comparable with a native vendor run."
+        }
+      ],
+      "experiments": [
+        "reference-tool-roundtrip-v1"
+      ],
+      "open_questions": [
+        "Where should provider tool-call repair end and harness validation begin?"
+      ],
+      "reader_layer_status": {
+        "L0": "partial",
+        "L1": "complete",
+        "L2": "partial",
+        "L3": "missing",
+        "L4": "partial"
+      },
+      "content": {
+        "zh-CN": null,
+        "en": null
+      }
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "tool-output-truncation",
+      "title": "Tool Output Truncation",
+      "summary": "Bound oversized tool results while preserving provenance, size, and a useful preview.",
+      "category": "context",
+      "status": "core",
+      "prerequisites": [
+        "tool-dispatch",
+        "context-budget"
+      ],
+      "reference_lessons": [
+        "s06-context-budget"
+      ],
+      "agent_implementations": [],
+      "experiments": [],
+      "open_questions": [
+        "When should output be truncated, summarized, indexed, or stored out of band?"
+      ],
+      "reader_layer_status": {
+        "L0": "partial",
+        "L1": "complete",
+        "L2": "partial",
+        "L3": "missing",
+        "L4": "missing"
+      },
+      "content": {
+        "zh-CN": null,
+        "en": null
+      }
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "workspace-tools",
+      "title": "Workspace Tools",
+      "summary": "Expose file, command, and edit effects through explicit, inspectable tool boundaries.",
+      "category": "tools",
+      "status": "core",
+      "prerequisites": [
+        "tool-dispatch"
+      ],
+      "reference_lessons": [
+        "s04-workspace-tools"
+      ],
+      "agent_implementations": [],
+      "experiments": [],
+      "open_questions": [
+        "Which effect types need atomic checkpoints before execution?"
+      ],
+      "reader_layer_status": {
+        "L0": "partial",
+        "L1": "complete",
+        "L2": "partial",
+        "L3": "missing",
+        "L4": "missing"
+      },
+      "content": {
+        "zh-CN": null,
+        "en": null
+      }
+    }
+  ],
+  "experiments": [
+    {
+      "schema_version": "0.1.0",
+      "id": "reference-tool-roundtrip-v1",
+      "title": "Reference Harness controlled tool roundtrip",
+      "question": "Can the registry-backed reference runner reproduce one read-only tool roundtrip, including the same normalized event trace, from a pinned fixture and scenario?",
+      "hypothesis": "Both repetitions will record the declared tool request and successful result in order, preserve the fixture, match the expected answer, and share one normalized trace fingerprint.",
+      "mode": "controlled",
+      "status": "complete",
+      "fixture": {
+        "path": "labs/fixtures/reference-tool-roundtrip-v1",
+        "revision": "fixture-v1",
+        "sha256": "8d962551cb790e0401896c6bab495fbd63f25c1194b70c9f5e0a79f2909ddcaf"
+      },
+      "scenario": {
+        "path": "labs/scenarios/reference-tool-roundtrip-v1.scenario.json",
+        "prompt_sha256": "4a1376db3ab987fd384e91931d34930c35856f1a379a017a237db9f60f408760"
+      },
+      "subjects": [
+        {
+          "agent_id": "reference-harness",
+          "snapshot_id": "reference-harness-2026-08-10-controlled",
+          "surface": "sdk",
+          "model": "scripted-model-v1",
+          "provider": "local-fixture",
+          "comparison_status": "not-comparable",
+          "configuration": {
+            "permission_mode": "read-only",
+            "network": false,
+            "writes": false
+          },
+          "uncontrolled_variables": []
+        }
+      ],
+      "controls": {
+        "network": false,
+        "temperature": 0,
+        "writes": false,
+        "sandbox": "temporary-copy-path-boundary"
+      },
+      "repetitions": 2,
+      "metrics": [
+        "event-order-valid",
+        "tool-result-recorded",
+        "final-answer-match",
+        "fixture-unchanged",
+        "deterministic-replay"
+      ],
+      "success_criteria": [
+        "Both repetitions emit the declared event sequence and a successful read_file result.",
+        "Both repetitions return the exact expected final answer without modifying the fixture.",
+        "Both repetitions have the same normalized Trace fingerprint."
+      ],
+      "limitations": [
+        "The Scripted Model is a deterministic test double and does not measure model capability.",
+        "The Reference Harness is not a native vendor agent, so this result cannot raise Codex, Claude Code, Pi, or Reasonix coverage.",
+        "The workspace boundary prevents path escape but is not an operating-system sandbox.",
+        "The experiment does not measure latency, token usage, cost, or behavior under failure."
+      ],
+      "outputs": {
+        "traces_path": "labs/results/reference-tool-roundtrip-v1",
+        "results_path": "labs/results/reference-tool-roundtrip-v1/result.json",
+        "report_path": "labs/results/reference-tool-roundtrip-v1/report.md"
+      },
+      "result": {
+        "schema_version": "0.1.0",
+        "experiment_id": "reference-tool-roundtrip-v1",
+        "generated_at": "2026-08-10T02:00:00Z",
+        "runner": {
+          "id": "reference-experiment-runner",
+          "version": "0.1.0",
+          "command": "python3 labs/runner.py reference-tool-roundtrip-v1 --check"
+        },
+        "status": "passed",
+        "summary": {
+          "total_runs": 2,
+          "successful_runs": 2,
+          "failed_runs": 0,
+          "criteria_passed": true
+        },
+        "criteria": [
+          {
+            "statement": "Both repetitions emit the declared event sequence and a successful read_file result.",
+            "passed": true
+          },
+          {
+            "statement": "Both repetitions return the exact expected final answer without modifying the fixture.",
+            "passed": true
+          },
+          {
+            "statement": "Both repetitions have the same normalized Trace fingerprint.",
+            "passed": true
+          }
+        ],
+        "fixture_sha256": "8d962551cb790e0401896c6bab495fbd63f25c1194b70c9f5e0a79f2909ddcaf",
+        "prompt_sha256": "4a1376db3ab987fd384e91931d34930c35856f1a379a017a237db9f60f408760",
+        "runs": [
+          {
+            "run_id": "reference-tool-roundtrip-v1-run-001",
+            "repetition": 1,
+            "status": "passed",
+            "trace_path": "labs/results/reference-tool-roundtrip-v1/run-001.trace.jsonl",
+            "event_count": 9,
+            "event_types": [
+              "session.start",
+              "user.message",
+              "model.request",
+              "model.response",
+              "tool.request",
+              "tool.result",
+              "model.request",
+              "model.response",
+              "session.stop"
+            ],
+            "final_text": "input.txt contains exactly two values: alpha and beta.",
+            "stop_reason": "completed",
+            "metrics": {
+              "event-order-valid": true,
+              "tool-result-recorded": true,
+              "final-answer-match": true,
+              "fixture-unchanged": true,
+              "deterministic-replay": true
+            },
+            "deterministic_fingerprint": "a59806d5bd056ac750112dcaf356879b72d7d87b52fac970248fa8f72b94b886",
+            "redaction": {
+              "status": "clean",
+              "fields": []
+            }
+          },
+          {
+            "run_id": "reference-tool-roundtrip-v1-run-002",
+            "repetition": 2,
+            "status": "passed",
+            "trace_path": "labs/results/reference-tool-roundtrip-v1/run-002.trace.jsonl",
+            "event_count": 9,
+            "event_types": [
+              "session.start",
+              "user.message",
+              "model.request",
+              "model.response",
+              "tool.request",
+              "tool.result",
+              "model.request",
+              "model.response",
+              "session.stop"
+            ],
+            "final_text": "input.txt contains exactly two values: alpha and beta.",
+            "stop_reason": "completed",
+            "metrics": {
+              "event-order-valid": true,
+              "tool-result-recorded": true,
+              "final-answer-match": true,
+              "fixture-unchanged": true,
+              "deterministic-replay": true
+            },
+            "deterministic_fingerprint": "a59806d5bd056ac750112dcaf356879b72d7d87b52fac970248fa8f72b94b886",
+            "redaction": {
+              "status": "clean",
+              "fields": []
+            }
+          }
+        ],
+        "limitations": [
+          "The Scripted Model is a deterministic test double and does not measure model capability.",
+          "The Reference Harness is not a native vendor agent, so this result cannot raise Codex, Claude Code, Pi, or Reasonix coverage.",
+          "The workspace boundary prevents path escape but is not an operating-system sandbox.",
+          "The experiment does not measure latency, token usage, cost, or behavior under failure."
+        ]
+      },
+      "report_content": "# Reference Harness controlled tool roundtrip\n\n- Status: `PASSED`\n- Mode: `controlled`\n- Experiment: `reference-tool-roundtrip-v1`\n\n## Question\n\nCan the registry-backed reference runner reproduce one read-only tool roundtrip, including the same normalized event trace, from a pinned fixture and scenario?\n\n## Reproduction\n\n```bash\npython3 labs/runner.py reference-tool-roundtrip-v1 --check\n```\n\nThe command rebuilds the expected artifacts in memory and exits non-zero if a committed trace, result, fixture digest, prompt digest, or report differs.\n\n## Result\n\n2 of 2 repetitions passed all declared metrics.\n\n- `reference-tool-roundtrip-v1-run-001`: passed, 9 events, fingerprint `a59806d5bd056ac750112dcaf356879b72d7d87b52fac970248fa8f72b94b886`\n- `reference-tool-roundtrip-v1-run-002`: passed, 9 events, fingerprint `a59806d5bd056ac750112dcaf356879b72d7d87b52fac970248fa8f72b94b886`\n\n## Metrics\n\n- `event-order-valid`: pass\n- `tool-result-recorded`: pass\n- `final-answer-match`: pass\n- `fixture-unchanged`: pass\n- `deterministic-replay`: pass\n\n## Input digests\n\n- Fixture: `8d962551cb790e0401896c6bab495fbd63f25c1194b70c9f5e0a79f2909ddcaf`\n- Prompt: `4a1376db3ab987fd384e91931d34930c35856f1a379a017a237db9f60f408760`\n\n## Evidence boundary\n\n- The Scripted Model is a deterministic test double and does not measure model capability.\n- The Reference Harness is not a native vendor agent, so this result cannot raise Codex, Claude Code, Pi, or Reasonix coverage.\n- The workspace boundary prevents path escape but is not an operating-system sandbox.\n- The experiment does not measure latency, token usage, cost, or behavior under failure.\n",
+      "trace_ids": [
+        "reference-tool-roundtrip-v1-run-001",
+        "reference-tool-roundtrip-v1-run-002"
+      ]
+    }
+  ],
+  "traces": [
+    {
+      "id": "example-tool-roundtrip",
+      "title": {
+        "zh-CN": "确定性工具往返（格式样例）",
+        "en": "Deterministic tool roundtrip (format example)"
+      },
+      "kind": "synthetic",
+      "source_path": "registry/examples/example-trace.jsonl",
+      "download_path": "/data/example-trace.jsonl",
+      "events": [
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-000",
+          "session_id": "session-example",
+          "sequence": 0,
+          "timestamp": "2026-08-10T00:00:00Z",
+          "type": "session.start",
+          "actor": {
+            "kind": "harness",
+            "id": "example-harness"
+          },
+          "payload": {
+            "cwd": "<fixture>"
+          },
+          "provenance": {
+            "agent_id": "example-agent",
+            "snapshot_id": "example-agent-2026-08-10-cli",
+            "surface": "cli",
+            "harness_mode": "controlled",
+            "run_id": "run-example-001",
+            "experiment_id": "example-tool-roundtrip",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          }
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-001",
+          "session_id": "session-example",
+          "sequence": 1,
+          "timestamp": "2026-08-10T00:00:01Z",
+          "type": "tool.request",
+          "actor": {
+            "kind": "model",
+            "id": "scripted-model-v1"
+          },
+          "payload": {
+            "tool": "read-file",
+            "arguments": {
+              "path": "README.md"
+            }
+          },
+          "provenance": {
+            "agent_id": "example-agent",
+            "snapshot_id": "example-agent-2026-08-10-cli",
+            "surface": "cli",
+            "harness_mode": "controlled",
+            "run_id": "run-example-001",
+            "experiment_id": "example-tool-roundtrip",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-000"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-002",
+          "session_id": "session-example",
+          "sequence": 2,
+          "timestamp": "2026-08-10T00:00:02Z",
+          "type": "tool.result",
+          "actor": {
+            "kind": "tool",
+            "id": "read-file"
+          },
+          "payload": {
+            "ok": true,
+            "summary": "Synthetic README content"
+          },
+          "provenance": {
+            "agent_id": "example-agent",
+            "snapshot_id": "example-agent-2026-08-10-cli",
+            "surface": "cli",
+            "harness_mode": "controlled",
+            "run_id": "run-example-001",
+            "experiment_id": "example-tool-roundtrip",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "redacted",
+            "fields": [
+              "payload.content"
+            ],
+            "notes": "The full fixture content is omitted from this schema example."
+          },
+          "duration_ms": 12,
+          "parent_event_id": "evt-001"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-003",
+          "session_id": "session-example",
+          "sequence": 3,
+          "timestamp": "2026-08-10T00:00:03Z",
+          "type": "session.stop",
+          "actor": {
+            "kind": "harness",
+            "id": "example-harness"
+          },
+          "payload": {
+            "reason": "completed"
+          },
+          "provenance": {
+            "agent_id": "example-agent",
+            "snapshot_id": "example-agent-2026-08-10-cli",
+            "surface": "cli",
+            "harness_mode": "controlled",
+            "run_id": "run-example-001",
+            "experiment_id": "example-tool-roundtrip",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-002"
+        }
+      ]
+    },
+    {
+      "id": "reference-tool-roundtrip-v1-run-001",
+      "title": {
+        "zh-CN": "Reference Harness controlled tool roundtrip · reference-tool-roundtrip-v1-run-001",
+        "en": "Reference Harness controlled tool roundtrip · reference-tool-roundtrip-v1-run-001"
+      },
+      "kind": "controlled",
+      "experiment_id": "reference-tool-roundtrip-v1",
+      "run_id": "reference-tool-roundtrip-v1-run-001",
+      "source_path": "labs/results/reference-tool-roundtrip-v1/run-001.trace.jsonl",
+      "download_path": "/data/traces/reference-tool-roundtrip-v1-run-001.jsonl",
+      "events": [
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-000",
+          "session_id": "reference-tool-roundtrip-v1-session-001",
+          "sequence": 0,
+          "timestamp": "2026-08-10T00:00:00Z",
+          "type": "session.start",
+          "actor": {
+            "kind": "harness",
+            "id": "reference-harness"
+          },
+          "payload": {
+            "max_turns": 3,
+            "tool_count": 1
+          },
+          "provenance": {
+            "agent_id": "reference-harness",
+            "snapshot_id": "reference-harness-2026-08-10-controlled",
+            "surface": "sdk",
+            "harness_mode": "controlled",
+            "run_id": "reference-tool-roundtrip-v1-run-001",
+            "experiment_id": "reference-tool-roundtrip-v1",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          }
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-001",
+          "session_id": "reference-tool-roundtrip-v1-session-001",
+          "sequence": 1,
+          "timestamp": "2026-08-10T00:00:01Z",
+          "type": "user.message",
+          "actor": {
+            "kind": "user",
+            "id": "learner"
+          },
+          "payload": {
+            "content": "Read input.txt with the declared tool, then report the exact two values."
+          },
+          "provenance": {
+            "agent_id": "reference-harness",
+            "snapshot_id": "reference-harness-2026-08-10-controlled",
+            "surface": "sdk",
+            "harness_mode": "controlled",
+            "run_id": "reference-tool-roundtrip-v1-run-001",
+            "experiment_id": "reference-tool-roundtrip-v1",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-000"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-002",
+          "session_id": "reference-tool-roundtrip-v1-session-001",
+          "sequence": 2,
+          "timestamp": "2026-08-10T00:00:02Z",
+          "type": "model.request",
+          "actor": {
+            "kind": "harness",
+            "id": "reference-harness"
+          },
+          "payload": {
+            "turn": 1,
+            "message_count": 2,
+            "roles": [
+              "system",
+              "user"
+            ],
+            "tools": [
+              "read_file"
+            ]
+          },
+          "provenance": {
+            "agent_id": "reference-harness",
+            "snapshot_id": "reference-harness-2026-08-10-controlled",
+            "surface": "sdk",
+            "harness_mode": "controlled",
+            "run_id": "reference-tool-roundtrip-v1-run-001",
+            "experiment_id": "reference-tool-roundtrip-v1",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-001"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-003",
+          "session_id": "reference-tool-roundtrip-v1-session-001",
+          "sequence": 3,
+          "timestamp": "2026-08-10T00:00:03Z",
+          "type": "model.response",
+          "actor": {
+            "kind": "model",
+            "id": "scripted-model-v1"
+          },
+          "payload": {
+            "turn": 1,
+            "content": "I will inspect the fixture before answering.",
+            "stop": false,
+            "tool_calls": [
+              {
+                "id": "call-read-input",
+                "name": "read_file",
+                "arguments": {
+                  "path": "input.txt"
+                }
+              }
+            ]
+          },
+          "provenance": {
+            "agent_id": "reference-harness",
+            "snapshot_id": "reference-harness-2026-08-10-controlled",
+            "surface": "sdk",
+            "harness_mode": "controlled",
+            "run_id": "reference-tool-roundtrip-v1-run-001",
+            "experiment_id": "reference-tool-roundtrip-v1",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-002"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-004",
+          "session_id": "reference-tool-roundtrip-v1-session-001",
+          "sequence": 4,
+          "timestamp": "2026-08-10T00:00:04Z",
+          "type": "tool.request",
+          "actor": {
+            "kind": "model",
+            "id": "scripted-model-v1"
+          },
+          "payload": {
+            "tool_call_id": "call-read-input",
+            "tool": "read_file",
+            "arguments": {
+              "path": "input.txt"
+            }
+          },
+          "provenance": {
+            "agent_id": "reference-harness",
+            "snapshot_id": "reference-harness-2026-08-10-controlled",
+            "surface": "sdk",
+            "harness_mode": "controlled",
+            "run_id": "reference-tool-roundtrip-v1-run-001",
+            "experiment_id": "reference-tool-roundtrip-v1",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-003"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-005",
+          "session_id": "reference-tool-roundtrip-v1-session-001",
+          "sequence": 5,
+          "timestamp": "2026-08-10T00:00:05Z",
+          "type": "tool.result",
+          "actor": {
+            "kind": "tool",
+            "id": "read_file"
+          },
+          "payload": {
+            "tool_call_id": "call-read-input",
+            "tool": "read_file",
+            "ok": true,
+            "result": {
+              "path": "input.txt",
+              "content": "alpha\nbeta\n",
+              "truncated": false
+            },
+            "truncated": false
+          },
+          "provenance": {
+            "agent_id": "reference-harness",
+            "snapshot_id": "reference-harness-2026-08-10-controlled",
+            "surface": "sdk",
+            "harness_mode": "controlled",
+            "run_id": "reference-tool-roundtrip-v1-run-001",
+            "experiment_id": "reference-tool-roundtrip-v1",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-004"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-006",
+          "session_id": "reference-tool-roundtrip-v1-session-001",
+          "sequence": 6,
+          "timestamp": "2026-08-10T00:00:06Z",
+          "type": "model.request",
+          "actor": {
+            "kind": "harness",
+            "id": "reference-harness"
+          },
+          "payload": {
+            "turn": 2,
+            "message_count": 4,
+            "roles": [
+              "system",
+              "user",
+              "assistant",
+              "tool"
+            ],
+            "tools": [
+              "read_file"
+            ]
+          },
+          "provenance": {
+            "agent_id": "reference-harness",
+            "snapshot_id": "reference-harness-2026-08-10-controlled",
+            "surface": "sdk",
+            "harness_mode": "controlled",
+            "run_id": "reference-tool-roundtrip-v1-run-001",
+            "experiment_id": "reference-tool-roundtrip-v1",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-005"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-007",
+          "session_id": "reference-tool-roundtrip-v1-session-001",
+          "sequence": 7,
+          "timestamp": "2026-08-10T00:00:07Z",
+          "type": "model.response",
+          "actor": {
+            "kind": "model",
+            "id": "scripted-model-v1"
+          },
+          "payload": {
+            "turn": 2,
+            "content": "input.txt contains exactly two values: alpha and beta.",
+            "stop": true,
+            "tool_calls": []
+          },
+          "provenance": {
+            "agent_id": "reference-harness",
+            "snapshot_id": "reference-harness-2026-08-10-controlled",
+            "surface": "sdk",
+            "harness_mode": "controlled",
+            "run_id": "reference-tool-roundtrip-v1-run-001",
+            "experiment_id": "reference-tool-roundtrip-v1",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-006"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-008",
+          "session_id": "reference-tool-roundtrip-v1-session-001",
+          "sequence": 8,
+          "timestamp": "2026-08-10T00:00:08Z",
+          "type": "session.stop",
+          "actor": {
+            "kind": "harness",
+            "id": "reference-harness"
+          },
+          "payload": {
+            "reason": "completed",
+            "turns": 2
+          },
+          "provenance": {
+            "agent_id": "reference-harness",
+            "snapshot_id": "reference-harness-2026-08-10-controlled",
+            "surface": "sdk",
+            "harness_mode": "controlled",
+            "run_id": "reference-tool-roundtrip-v1-run-001",
+            "experiment_id": "reference-tool-roundtrip-v1",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-007"
+        }
+      ]
+    },
+    {
+      "id": "reference-tool-roundtrip-v1-run-002",
+      "title": {
+        "zh-CN": "Reference Harness controlled tool roundtrip · reference-tool-roundtrip-v1-run-002",
+        "en": "Reference Harness controlled tool roundtrip · reference-tool-roundtrip-v1-run-002"
+      },
+      "kind": "controlled",
+      "experiment_id": "reference-tool-roundtrip-v1",
+      "run_id": "reference-tool-roundtrip-v1-run-002",
+      "source_path": "labs/results/reference-tool-roundtrip-v1/run-002.trace.jsonl",
+      "download_path": "/data/traces/reference-tool-roundtrip-v1-run-002.jsonl",
+      "events": [
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-000",
+          "session_id": "reference-tool-roundtrip-v1-session-002",
+          "sequence": 0,
+          "timestamp": "2026-08-10T00:15:00Z",
+          "type": "session.start",
+          "actor": {
+            "kind": "harness",
+            "id": "reference-harness"
+          },
+          "payload": {
+            "max_turns": 3,
+            "tool_count": 1
+          },
+          "provenance": {
+            "agent_id": "reference-harness",
+            "snapshot_id": "reference-harness-2026-08-10-controlled",
+            "surface": "sdk",
+            "harness_mode": "controlled",
+            "run_id": "reference-tool-roundtrip-v1-run-002",
+            "experiment_id": "reference-tool-roundtrip-v1",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          }
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-001",
+          "session_id": "reference-tool-roundtrip-v1-session-002",
+          "sequence": 1,
+          "timestamp": "2026-08-10T00:15:01Z",
+          "type": "user.message",
+          "actor": {
+            "kind": "user",
+            "id": "learner"
+          },
+          "payload": {
+            "content": "Read input.txt with the declared tool, then report the exact two values."
+          },
+          "provenance": {
+            "agent_id": "reference-harness",
+            "snapshot_id": "reference-harness-2026-08-10-controlled",
+            "surface": "sdk",
+            "harness_mode": "controlled",
+            "run_id": "reference-tool-roundtrip-v1-run-002",
+            "experiment_id": "reference-tool-roundtrip-v1",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-000"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-002",
+          "session_id": "reference-tool-roundtrip-v1-session-002",
+          "sequence": 2,
+          "timestamp": "2026-08-10T00:15:02Z",
+          "type": "model.request",
+          "actor": {
+            "kind": "harness",
+            "id": "reference-harness"
+          },
+          "payload": {
+            "turn": 1,
+            "message_count": 2,
+            "roles": [
+              "system",
+              "user"
+            ],
+            "tools": [
+              "read_file"
+            ]
+          },
+          "provenance": {
+            "agent_id": "reference-harness",
+            "snapshot_id": "reference-harness-2026-08-10-controlled",
+            "surface": "sdk",
+            "harness_mode": "controlled",
+            "run_id": "reference-tool-roundtrip-v1-run-002",
+            "experiment_id": "reference-tool-roundtrip-v1",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-001"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-003",
+          "session_id": "reference-tool-roundtrip-v1-session-002",
+          "sequence": 3,
+          "timestamp": "2026-08-10T00:15:03Z",
+          "type": "model.response",
+          "actor": {
+            "kind": "model",
+            "id": "scripted-model-v1"
+          },
+          "payload": {
+            "turn": 1,
+            "content": "I will inspect the fixture before answering.",
+            "stop": false,
+            "tool_calls": [
+              {
+                "id": "call-read-input",
+                "name": "read_file",
+                "arguments": {
+                  "path": "input.txt"
+                }
+              }
+            ]
+          },
+          "provenance": {
+            "agent_id": "reference-harness",
+            "snapshot_id": "reference-harness-2026-08-10-controlled",
+            "surface": "sdk",
+            "harness_mode": "controlled",
+            "run_id": "reference-tool-roundtrip-v1-run-002",
+            "experiment_id": "reference-tool-roundtrip-v1",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-002"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-004",
+          "session_id": "reference-tool-roundtrip-v1-session-002",
+          "sequence": 4,
+          "timestamp": "2026-08-10T00:15:04Z",
+          "type": "tool.request",
+          "actor": {
+            "kind": "model",
+            "id": "scripted-model-v1"
+          },
+          "payload": {
+            "tool_call_id": "call-read-input",
+            "tool": "read_file",
+            "arguments": {
+              "path": "input.txt"
+            }
+          },
+          "provenance": {
+            "agent_id": "reference-harness",
+            "snapshot_id": "reference-harness-2026-08-10-controlled",
+            "surface": "sdk",
+            "harness_mode": "controlled",
+            "run_id": "reference-tool-roundtrip-v1-run-002",
+            "experiment_id": "reference-tool-roundtrip-v1",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-003"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-005",
+          "session_id": "reference-tool-roundtrip-v1-session-002",
+          "sequence": 5,
+          "timestamp": "2026-08-10T00:15:05Z",
+          "type": "tool.result",
+          "actor": {
+            "kind": "tool",
+            "id": "read_file"
+          },
+          "payload": {
+            "tool_call_id": "call-read-input",
+            "tool": "read_file",
+            "ok": true,
+            "result": {
+              "path": "input.txt",
+              "content": "alpha\nbeta\n",
+              "truncated": false
+            },
+            "truncated": false
+          },
+          "provenance": {
+            "agent_id": "reference-harness",
+            "snapshot_id": "reference-harness-2026-08-10-controlled",
+            "surface": "sdk",
+            "harness_mode": "controlled",
+            "run_id": "reference-tool-roundtrip-v1-run-002",
+            "experiment_id": "reference-tool-roundtrip-v1",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-004"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-006",
+          "session_id": "reference-tool-roundtrip-v1-session-002",
+          "sequence": 6,
+          "timestamp": "2026-08-10T00:15:06Z",
+          "type": "model.request",
+          "actor": {
+            "kind": "harness",
+            "id": "reference-harness"
+          },
+          "payload": {
+            "turn": 2,
+            "message_count": 4,
+            "roles": [
+              "system",
+              "user",
+              "assistant",
+              "tool"
+            ],
+            "tools": [
+              "read_file"
+            ]
+          },
+          "provenance": {
+            "agent_id": "reference-harness",
+            "snapshot_id": "reference-harness-2026-08-10-controlled",
+            "surface": "sdk",
+            "harness_mode": "controlled",
+            "run_id": "reference-tool-roundtrip-v1-run-002",
+            "experiment_id": "reference-tool-roundtrip-v1",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-005"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-007",
+          "session_id": "reference-tool-roundtrip-v1-session-002",
+          "sequence": 7,
+          "timestamp": "2026-08-10T00:15:07Z",
+          "type": "model.response",
+          "actor": {
+            "kind": "model",
+            "id": "scripted-model-v1"
+          },
+          "payload": {
+            "turn": 2,
+            "content": "input.txt contains exactly two values: alpha and beta.",
+            "stop": true,
+            "tool_calls": []
+          },
+          "provenance": {
+            "agent_id": "reference-harness",
+            "snapshot_id": "reference-harness-2026-08-10-controlled",
+            "surface": "sdk",
+            "harness_mode": "controlled",
+            "run_id": "reference-tool-roundtrip-v1-run-002",
+            "experiment_id": "reference-tool-roundtrip-v1",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-006"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-008",
+          "session_id": "reference-tool-roundtrip-v1-session-002",
+          "sequence": 8,
+          "timestamp": "2026-08-10T00:15:08Z",
+          "type": "session.stop",
+          "actor": {
+            "kind": "harness",
+            "id": "reference-harness"
+          },
+          "payload": {
+            "reason": "completed",
+            "turns": 2
+          },
+          "provenance": {
+            "agent_id": "reference-harness",
+            "snapshot_id": "reference-harness-2026-08-10-controlled",
+            "surface": "sdk",
+            "harness_mode": "controlled",
+            "run_id": "reference-tool-roundtrip-v1-run-002",
+            "experiment_id": "reference-tool-roundtrip-v1",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-007"
+        }
+      ]
+    }
+  ]
+}

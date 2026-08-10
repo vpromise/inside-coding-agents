@@ -1,0 +1,14 @@
+{
+  "schema_version": "0.1.0",
+  "id": "path-boundary",
+  "title": "Workspace Path Boundary",
+  "summary": "Reject absolute paths and traversal before a file tool touches the filesystem.",
+  "category": "safety",
+  "status": "core",
+  "prerequisites": ["workspace-tools"],
+  "reference_lessons": ["s04-workspace-tools"],
+  "agent_implementations": [],
+  "experiments": [],
+  "open_questions": ["How should adapters represent symlink and mount visibility across operating systems?"],
+  "reader_layer_status": {"L0": "partial", "L1": "complete", "L2": "partial", "L3": "missing", "L4": "missing"}
+}

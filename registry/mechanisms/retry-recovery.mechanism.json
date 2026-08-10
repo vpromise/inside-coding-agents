@@ -1,0 +1,25 @@
+{
+  "schema_version": "0.1.0",
+  "id": "retry-recovery",
+  "title": "Retry and Recovery",
+  "summary": "Classify failures, bound retries, avoid duplicate side effects, and preserve enough state for a safe continuation or explicit pause.",
+  "category": "reliability",
+  "status": "core",
+  "prerequisites": ["agent-loop", "tool-dispatch"],
+  "reference_lessons": ["s01-agent-loop", "s03-tool-dispatch"],
+  "agent_implementations": [
+    {
+      "agent_id": "reasonix",
+      "snapshot_id": "reasonix-2026-08-10-source",
+      "coverage": "partial",
+      "claim_ids": ["reasonix-source-retry-recovery"]
+    }
+  ],
+  "experiments": [],
+  "open_questions": [
+    "Which retries are safe before a provider response is committed?",
+    "How should repeated tool failures be recognized without suppressing legitimate retries?",
+    "What state must be persisted so recovery never replays a mutation accidentally?"
+  ],
+  "reader_layer_status": {"L0": "partial", "L1": "missing", "L2": "partial", "L3": "partial", "L4": "partial"}
+}

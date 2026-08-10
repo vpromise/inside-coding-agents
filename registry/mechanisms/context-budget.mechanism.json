@@ -1,0 +1,14 @@
+{
+  "schema_version": "0.1.0",
+  "id": "context-budget",
+  "title": "Context Budget",
+  "summary": "Allocate finite input space across instructions, conversation, tools, memory, and output reserve.",
+  "category": "context",
+  "status": "core",
+  "prerequisites": ["agent-loop"],
+  "reference_lessons": ["s06-context-budget"],
+  "agent_implementations": [],
+  "experiments": [],
+  "open_questions": ["Which budget decisions should be replayable across tokenizers?"],
+  "reader_layer_status": {"L0": "partial", "L1": "complete", "L2": "partial", "L3": "missing", "L4": "missing"}
+}

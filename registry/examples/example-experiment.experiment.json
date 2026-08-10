@@ -1,0 +1,52 @@
+{
+  "schema_version": "0.1.0",
+  "id": "example-tool-roundtrip",
+  "title": "Synthetic tool roundtrip",
+  "question": "Can the synthetic agent execute one declared tool call and preserve event order?",
+  "hypothesis": "The trace contains request and result events in increasing sequence order.",
+  "mode": "controlled",
+  "status": "complete",
+  "fixture": {
+    "path": "labs/fixtures/example-tool-roundtrip",
+    "revision": "fixture-v1",
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "scenario": {
+    "path": "labs/scenarios/example-tool-roundtrip",
+    "prompt_sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+  },
+  "subjects": [
+    {
+      "agent_id": "example-agent",
+      "snapshot_id": "example-agent-2026-08-10-cli",
+      "surface": "cli",
+      "model": "scripted-model-v1",
+      "provider": "local-fixture",
+      "comparison_status": "comparable",
+      "configuration": {
+        "permission_mode": "ask",
+        "network": false
+      },
+      "uncontrolled_variables": []
+    }
+  ],
+  "controls": {
+    "network": false,
+    "temperature": 0,
+    "sandbox": "fixture-only"
+  },
+  "repetitions": 1,
+  "metrics": ["event-order-valid", "tool-result-recorded"],
+  "success_criteria": [
+    "The trace contains tool.request before tool.result.",
+    "All trace events validate against trace-event.schema.json."
+  ],
+  "limitations": [
+    "This synthetic fixture does not measure model or real harness behavior."
+  ],
+  "outputs": {
+    "traces_path": "registry/examples/example-trace.jsonl",
+    "results_path": "labs/results/example-tool-roundtrip.json",
+    "report_path": "labs/results/example-tool-roundtrip.md"
+  }
+}

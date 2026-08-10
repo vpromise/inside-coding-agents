@@ -1,0 +1,14 @@
+{
+  "schema_version": "0.1.0",
+  "id": "instruction-discovery",
+  "title": "Instruction Discovery",
+  "summary": "Discover, order, bound, and attribute project instructions before model execution.",
+  "category": "context",
+  "status": "core",
+  "prerequisites": ["agent-loop"],
+  "reference_lessons": ["s05-instructions"],
+  "agent_implementations": [],
+  "experiments": [],
+  "open_questions": ["How should conflicting instruction scopes be surfaced to users and traces?"],
+  "reader_layer_status": {"L0": "partial", "L1": "complete", "L2": "partial", "L3": "missing", "L4": "missing"}
+}

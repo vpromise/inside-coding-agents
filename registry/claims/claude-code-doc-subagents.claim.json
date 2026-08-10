@@ -1,0 +1,26 @@
+{
+  "schema_version": "0.1.0",
+  "id": "claude-code-doc-subagents",
+  "agent_id": "claude-code",
+  "snapshot_id": "claude-code-2026-08-10-docs",
+  "mechanism_id": "subagent-orchestration",
+  "surface": "cli",
+  "statement": "Claude Code's official documentation describes subagents with separate context windows, configurable prompts, tools, models, permissions, hooks, skills, depth and turn limits, and optional temporary Git worktree isolation.",
+  "display_text": {
+    "zh-CN": "Claude Code 官方文档描述的 subagent 具有独立 context window，可配置 prompt、tools、model、permissions、hooks、skills、depth/turn limits，并可选择临时 Git worktree isolation。",
+    "en": "Claude Code's official documentation describes subagents with separate context windows, configurable prompts, tools, models, permissions, hooks, skills, depth and turn limits, and optional temporary Git worktree isolation."
+  },
+  "status": "reviewed",
+  "evidence": [
+    {
+      "type": "official-doc",
+      "title": "Claude Code — Create custom subagents",
+      "source_url": "https://code.claude.com/docs/en/sub-agents",
+      "captured_at": "2026-08-10",
+      "locator": "Configure subagents; Control capabilities; Work with subagents; worktree isolation"
+    }
+  ],
+  "reviewed_at": "2026-08-10",
+  "reviewers": ["foundation-maintainers"],
+  "notes": "The claim intentionally avoids closed-source scheduling, hidden prompt, or internal state-machine assertions."
+}

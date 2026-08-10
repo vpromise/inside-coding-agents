@@ -1,0 +1,35 @@
+{
+  "schema_version": "0.1.0",
+  "id": "reasonix-source-tool-dispatch",
+  "agent_id": "reasonix",
+  "snapshot_id": "reasonix-2026-08-10-source",
+  "mechanism_id": "tool-dispatch",
+  "surface": "cli",
+  "statement": "Reasonix separates batch scheduling from single-call execution, so concurrency decisions, per-call context, capability gates, tool invocation, results, and failure bookkeeping cross explicit boundaries.",
+  "display_text": {
+    "zh-CN": "Reasonix 将 batch scheduling 与 single-call execution 分离，使并发决策、per-call context、capability gate、工具调用、结果与失败记账经过明确边界。",
+    "en": "Reasonix separates batch scheduling from single-call execution, so concurrency decisions, per-call context, capability gates, tool invocation, results, and failure bookkeeping cross explicit boundaries."
+  },
+  "status": "reviewed",
+  "evidence": [
+    {
+      "type": "source",
+      "title": "Reasonix batch tool execution",
+      "source_url": "https://github.com/esengine/DeepSeek-Reasonix/blob/6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993/internal/agent/execute_batch.go",
+      "captured_at": "2026-08-10",
+      "locator": "executeBatch",
+      "commit": "6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993"
+    },
+    {
+      "type": "source",
+      "title": "Reasonix single tool-call execution",
+      "source_url": "https://github.com/esengine/DeepSeek-Reasonix/blob/6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993/internal/agent/execute_one.go",
+      "captured_at": "2026-08-10",
+      "locator": "executeOne",
+      "commit": "6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993"
+    }
+  ],
+  "reviewed_at": "2026-08-10",
+  "reviewers": ["foundation-maintainers"],
+  "notes": "The claim maps boundaries, not correctness under every concurrent workload."
+}

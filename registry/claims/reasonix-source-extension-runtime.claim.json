@@ -1,0 +1,35 @@
+{
+  "schema_version": "0.1.0",
+  "id": "reasonix-source-extension-runtime",
+  "agent_id": "reasonix",
+  "snapshot_id": "reasonix-2026-08-10-source",
+  "mechanism_id": "extension-runtime",
+  "surface": "cli",
+  "statement": "Reasonix plugin manifests can contribute hooks and MCP servers, while lazy MCP placeholders keep cached tool metadata stable and defer process startup or live schema reconciliation until needed.",
+  "display_text": {
+    "zh-CN": "Reasonix plugin manifest 可以贡献 hooks 与 MCP servers；lazy MCP placeholder 会保持缓存的工具元数据稳定，并将进程启动或 live schema reconciliation 延迟到需要时。",
+    "en": "Reasonix plugin manifests can contribute hooks and MCP servers, while lazy MCP placeholders keep cached tool metadata stable and defer process startup or live schema reconciliation until needed."
+  },
+  "status": "reviewed",
+  "evidence": [
+    {
+      "type": "source",
+      "title": "Reasonix plugin manifest contract",
+      "source_url": "https://github.com/esengine/DeepSeek-Reasonix/blob/6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993/internal/pluginpkg/manifest_v1.go",
+      "captured_at": "2026-08-10",
+      "locator": "Manifest contributions, hooks, and MCP servers",
+      "commit": "6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993"
+    },
+    {
+      "type": "source",
+      "title": "Reasonix lazy MCP toolset",
+      "source_url": "https://github.com/esengine/DeepSeek-Reasonix/blob/6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993/internal/plugin/lazy.go",
+      "captured_at": "2026-08-10",
+      "locator": "lazyTool; LazyToolset; schema cache reconciliation",
+      "commit": "6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993"
+    }
+  ],
+  "reviewed_at": "2026-08-10",
+  "reviewers": ["foundation-maintainers"],
+  "notes": "No third-party plugin was installed or executed."
+}

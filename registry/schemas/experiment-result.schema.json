@@ -1,0 +1,130 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:inside-coding-agents:schema:experiment-result:0.1.0",
+  "title": "Inside Coding Agents Experiment Result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "experiment_id",
+    "generated_at",
+    "runner",
+    "status",
+    "summary",
+    "criteria",
+    "fixture_sha256",
+    "prompt_sha256",
+    "runs",
+    "limitations"
+  ],
+  "properties": {
+    "schema_version": { "const": "0.1.0" },
+    "experiment_id": { "$ref": "#/$defs/stableId" },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "runner": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version", "command"],
+      "properties": {
+        "id": { "$ref": "#/$defs/stableId" },
+        "version": { "type": "string", "minLength": 1 },
+        "command": { "type": "string", "minLength": 1 }
+      }
+    },
+    "status": { "enum": ["passed", "failed"] },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["total_runs", "successful_runs", "failed_runs", "criteria_passed"],
+      "properties": {
+        "total_runs": { "type": "integer", "minimum": 1 },
+        "successful_runs": { "type": "integer", "minimum": 0 },
+        "failed_runs": { "type": "integer", "minimum": 0 },
+        "criteria_passed": { "type": "boolean" }
+      }
+    },
+    "criteria": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["statement", "passed"],
+        "properties": {
+          "statement": { "type": "string", "minLength": 1 },
+          "passed": { "type": "boolean" }
+        }
+      }
+    },
+    "fixture_sha256": { "$ref": "#/$defs/sha256" },
+    "prompt_sha256": { "$ref": "#/$defs/sha256" },
+    "runs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "run_id",
+          "repetition",
+          "status",
+          "trace_path",
+          "event_count",
+          "event_types",
+          "final_text",
+          "stop_reason",
+          "metrics",
+          "deterministic_fingerprint",
+          "redaction"
+        ],
+        "properties": {
+          "run_id": { "type": "string", "minLength": 1 },
+          "repetition": { "type": "integer", "minimum": 1 },
+          "status": { "enum": ["passed", "failed"] },
+          "trace_path": { "type": "string", "minLength": 1 },
+          "event_count": { "type": "integer", "minimum": 1 },
+          "event_types": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "final_text": { "type": "string" },
+          "stop_reason": { "type": "string", "minLength": 1 },
+          "metrics": {
+            "type": "object",
+            "minProperties": 1,
+            "additionalProperties": { "type": "boolean" }
+          },
+          "deterministic_fingerprint": { "$ref": "#/$defs/sha256" },
+          "redaction": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["status", "fields"],
+            "properties": {
+              "status": { "enum": ["clean", "redacted", "restricted"] },
+              "fields": {
+                "type": "array",
+                "uniqueItems": true,
+                "items": { "type": "string", "minLength": 1 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    }
+  },
+  "$defs": {
+    "stableId": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  }
+}

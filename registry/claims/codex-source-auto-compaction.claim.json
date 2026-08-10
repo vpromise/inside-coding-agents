@@ -1,0 +1,35 @@
+{
+  "schema_version": "0.1.0",
+  "id": "codex-source-auto-compaction",
+  "agent_id": "codex",
+  "snapshot_id": "codex-2026-08-10-source",
+  "mechanism_id": "context-compaction",
+  "surface": "cli",
+  "statement": "The pinned Codex turn loop checks context limits before and after sampling and can replace history through local or remote compaction before resuming the same turn.",
+  "display_text": {
+    "zh-CN": "固定版本的 Codex turn loop 会在采样前后检查上下文限制，并可通过本地或远程 compaction 替换 history，然后继续同一 turn。",
+    "en": "The pinned Codex turn loop checks context limits before and after sampling and can replace history through local or remote compaction before resuming the same turn."
+  },
+  "status": "reviewed",
+  "evidence": [
+    {
+      "type": "source",
+      "title": "Codex pre- and mid-turn compaction routing",
+      "source_url": "https://github.com/openai/codex/blob/89a335ed50258dc9dc5b3d7f410db61b431244f9/codex-rs/core/src/session/turn.rs",
+      "captured_at": "2026-08-10",
+      "locator": "run_pre_sampling_compact; run_auto_compact",
+      "commit": "89a335ed50258dc9dc5b3d7f410db61b431244f9"
+    },
+    {
+      "type": "source",
+      "title": "Codex local compaction history replacement",
+      "source_url": "https://github.com/openai/codex/blob/89a335ed50258dc9dc5b3d7f410db61b431244f9/codex-rs/core/src/compact.rs",
+      "captured_at": "2026-08-10",
+      "locator": "run_compact_task_inner_impl; build_compacted_history",
+      "commit": "89a335ed50258dc9dc5b3d7f410db61b431244f9"
+    }
+  ],
+  "reviewed_at": "2026-08-10",
+  "reviewers": ["foundation-maintainers"],
+  "notes": "No quality or losslessness claim is made; the native experiment needed to characterize behavior is still missing."
+}

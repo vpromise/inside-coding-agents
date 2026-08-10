@@ -1,0 +1,35 @@
+{
+  "schema_version": "0.1.0",
+  "id": "codex-source-event-stream",
+  "agent_id": "codex",
+  "snapshot_id": "codex-2026-08-10-source",
+  "mechanism_id": "event-stream",
+  "surface": "cli",
+  "statement": "The pinned Codex protocol defines typed events for turn lifecycle, streamed content, tools, approvals, compaction, hooks, and collaborative-agent activity, and the turn implementation emits those events through the session boundary.",
+  "display_text": {
+    "zh-CN": "固定版本的 Codex protocol 为 turn 生命周期、流式内容、工具、approval、compaction、hooks 与协作 Agent 活动定义了类型化事件，turn 实现通过 session 边界发送这些事件。",
+    "en": "The pinned Codex protocol defines typed events for turn lifecycle, streamed content, tools, approvals, compaction, hooks, and collaborative-agent activity, and the turn implementation emits those events through the session boundary."
+  },
+  "status": "reviewed",
+  "evidence": [
+    {
+      "type": "source",
+      "title": "Codex protocol event model",
+      "source_url": "https://github.com/openai/codex/blob/89a335ed50258dc9dc5b3d7f410db61b431244f9/codex-rs/protocol/src/protocol.rs",
+      "captured_at": "2026-08-10",
+      "locator": "EventMsg",
+      "commit": "89a335ed50258dc9dc5b3d7f410db61b431244f9"
+    },
+    {
+      "type": "source",
+      "title": "Codex turn event emission",
+      "source_url": "https://github.com/openai/codex/blob/89a335ed50258dc9dc5b3d7f410db61b431244f9/codex-rs/core/src/session/turn.rs",
+      "captured_at": "2026-08-10",
+      "locator": "send_event and emit_turn_item lifecycle calls",
+      "commit": "89a335ed50258dc9dc5b3d7f410db61b431244f9"
+    }
+  ],
+  "reviewed_at": "2026-08-10",
+  "reviewers": ["foundation-maintainers"],
+  "notes": "The project has not yet captured and normalized a native Codex event stream, so replay fidelity is unknown."
+}

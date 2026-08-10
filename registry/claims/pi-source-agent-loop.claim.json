@@ -1,0 +1,35 @@
+{
+  "schema_version": "0.1.0",
+  "id": "pi-source-agent-loop",
+  "agent_id": "pi",
+  "snapshot_id": "pi-2026-08-10-source",
+  "mechanism_id": "agent-loop",
+  "surface": "cli",
+  "statement": "Pi's pinned agent core uses an inner loop for model/tool/steering turns and an outer loop for queued follow-up messages, emitting explicit agent, turn, message, and tool lifecycle events throughout.",
+  "display_text": {
+    "zh-CN": "固定版本的 Pi agent core 使用内层循环处理 model/tool/steering turn，外层循环处理排队的 follow-up message，并持续发送 agent、turn、message 与 tool 生命周期事件。",
+    "en": "Pi's pinned agent core uses an inner loop for model/tool/steering turns and an outer loop for queued follow-up messages, emitting explicit agent, turn, message, and tool lifecycle events throughout."
+  },
+  "status": "reviewed",
+  "evidence": [
+    {
+      "type": "source",
+      "title": "Pi agent loop",
+      "source_url": "https://github.com/earendil-works/pi/blob/936aff00918de1187f085f123c2812d8f2d67745/packages/agent/src/agent-loop.ts",
+      "captured_at": "2026-08-10",
+      "locator": "runLoop",
+      "commit": "936aff00918de1187f085f123c2812d8f2d67745"
+    },
+    {
+      "type": "source",
+      "title": "Pi stateful Agent wrapper",
+      "source_url": "https://github.com/earendil-works/pi/blob/936aff00918de1187f085f123c2812d8f2d67745/packages/agent/src/agent.ts",
+      "captured_at": "2026-08-10",
+      "locator": "Agent and PendingMessageQueue",
+      "commit": "936aff00918de1187f085f123c2812d8f2d67745"
+    }
+  ],
+  "reviewed_at": "2026-08-10",
+  "reviewers": ["foundation-maintainers"],
+  "notes": "This maps the reusable agent package and its coding-agent integration; no provider call was made."
+}

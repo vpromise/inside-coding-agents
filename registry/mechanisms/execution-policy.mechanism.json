@@ -1,0 +1,44 @@
+{
+  "schema_version": "0.1.0",
+  "id": "execution-policy",
+  "title": "Execution Policy",
+  "summary": "Decide which tool actions may run, which require a human or policy decision, and which must be constrained by an operating-system boundary.",
+  "category": "safety",
+  "status": "core",
+  "prerequisites": ["tool-dispatch", "path-boundary"],
+  "reference_lessons": ["s03-tool-dispatch", "s04-workspace-tools"],
+  "agent_implementations": [
+    {
+      "agent_id": "codex",
+      "snapshot_id": "codex-2026-08-10-source",
+      "coverage": "substantial",
+      "claim_ids": ["codex-source-execution-policy"]
+    },
+    {
+      "agent_id": "pi",
+      "snapshot_id": "pi-2026-08-10-source",
+      "coverage": "substantial",
+      "claim_ids": ["pi-source-execution-boundary"],
+      "notes": "Substantial coverage describes a clearly documented negative boundary, not a built-in sandbox implementation."
+    },
+    {
+      "agent_id": "reasonix",
+      "snapshot_id": "reasonix-2026-08-10-source",
+      "coverage": "partial",
+      "claim_ids": ["reasonix-source-execution-policy"]
+    },
+    {
+      "agent_id": "claude-code",
+      "snapshot_id": "claude-code-2026-08-10-docs",
+      "coverage": "partial",
+      "claim_ids": ["claude-code-doc-execution-policy"]
+    }
+  ],
+  "experiments": [],
+  "open_questions": [
+    "Which decisions belong to semantic permissions and which require OS enforcement?",
+    "How should approval caches be scoped and revoked?",
+    "How can headless execution fail closed without making automation unusable?"
+  ],
+  "reader_layer_status": {"L0": "partial", "L1": "missing", "L2": "partial", "L3": "partial", "L4": "partial"}
+}

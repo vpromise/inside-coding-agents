@@ -1,0 +1,27 @@
+{
+  "schema_version": "0.1.0",
+  "id": "pi-source-orchestration-boundary",
+  "agent_id": "pi",
+  "snapshot_id": "pi-2026-08-10-source",
+  "mechanism_id": "subagent-orchestration",
+  "surface": "cli",
+  "statement": "Pi intentionally omits a built-in subagent orchestration policy; its official project guidance points users to separate Pi processes or extensions so delegation semantics remain outside the minimal core.",
+  "display_text": {
+    "zh-CN": "Pi 有意不在 core 中内建 subagent orchestration policy；官方项目说明建议使用独立 Pi 进程或 extensions，因此 delegation 语义留在 minimal core 之外。",
+    "en": "Pi intentionally omits a built-in subagent orchestration policy; its official project guidance points users to separate Pi processes or extensions so delegation semantics remain outside the minimal core."
+  },
+  "status": "reviewed",
+  "evidence": [
+    {
+      "type": "source",
+      "title": "Pi intentionally omitted features",
+      "source_url": "https://github.com/earendil-works/pi/blob/936aff00918de1187f085f123c2812d8f2d67745/packages/coding-agent/README.md",
+      "captured_at": "2026-08-10",
+      "locator": "What Pi intentionally omits — No sub-agents",
+      "commit": "936aff00918de1187f085f123c2812d8f2d67745"
+    }
+  ],
+  "reviewed_at": "2026-08-10",
+  "reviewers": ["foundation-maintainers"],
+  "notes": "This is a negative core-design claim, not a claim that the Pi ecosystem lacks subagent packages."
+}

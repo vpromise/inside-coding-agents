@@ -1,0 +1,140 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:inside-coding-agents:schema:mechanism:0.1.0",
+  "title": "Inside Coding Agents Mechanism",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "id",
+    "title",
+    "summary",
+    "category",
+    "status",
+    "prerequisites",
+    "reference_lessons",
+    "agent_implementations",
+    "experiments",
+    "open_questions"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "0.1.0"
+    },
+    "id": {
+      "$ref": "#/$defs/stableId"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1
+    },
+    "category": {
+      "enum": [
+        "loop",
+        "context",
+        "tools",
+        "safety",
+        "reliability",
+        "extensibility",
+        "orchestration",
+        "interfaces",
+        "observability"
+      ]
+    },
+    "status": {
+      "enum": ["core", "emerging", "deprecated"]
+    },
+    "prerequisites": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/stableId"
+      }
+    },
+    "reference_lessons": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/stableId"
+      }
+    },
+    "agent_implementations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["agent_id", "snapshot_id", "coverage", "claim_ids"],
+        "properties": {
+          "agent_id": {
+            "$ref": "#/$defs/stableId"
+          },
+          "snapshot_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "coverage": {
+            "enum": ["unknown", "partial", "substantial"]
+          },
+          "claim_ids": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "$ref": "#/$defs/stableId"
+            }
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "experiments": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/stableId"
+      }
+    },
+    "open_questions": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "reader_layer_status": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "L0": {
+          "$ref": "#/$defs/completeness"
+        },
+        "L1": {
+          "$ref": "#/$defs/completeness"
+        },
+        "L2": {
+          "$ref": "#/$defs/completeness"
+        },
+        "L3": {
+          "$ref": "#/$defs/completeness"
+        },
+        "L4": {
+          "$ref": "#/$defs/completeness"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "stableId": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "completeness": {
+      "enum": ["complete", "partial", "missing"]
+    }
+  }
+}

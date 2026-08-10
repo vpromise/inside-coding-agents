@@ -1,0 +1,40 @@
+{
+  "schema_version": "0.1.0",
+  "id": "tool-dispatch",
+  "title": "Tool Dispatch",
+  "summary": "Validate, authorize, execute, normalize, and record model-requested tool calls.",
+  "category": "tools",
+  "status": "core",
+  "prerequisites": ["agent-loop"],
+  "reference_lessons": ["s03-tool-dispatch"],
+  "agent_implementations": [
+    {
+      "agent_id": "codex",
+      "snapshot_id": "codex-2026-08-10-source",
+      "coverage": "substantial",
+      "claim_ids": ["codex-source-tool-router"]
+    },
+    {
+      "agent_id": "pi",
+      "snapshot_id": "pi-2026-08-10-source",
+      "coverage": "substantial",
+      "claim_ids": ["pi-source-tool-dispatch"]
+    },
+    {
+      "agent_id": "reasonix",
+      "snapshot_id": "reasonix-2026-08-10-source",
+      "coverage": "partial",
+      "claim_ids": ["reasonix-source-tool-dispatch"]
+    },
+    {
+      "agent_id": "reference-harness",
+      "snapshot_id": "reference-harness-2026-08-10-controlled",
+      "coverage": "substantial",
+      "claim_ids": ["reference-harness-controlled-tool-roundtrip"],
+      "notes": "Controlled project baseline only; this implementation is not comparable with a native vendor run."
+    }
+  ],
+  "experiments": ["reference-tool-roundtrip-v1"],
+  "open_questions": ["Where should provider tool-call repair end and harness validation begin?"],
+  "reader_layer_status": {"L0": "partial", "L1": "complete", "L2": "partial", "L3": "missing", "L4": "partial"}
+}

@@ -1,0 +1,92 @@
+{
+  "schema_version": "0.1.0",
+  "id": "pi",
+  "name": "Pi",
+  "summary": "A deliberately minimal, multi-provider terminal coding harness whose agent core, session tree, compaction, tools, RPC mode, and extension runtime are published in one monorepo.",
+  "coverage_tier": "B",
+  "source_availability": "open",
+  "homepage": "https://github.com/earendil-works/pi",
+  "upstream": {
+    "documentation": "https://github.com/earendil-works/pi/tree/936aff00918de1187f085f123c2812d8f2d67745/packages/coding-agent/docs",
+    "release_feed": "https://github.com/earendil-works/pi/releases",
+    "repositories": [
+      {
+        "component": "monorepo",
+        "url": "https://github.com/earendil-works/pi",
+        "default_branch": "main"
+      }
+    ]
+  },
+  "licenses": [
+    {
+      "component": "monorepo",
+      "spdx": "MIT",
+      "url": "https://github.com/earendil-works/pi/blob/936aff00918de1187f085f123c2812d8f2d67745/LICENSE"
+    }
+  ],
+  "surfaces": ["cli", "tui", "sdk", "server"],
+  "model_strategy": ["multi-provider", "openai-compatible", "local-models"],
+  "lifecycle": "active",
+  "tags": ["coding-agent", "typescript", "minimal-core", "extension-first", "session-tree"],
+  "stewards": ["foundation-maintainers"],
+  "snapshots": [
+    {
+      "id": "pi-2026-08-10-source",
+      "observed_at": "2026-08-10",
+      "surface": "cli",
+      "version": "0.84.1@936aff0",
+      "freshness": "current",
+      "docs_captured_at": "2026-08-10",
+      "source_ref": {
+        "repository": "https://github.com/earendil-works/pi",
+        "commit": "936aff00918de1187f085f123c2812d8f2d67745",
+        "paths": [
+          "packages/agent/src/agent-loop.ts",
+          "packages/agent/src/agent.ts",
+          "packages/coding-agent/src/core/agent-session.ts",
+          "packages/coding-agent/src/core/compaction/compaction.ts",
+          "packages/coding-agent/src/core/session-manager.ts",
+          "packages/coding-agent/src/core/extensions/runner.ts",
+          "packages/coding-agent/docs/security.md",
+          "packages/coding-agent/README.md"
+        ]
+      },
+      "environment": {
+        "os": "source-inspection-only",
+        "runtime": "TypeScript monorepo; binary not executed",
+        "permission_mode": "no-built-in-permission-system",
+        "sandbox_mode": "external-boundary-required",
+        "network_mode": "not-executed"
+      },
+      "claims_path": "registry/claims/pi-source-agent-loop.claim.json",
+      "notes": "Clean source inspection of package version 0.84.1 pinned to one commit. Negative safety claims describe the documented core boundary, not every third-party Pi extension. A native experiment is still required for Tier A."
+    },
+    {
+      "id": "pi-2026-08-10-rpc",
+      "observed_at": "2026-08-10",
+      "surface": "server",
+      "version": "0.84.1@936aff0",
+      "freshness": "current",
+      "docs_captured_at": "2026-08-10",
+      "source_ref": {
+        "repository": "https://github.com/earendil-works/pi",
+        "commit": "936aff00918de1187f085f123c2812d8f2d67745",
+        "paths": [
+          "packages/coding-agent/src/modes/rpc/rpc-mode.ts",
+          "packages/coding-agent/src/modes/rpc/rpc-types.ts",
+          "packages/coding-agent/src/modes/rpc/rpc-client.ts",
+          "packages/coding-agent/docs/rpc.md"
+        ]
+      },
+      "environment": {
+        "os": "source-inspection-only",
+        "runtime": "TypeScript RPC implementation; process not executed",
+        "permission_mode": "inherits-cli-boundary",
+        "sandbox_mode": "external-boundary-required",
+        "network_mode": "not-executed"
+      },
+      "claims_path": "registry/claims/pi-source-rpc-mode.claim.json",
+      "notes": "RPC-specific snapshot. Its JSONL transport is source-mapped independently from Pi's interactive CLI behavior."
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "schema_version": "0.1.0",
+  "id": "event-stream",
+  "title": "Event Stream",
+  "summary": "Translate provider deltas and harness transitions into ordered, replayable events.",
+  "category": "observability",
+  "status": "core",
+  "prerequisites": ["agent-loop"],
+  "reference_lessons": ["s02-events-streaming"],
+  "agent_implementations": [
+    {
+      "agent_id": "codex",
+      "snapshot_id": "codex-2026-08-10-source",
+      "coverage": "partial",
+      "claim_ids": ["codex-source-event-stream"]
+    },
+    {
+      "agent_id": "pi",
+      "snapshot_id": "pi-2026-08-10-source",
+      "coverage": "substantial",
+      "claim_ids": ["pi-source-session-events"]
+    },
+    {
+      "agent_id": "reasonix",
+      "snapshot_id": "reasonix-2026-08-10-source",
+      "coverage": "substantial",
+      "claim_ids": ["reasonix-source-event-log"]
+    }
+  ],
+  "experiments": [],
+  "open_questions": ["Which streaming payload fields can be portable without erasing provider-specific semantics?"],
+  "reader_layer_status": {"L0": "partial", "L1": "complete", "L2": "partial", "L3": "missing", "L4": "missing"}
+}

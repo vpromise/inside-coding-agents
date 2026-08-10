@@ -1,0 +1,35 @@
+{
+  "schema_version": "0.1.0",
+  "id": "codex-source-subagent-routing",
+  "agent_id": "codex",
+  "snapshot_id": "codex-2026-08-10-source",
+  "mechanism_id": "subagent-orchestration",
+  "surface": "cli",
+  "statement": "The pinned Codex core registers multi-agent tools for spawning and communicating with child agents and implements spawn through a dedicated agent-control boundary rather than inside the main sampling loop.",
+  "display_text": {
+    "zh-CN": "固定版本的 Codex core 注册了用于创建与通信的 multi-agent 工具，并通过独立 agent-control 边界实现 spawn，而不是把子 Agent 生命周期直接塞进主采样循环。",
+    "en": "The pinned Codex core registers multi-agent tools for spawning and communicating with child agents and implements spawn through a dedicated agent-control boundary rather than inside the main sampling loop."
+  },
+  "status": "reviewed",
+  "evidence": [
+    {
+      "type": "source",
+      "title": "Codex multi-agent spawn tool",
+      "source_url": "https://github.com/openai/codex/blob/89a335ed50258dc9dc5b3d7f410db61b431244f9/codex-rs/core/src/tools/handlers/multi_agents_v2/spawn.rs",
+      "captured_at": "2026-08-10",
+      "locator": "spawn tool handler",
+      "commit": "89a335ed50258dc9dc5b3d7f410db61b431244f9"
+    },
+    {
+      "type": "source",
+      "title": "Codex agent-control spawn boundary",
+      "source_url": "https://github.com/openai/codex/blob/89a335ed50258dc9dc5b3d7f410db61b431244f9/codex-rs/core/src/agent/control/spawn.rs",
+      "captured_at": "2026-08-10",
+      "locator": "child agent spawn control",
+      "commit": "89a335ed50258dc9dc5b3d7f410db61b431244f9"
+    }
+  ],
+  "reviewed_at": "2026-08-10",
+  "reviewers": ["foundation-maintainers"],
+  "notes": "Scheduling fairness, worktree isolation, and behavior under real concurrent load remain untested here."
+}

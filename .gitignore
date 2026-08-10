@@ -1,0 +1,55 @@
+# Operating systems and editors
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.mobileprovision
+# Private agent/operator work (never publish)
+.private/
+.tasks/
+.codex/
+private-notes/
+TASKS.local.md
+PLAN.local.md
+*.private.md
+*.unredacted.*
+
+# JavaScript / TypeScript
+node_modules/
+.next/
+out/
+dist/
+coverage/
+*.tsbuildinfo
+.wrangler/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+
+# Local experiment output
+labs/results/local/
+labs/results/tmp/
+*.unredacted.jsonl
+
+# Local source/vendor checkouts used for research
+.research/
+vendor-upstreams/
+
+# Logs and temporary files
+*.log
+tmp/
+.cache/

@@ -1,0 +1,37 @@
+{
+  "schema_version": "0.1.0",
+  "id": "client-server-protocol",
+  "title": "Client–Server Protocol",
+  "summary": "Expose the harness loop, sessions, events, approvals, and configuration to terminal, IDE, desktop, or automation clients through a stable transport boundary.",
+  "category": "interfaces",
+  "status": "core",
+  "prerequisites": ["agent-loop", "event-stream"],
+  "reference_lessons": ["s01-agent-loop", "s02-events-streaming"],
+  "agent_implementations": [
+    {
+      "agent_id": "codex",
+      "snapshot_id": "codex-2026-08-10-app-server",
+      "coverage": "partial",
+      "claim_ids": ["codex-source-app-server"]
+    },
+    {
+      "agent_id": "pi",
+      "snapshot_id": "pi-2026-08-10-rpc",
+      "coverage": "partial",
+      "claim_ids": ["pi-source-rpc-mode"]
+    },
+    {
+      "agent_id": "reasonix",
+      "snapshot_id": "reasonix-2026-08-10-acp",
+      "coverage": "partial",
+      "claim_ids": ["reasonix-source-acp"]
+    }
+  ],
+  "experiments": [],
+  "open_questions": [
+    "Which lifecycle events and approval semantics are portable across clients?",
+    "How should protocol compatibility be versioned independently of product releases?",
+    "Where should session authority live when multiple clients can reconnect?"
+  ],
+  "reader_layer_status": {"L0": "partial", "L1": "missing", "L2": "partial", "L3": "partial", "L4": "partial"}
+}

@@ -1,0 +1,1 @@
+"""Executable vertical-slice lessons."""

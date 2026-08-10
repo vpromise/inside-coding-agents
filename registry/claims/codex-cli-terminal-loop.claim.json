@@ -1,0 +1,26 @@
+{
+  "schema_version": "0.1.0",
+  "id": "codex-cli-terminal-loop",
+  "agent_id": "codex",
+  "snapshot_id": "codex-2026-08-10-cli",
+  "mechanism_id": "agent-loop",
+  "surface": "cli",
+  "statement": "Official Codex CLI documentation presents one terminal loop for exploring code, planning changes, editing files, running local tools, steering an active turn, and continuing follow-up work in the same session.",
+  "display_text": {
+    "zh-CN": "Codex CLI 官方文档将其描述为一个终端内的连续工作循环：探索代码、规划修改、编辑文件、运行本地工具、在执行中 steering，并在同一 session 中继续后续工作。"
+  },
+  "status": "reviewed",
+  "evidence": [
+    {
+      "type": "official-doc",
+      "title": "Codex CLI — Inspect, edit, and run code from your terminal",
+      "source_url": "https://learn.chatgpt.com/docs/codex/cli",
+      "captured_at": "2026-08-10",
+      "locator": "Work against your local repository; Keep the coding loop in your terminal",
+      "notes": "Supports the documented product behavior only; it does not establish internal loop implementation details."
+    }
+  ],
+  "reviewed_at": "2026-08-10",
+  "reviewers": ["foundation-maintainers"],
+  "notes": "Source-code mapping, request protocol, retry behavior, and exact termination logic are not asserted by this claim."
+}

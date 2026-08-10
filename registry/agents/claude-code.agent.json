@@ -1,0 +1,51 @@
+{
+  "schema_version": "0.1.0",
+  "id": "claude-code",
+  "name": "Claude Code",
+  "summary": "Anthropic's terminal coding agent; this Tier B profile is limited to official documentation and the public distribution repository because the product core is not published there.",
+  "coverage_tier": "B",
+  "source_availability": "partial",
+  "homepage": "https://code.claude.com/docs/en/overview",
+  "upstream": {
+    "documentation": "https://code.claude.com/docs/en/overview",
+    "release_feed": "https://github.com/anthropics/claude-code/releases",
+    "repositories": [
+      {
+        "component": "distribution-examples-and-plugins",
+        "url": "https://github.com/anthropics/claude-code",
+        "default_branch": "main"
+      }
+    ]
+  },
+  "licenses": [
+    {
+      "component": "distribution-repository",
+      "spdx": "LicenseRef-Anthropic-Commercial",
+      "url": "https://github.com/anthropics/claude-code/blob/2bb60696142b493eafaeacfe00eac51d16c50c4f/LICENSE.md"
+    }
+  ],
+  "surfaces": ["cli", "tui", "ide", "sdk"],
+  "model_strategy": ["first-party"],
+  "lifecycle": "active",
+  "tags": ["coding-agent", "closed-core", "hooks", "permissions", "subagents"],
+  "stewards": ["foundation-maintainers"],
+  "snapshots": [
+    {
+      "id": "claude-code-2026-08-10-docs",
+      "observed_at": "2026-08-10",
+      "surface": "cli",
+      "version": "2.1.226-docs-boundary",
+      "freshness": "current",
+      "docs_captured_at": "2026-08-10",
+      "environment": {
+        "os": "not-executed",
+        "runtime": "official-docs observation",
+        "permission_mode": "documented-configurable",
+        "sandbox_mode": "documented-configurable",
+        "network_mode": "not-executed"
+      },
+      "claims_path": "registry/claims/claude-code-doc-execution-policy.claim.json",
+      "notes": "Official-documentation snapshot aligned with public distribution tag v2.1.226. No claim in this snapshot asserts the closed core's file layout, hidden prompts, or internal state machine."
+    }
+  ]
+}

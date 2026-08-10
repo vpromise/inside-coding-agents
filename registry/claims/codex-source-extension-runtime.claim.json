@@ -1,0 +1,34 @@
+{
+  "schema_version": "0.1.0",
+  "id": "codex-source-extension-runtime",
+  "agent_id": "codex",
+  "snapshot_id": "codex-2026-08-10-source",
+  "mechanism_id": "extension-runtime",
+  "surface": "cli",
+  "statement": "At the pinned revision, Codex assembles selected skills and plugins into turn context and runs typed lifecycle hooks around session start, tool use, permissions, stop, compaction, and session end.",
+  "display_text": {
+    "zh-CN": "在固定版本中，Codex 会把选中的 skills 与 plugins 组装进 turn context，并在 session start、tool use、permission、stop、compaction 和 session end 周围运行类型化 hooks。",
+    "en": "At the pinned revision, Codex assembles selected skills and plugins into turn context and runs typed lifecycle hooks around session start, tool use, permissions, stop, compaction, and session end."
+  },
+  "status": "reviewed",
+  "evidence": [
+    {
+      "type": "source",
+      "title": "Codex turn-time skill and plugin assembly",
+      "source_url": "https://github.com/openai/codex/blob/89a335ed50258dc9dc5b3d7f410db61b431244f9/codex-rs/core/src/session/turn.rs",
+      "captured_at": "2026-08-10",
+      "locator": "build_skills_and_plugins and hook calls",
+      "commit": "89a335ed50258dc9dc5b3d7f410db61b431244f9"
+    },
+    {
+      "type": "source",
+      "title": "Codex lifecycle hook runtime",
+      "source_url": "https://github.com/openai/codex/blob/89a335ed50258dc9dc5b3d7f410db61b431244f9/codex-rs/core/src/hook_runtime.rs",
+      "captured_at": "2026-08-10",
+      "locator": "run_*_hooks functions",
+      "commit": "89a335ed50258dc9dc5b3d7f410db61b431244f9"
+    }
+  ],
+  "reviewed_at": "2026-08-10",
+  "reviewers": ["foundation-maintainers"]
+}

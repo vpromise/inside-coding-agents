@@ -1,0 +1,62 @@
+name: Claim correction
+description: Challenge or correct a published architecture claim with versioned evidence.
+title: "claim: "
+labels: [evidence-review]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for helping keep the Atlas accurate. Submit only public, redistributable evidence. Never paste credentials, private source, personal paths, or unredacted traces.
+
+  - type: input
+    id: claim_id
+    attributes:
+      label: Claim ID
+      placeholder: codex-source-agent-loop
+    validations:
+      required: true
+
+  - type: input
+    id: snapshot_id
+    attributes:
+      label: Snapshot ID and surface
+      placeholder: codex-2026-08-10-source · cli
+    validations:
+      required: true
+
+  - type: dropdown
+    id: evidence_type
+    attributes:
+      label: Evidence type
+      options:
+        - source
+        - official-doc
+        - reproduced
+        - inference boundary
+    validations:
+      required: true
+
+  - type: textarea
+    id: correction
+    attributes:
+      label: Proposed correction
+      description: State the smallest factual change and why the current wording exceeds or conflicts with the evidence.
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Versioned evidence
+      description: Prefer immutable commit links, official documentation, or a public reproduction record.
+      placeholder: One URL and locator per line.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Publication check
+      options:
+        - label: I confirm this report contains no secrets, private source, personal data, or unredacted trace content.
+          required: true

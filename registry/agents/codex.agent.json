@@ -1,0 +1,110 @@
+{
+  "schema_version": "0.1.0",
+  "id": "codex",
+  "name": "Codex",
+  "summary": "OpenAI's coding agent across terminal and other product surfaces; published snapshots keep official product behavior separate from the open-source CLI implementation.",
+  "coverage_tier": "B",
+  "source_availability": "open",
+  "homepage": "https://learn.chatgpt.com/docs/codex/cli",
+  "upstream": {
+    "documentation": "https://learn.chatgpt.com/docs/codex/cli",
+    "release_feed": "https://github.com/openai/codex/releases",
+    "repositories": [
+      {
+        "component": "cli",
+        "url": "https://github.com/openai/codex",
+        "default_branch": "main"
+      }
+    ]
+  },
+  "licenses": [
+    {
+      "component": "cli",
+      "spdx": "Apache-2.0",
+      "url": "https://github.com/openai/codex/blob/89a335ed50258dc9dc5b3d7f410db61b431244f9/LICENSE"
+    }
+  ],
+  "surfaces": ["cli"],
+  "model_strategy": ["first-party"],
+  "lifecycle": "active",
+  "tags": ["coding-agent", "terminal", "rust", "source-mapped"],
+  "stewards": ["foundation-maintainers"],
+  "snapshots": [
+    {
+      "id": "codex-2026-08-10-cli",
+      "observed_at": "2026-08-10",
+      "surface": "cli",
+      "version": "docs-observation",
+      "freshness": "current",
+      "docs_captured_at": "2026-08-10",
+      "environment": {
+        "os": "not-observed",
+        "runtime": "not-observed",
+        "permission_mode": "documented-configurable",
+        "sandbox_mode": "documented-configurable",
+        "network_mode": "not-observed"
+      },
+      "claims_path": "registry/claims/codex-cli-terminal-loop.claim.json",
+      "notes": "This is an official-documentation snapshot, not a pinned binary or source commit. Version-specific implementation claims remain intentionally unknown."
+    },
+    {
+      "id": "codex-2026-08-10-source",
+      "observed_at": "2026-08-10",
+      "surface": "cli",
+      "version": "source@89a335e",
+      "freshness": "current",
+      "docs_captured_at": "2026-08-10",
+      "source_ref": {
+        "repository": "https://github.com/openai/codex",
+        "commit": "89a335ed50258dc9dc5b3d7f410db61b431244f9",
+        "paths": [
+          "codex-rs/core/src/session/turn.rs",
+          "codex-rs/core/src/tasks/regular.rs",
+          "codex-rs/core/src/tools/registry.rs",
+          "codex-rs/core/src/tools/router.rs",
+          "codex-rs/core/src/tools/approvals.rs",
+          "codex-rs/core/src/tools/sandboxing.rs",
+          "codex-rs/core/src/compact.rs",
+          "codex-rs/core/src/hook_runtime.rs",
+          "codex-rs/core/src/tools/handlers/multi_agents_v2/spawn.rs",
+          "codex-rs/core/src/agent/control/spawn.rs",
+          "codex-rs/protocol/src/protocol.rs"
+        ]
+      },
+      "environment": {
+        "os": "source-inspection-only",
+        "runtime": "Rust workspace; binary not executed",
+        "permission_mode": "source-mapped",
+        "sandbox_mode": "source-mapped",
+        "network_mode": "not-executed"
+      },
+      "claims_path": "registry/claims/codex-source-agent-loop.claim.json",
+      "notes": "Clean source inspection pinned to one public commit. The snapshot does not claim that every hosted Codex surface runs this exact revision, and it has not yet earned Tier A because no native experiment is attached."
+    },
+    {
+      "id": "codex-2026-08-10-app-server",
+      "observed_at": "2026-08-10",
+      "surface": "server",
+      "version": "source@89a335e",
+      "freshness": "current",
+      "source_ref": {
+        "repository": "https://github.com/openai/codex",
+        "commit": "89a335ed50258dc9dc5b3d7f410db61b431244f9",
+        "paths": [
+          "codex-rs/app-server/src/lib.rs",
+          "codex-rs/app-server/src/message_processor.rs",
+          "codex-rs/app-server/src/transport.rs"
+        ]
+      },
+      "environment": {
+        "os": "source-inspection-only",
+        "runtime": "Rust workspace; server not executed",
+        "permission_mode": "not-executed",
+        "sandbox_mode": "not-executed",
+        "network_mode": "not-executed"
+      },
+      "claims_path": "registry/claims/codex-source-app-server.claim.json",
+      "notes": "Separate server-surface snapshot for the public App Server transport and JSON-RPC dispatch boundary; it is not evidence about a particular desktop or IDE client release."
+    }
+  ]
+}

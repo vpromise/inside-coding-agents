@@ -1,0 +1,76 @@
+{
+  "schema_version": "0.1.0",
+  "track": "foundations",
+  "title": {
+    "zh-CN": "从零构建 Agent Harness",
+    "en": "Build an Agent Harness from Zero"
+  },
+  "lessons": [
+    {
+      "id": "s01-agent-loop",
+      "number": "01",
+      "slug": "agent-loop",
+      "title": {"zh-CN": "最小 Agent Loop", "en": "The Minimal Agent Loop"},
+      "summary": {"zh-CN": "把一次模型调用变成有明确终止条件的循环。", "en": "Turn one model call into a loop with an explicit stop condition."},
+      "mechanism_ids": ["agent-loop"],
+      "status": "implemented",
+      "content_paths": {"zh-CN": "curriculum/lessons/s01_agent_loop/lesson.zh.md", "en": "curriculum/lessons/s01_agent_loop/lesson.en.md"},
+      "run": "python3 -m curriculum.lessons.s01_agent_loop.demo"
+    },
+    {
+      "id": "s02-events-streaming",
+      "number": "02",
+      "slug": "events-streaming",
+      "title": {"zh-CN": "Streaming 与事件", "en": "Streaming and Events"},
+      "summary": {"zh-CN": "把流式增量转换成可观察、可回放的事件。", "en": "Convert streaming deltas into observable, replayable events."},
+      "mechanism_ids": ["agent-loop", "event-stream"],
+      "status": "implemented",
+      "content_paths": {"zh-CN": "curriculum/lessons/s02_events_streaming/lesson.zh.md", "en": "curriculum/lessons/s02_events_streaming/lesson.en.md"},
+      "run": "python3 -m curriculum.lessons.s02_events_streaming.demo"
+    },
+    {
+      "id": "s03-tool-dispatch",
+      "number": "03",
+      "slug": "tool-dispatch",
+      "title": {"zh-CN": "Tool Registry 与 Dispatch", "en": "Tool Registry and Dispatch"},
+      "summary": {"zh-CN": "验证、执行并记录模型请求的工具调用。", "en": "Validate, execute, and record model-requested tool calls."},
+      "mechanism_ids": ["agent-loop", "tool-dispatch"],
+      "status": "implemented",
+      "content_paths": {"zh-CN": "curriculum/lessons/s03_tool_dispatch/lesson.zh.md", "en": "curriculum/lessons/s03_tool_dispatch/lesson.en.md"},
+      "run": "python3 -m curriculum.lessons.s03_tool_dispatch.demo"
+    },
+    {
+      "id": "s04-workspace-tools",
+      "number": "04",
+      "slug": "workspace-tools",
+      "title": {"zh-CN": "File、Shell 与 Edit Tools", "en": "File, Shell, and Edit Tools"},
+      "summary": {"zh-CN": "为副作用工具建立工作区路径边界和显式 allowlist。", "en": "Put workspace boundaries and explicit allowlists around side-effecting tools."},
+      "mechanism_ids": ["workspace-tools", "path-boundary"],
+      "status": "implemented",
+      "content_paths": {"zh-CN": "curriculum/lessons/s04_workspace_tools/lesson.zh.md", "en": "curriculum/lessons/s04_workspace_tools/lesson.en.md"},
+      "run": "python3 -m curriculum.lessons.s04_workspace_tools.demo"
+    },
+    {
+      "id": "s05-instructions",
+      "number": "05",
+      "slug": "instructions",
+      "title": {"zh-CN": "Instructions 与项目发现", "en": "Instructions and Project Discovery"},
+      "summary": {"zh-CN": "从工作区根目录到当前目录组合分层指令。", "en": "Compose hierarchical instructions from the workspace root to the current directory."},
+      "mechanism_ids": ["instruction-discovery"],
+      "status": "implemented",
+      "content_paths": {"zh-CN": "curriculum/lessons/s05_instructions/lesson.zh.md", "en": "curriculum/lessons/s05_instructions/lesson.en.md"},
+      "run": "python3 -m curriculum.lessons.s05_instructions.demo"
+    },
+    {
+      "id": "s06-context-budget",
+      "number": "06",
+      "slug": "context-budget",
+      "title": {"zh-CN": "Context Budget 与截断", "en": "Context Budgets and Truncation"},
+      "summary": {"zh-CN": "让输入裁剪和工具输出截断成为可见策略。", "en": "Make input pruning and tool-output truncation explicit policies."},
+      "mechanism_ids": ["context-budget", "tool-output-truncation"],
+      "status": "implemented",
+      "content_paths": {"zh-CN": "curriculum/lessons/s06_context_budget/lesson.zh.md", "en": "curriculum/lessons/s06_context_budget/lesson.en.md"},
+      "run": "python3 -m curriculum.lessons.s06_context_budget.demo"
+    }
+  ]
+}

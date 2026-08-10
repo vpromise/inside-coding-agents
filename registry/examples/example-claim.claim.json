@@ -1,0 +1,33 @@
+{
+  "schema_version": "0.1.0",
+  "id": "example-agent-tool-dispatch",
+  "agent_id": "example-agent",
+  "snapshot_id": "example-agent-2026-08-10-cli",
+  "mechanism_id": "tool-dispatch",
+  "surface": "cli",
+  "statement": "The synthetic agent dispatches a declared tool call and appends the result to the session log.",
+  "display_text": {
+    "zh-CN": "合成 Agent 会执行声明的工具调用，并将结果追加到 session log。"
+  },
+  "status": "reviewed",
+  "evidence": [
+    {
+      "type": "official-doc",
+      "title": "Synthetic tool dispatch documentation",
+      "source_url": "https://example.com/agent/docs/tool-dispatch",
+      "captured_at": "2026-08-10",
+      "locator": "Tool dispatch section",
+      "notes": "Synthetic evidence used only for schema validation."
+    },
+    {
+      "type": "reproduced",
+      "title": "Synthetic tool roundtrip trace",
+      "captured_at": "2026-08-10",
+      "experiment_id": "example-tool-roundtrip",
+      "trace_path": "registry/examples/example-trace.jsonl"
+    }
+  ],
+  "reviewed_at": "2026-08-10",
+  "reviewers": ["foundation-maintainers"],
+  "notes": "This claim is not about a real Agent."
+}

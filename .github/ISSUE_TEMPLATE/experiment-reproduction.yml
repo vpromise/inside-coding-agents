@@ -1,0 +1,63 @@
+name: Experiment reproduction
+description: Report an independent reproduction, including failures and not-comparable outcomes.
+title: "reproduction: "
+labels: [reproduction]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Independent failures are valuable evidence. Do not upload raw private workspaces, credentials, account identifiers, hidden reasoning, or unredacted native traces.
+
+  - type: input
+    id: experiment_id
+    attributes:
+      label: Experiment ID
+      placeholder: reference-tool-roundtrip-v1
+    validations:
+      required: true
+
+  - type: dropdown
+    id: outcome
+    attributes:
+      label: Outcome
+      options:
+        - reproduced
+        - failed
+        - partially reproduced
+        - not comparable
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Public environment manifest
+      description: Record OS family, runtime/Agent version, surface, model, permissions, sandbox, and network policy without personal paths or account data.
+    validations:
+      required: true
+
+  - type: textarea
+    id: commands
+    attributes:
+      label: Reproduction commands
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: observations
+    attributes:
+      label: Observed result and differences
+      description: Include every run, including failures. Link a redacted public artifact when available.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Publication check
+      options:
+        - label: I reviewed all text and linked artifacts for secrets, personal paths, private source, and unredacted data.
+          required: true
+        - label: I did not record or publish hidden chain-of-thought.
+          required: true

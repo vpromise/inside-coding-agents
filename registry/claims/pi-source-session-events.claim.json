@@ -1,0 +1,35 @@
+{
+  "schema_version": "0.1.0",
+  "id": "pi-source-session-events",
+  "agent_id": "pi",
+  "snapshot_id": "pi-2026-08-10-source",
+  "mechanism_id": "event-stream",
+  "surface": "cli",
+  "statement": "Pi combines a live typed AgentEvent stream with an append-only JSONL session tree whose entries carry id and parentId, allowing the active context to move between branches without deleting prior history.",
+  "display_text": {
+    "zh-CN": "Pi 将实时类型化 AgentEvent stream 与 append-only JSONL session tree 结合；entry 带有 id 与 parentId，使活动上下文可以在分支间移动而不删除旧历史。",
+    "en": "Pi combines a live typed AgentEvent stream with an append-only JSONL session tree whose entries carry id and parentId, allowing the active context to move between branches without deleting prior history."
+  },
+  "status": "reviewed",
+  "evidence": [
+    {
+      "type": "source",
+      "title": "Pi AgentEvent emission",
+      "source_url": "https://github.com/earendil-works/pi/blob/936aff00918de1187f085f123c2812d8f2d67745/packages/agent/src/agent-loop.ts",
+      "captured_at": "2026-08-10",
+      "locator": "agentLoop and runLoop event emission",
+      "commit": "936aff00918de1187f085f123c2812d8f2d67745"
+    },
+    {
+      "type": "source",
+      "title": "Pi append-only JSONL session tree",
+      "source_url": "https://github.com/earendil-works/pi/blob/936aff00918de1187f085f123c2812d8f2d67745/packages/coding-agent/src/core/session-manager.ts",
+      "captured_at": "2026-08-10",
+      "locator": "SessionEntryBase; SessionManager; getTree; branch",
+      "commit": "936aff00918de1187f085f123c2812d8f2d67745"
+    }
+  ],
+  "reviewed_at": "2026-08-10",
+  "reviewers": ["foundation-maintainers"],
+  "notes": "The native JSONL format has not yet been converted into this project's normalized Trace schema."
+}

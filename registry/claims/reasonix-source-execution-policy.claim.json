@@ -1,0 +1,35 @@
+{
+  "schema_version": "0.1.0",
+  "id": "reasonix-source-execution-policy",
+  "agent_id": "reasonix",
+  "snapshot_id": "reasonix-2026-08-10-source",
+  "mechanism_id": "execution-policy",
+  "surface": "cli",
+  "statement": "Reasonix separates permission and approval posture from OS-level shell confinement: approval modes preserve explicit deny and fresh-decision rules, while an enforced but unavailable shell sandbox fails closed instead of running unwrapped.",
+  "display_text": {
+    "zh-CN": "Reasonix 将 permission/approval posture 与 OS-level shell confinement 分离：approval mode 保留显式 deny 与 fresh-decision 规则；当要求 enforce 但 sandbox 不可用时，shell 会 fail closed 而不是无隔离运行。",
+    "en": "Reasonix separates permission and approval posture from OS-level shell confinement: approval modes preserve explicit deny and fresh-decision rules, while an enforced but unavailable shell sandbox fails closed instead of running unwrapped."
+  },
+  "status": "reviewed",
+  "evidence": [
+    {
+      "type": "source",
+      "title": "Reasonix approval manager and headless gates",
+      "source_url": "https://github.com/esengine/DeepSeek-Reasonix/blob/6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993/internal/control/approval.go",
+      "captured_at": "2026-08-10",
+      "locator": "approvalManager; BuildHeadlessApprovalGate",
+      "commit": "6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993"
+    },
+    {
+      "type": "source",
+      "title": "Reasonix OS sandbox contract",
+      "source_url": "https://github.com/esengine/DeepSeek-Reasonix/blob/6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993/internal/sandbox/sandbox.go",
+      "captured_at": "2026-08-10",
+      "locator": "package contract; Spec; UnavailableMessage",
+      "commit": "6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993"
+    }
+  ],
+  "reviewed_at": "2026-08-10",
+  "reviewers": ["foundation-maintainers"],
+  "notes": "Platform enforcement was not executed. The source states that Windows has no OS-level Bash sandbox in this revision."
+}

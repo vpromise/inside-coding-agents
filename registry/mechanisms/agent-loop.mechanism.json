@@ -1,0 +1,50 @@
+{
+  "schema_version": "0.1.0",
+  "id": "agent-loop",
+  "title": "Agent Loop",
+  "summary": "Own the repeated transition from user intent to model response, tool effects, updated context, and an explicit stop reason.",
+  "category": "loop",
+  "status": "core",
+  "prerequisites": [],
+  "reference_lessons": ["s01-agent-loop", "s02-events-streaming", "s03-tool-dispatch"],
+  "agent_implementations": [
+    {
+      "agent_id": "codex",
+      "snapshot_id": "codex-2026-08-10-cli",
+      "coverage": "partial",
+      "claim_ids": ["codex-cli-terminal-loop"],
+      "notes": "Official-documentation mapping only. A pinned source map and native trace are still required for Tier A."
+    },
+    {
+      "agent_id": "codex",
+      "snapshot_id": "codex-2026-08-10-source",
+      "coverage": "substantial",
+      "claim_ids": ["codex-source-agent-loop"]
+    },
+    {
+      "agent_id": "pi",
+      "snapshot_id": "pi-2026-08-10-source",
+      "coverage": "substantial",
+      "claim_ids": ["pi-source-agent-loop"]
+    },
+    {
+      "agent_id": "reasonix",
+      "snapshot_id": "reasonix-2026-08-10-source",
+      "coverage": "substantial",
+      "claim_ids": ["reasonix-source-agent-loop"]
+    }
+  ],
+  "experiments": [],
+  "open_questions": [
+    "Which termination reasons should be portable across provider and Agent adapters?",
+    "How should streaming tool-call arguments appear without leaking provider-specific wire formats?",
+    "Which retry decisions belong inside the loop versus a provider adapter?"
+  ],
+  "reader_layer_status": {
+    "L0": "complete",
+    "L1": "complete",
+    "L2": "partial",
+    "L3": "partial",
+    "L4": "partial"
+  }
+}

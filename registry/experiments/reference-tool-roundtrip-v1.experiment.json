@@ -1,0 +1,64 @@
+{
+  "schema_version": "0.1.0",
+  "id": "reference-tool-roundtrip-v1",
+  "title": "Reference Harness controlled tool roundtrip",
+  "question": "Can the registry-backed reference runner reproduce one read-only tool roundtrip, including the same normalized event trace, from a pinned fixture and scenario?",
+  "hypothesis": "Both repetitions will record the declared tool request and successful result in order, preserve the fixture, match the expected answer, and share one normalized trace fingerprint.",
+  "mode": "controlled",
+  "status": "complete",
+  "fixture": {
+    "path": "labs/fixtures/reference-tool-roundtrip-v1",
+    "revision": "fixture-v1",
+    "sha256": "8d962551cb790e0401896c6bab495fbd63f25c1194b70c9f5e0a79f2909ddcaf"
+  },
+  "scenario": {
+    "path": "labs/scenarios/reference-tool-roundtrip-v1.scenario.json",
+    "prompt_sha256": "4a1376db3ab987fd384e91931d34930c35856f1a379a017a237db9f60f408760"
+  },
+  "subjects": [
+    {
+      "agent_id": "reference-harness",
+      "snapshot_id": "reference-harness-2026-08-10-controlled",
+      "surface": "sdk",
+      "model": "scripted-model-v1",
+      "provider": "local-fixture",
+      "comparison_status": "not-comparable",
+      "configuration": {
+        "permission_mode": "read-only",
+        "network": false,
+        "writes": false
+      },
+      "uncontrolled_variables": []
+    }
+  ],
+  "controls": {
+    "network": false,
+    "temperature": 0,
+    "writes": false,
+    "sandbox": "temporary-copy-path-boundary"
+  },
+  "repetitions": 2,
+  "metrics": [
+    "event-order-valid",
+    "tool-result-recorded",
+    "final-answer-match",
+    "fixture-unchanged",
+    "deterministic-replay"
+  ],
+  "success_criteria": [
+    "Both repetitions emit the declared event sequence and a successful read_file result.",
+    "Both repetitions return the exact expected final answer without modifying the fixture.",
+    "Both repetitions have the same normalized Trace fingerprint."
+  ],
+  "limitations": [
+    "The Scripted Model is a deterministic test double and does not measure model capability.",
+    "The Reference Harness is not a native vendor agent, so this result cannot raise Codex, Claude Code, Pi, or Reasonix coverage.",
+    "The workspace boundary prevents path escape but is not an operating-system sandbox.",
+    "The experiment does not measure latency, token usage, cost, or behavior under failure."
+  ],
+  "outputs": {
+    "traces_path": "labs/results/reference-tool-roundtrip-v1",
+    "results_path": "labs/results/reference-tool-roundtrip-v1/result.json",
+    "report_path": "labs/results/reference-tool-roundtrip-v1/report.md"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "schema_version": "0.1.0",
+  "id": "reasonix-source-subagents",
+  "agent_id": "reasonix",
+  "snapshot_id": "reasonix-2026-08-10-source",
+  "mechanism_id": "subagent-orchestration",
+  "surface": "cli",
+  "statement": "Reasonix constructs a filtered child tool registry, supports a read-only child profile, caps recursive delegation by depth, hides parent-only orchestration and job tools, and gives each child a private temporary-session boundary.",
+  "display_text": {
+    "zh-CN": "Reasonix 会构造过滤后的 child tool registry，支持只读 child profile，按深度限制递归 delegation，隐藏 parent-only orchestration/job tools，并为每个 child 提供私有临时 session 边界。",
+    "en": "Reasonix constructs a filtered child tool registry, supports a read-only child profile, caps recursive delegation by depth, hides parent-only orchestration and job tools, and gives each child a private temporary-session boundary."
+  },
+  "status": "reviewed",
+  "evidence": [
+    {
+      "type": "source",
+      "title": "Reasonix subagent tool and context boundaries",
+      "source_url": "https://github.com/esengine/DeepSeek-Reasonix/blob/6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993/internal/agent/task.go",
+      "captured_at": "2026-08-10",
+      "locator": "withSubagentSessionTemp; SubagentToolRegistryForDepth; read-only profile",
+      "commit": "6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993"
+    }
+  ],
+  "reviewed_at": "2026-08-10",
+  "reviewers": ["foundation-maintainers"],
+  "notes": "This source map does not yet cover scheduler fairness, merge quality, or real concurrent mutation behavior."
+}

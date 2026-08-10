@@ -1,0 +1,35 @@
+{
+  "schema_version": "0.1.0",
+  "id": "reasonix-source-acp",
+  "agent_id": "reasonix",
+  "snapshot_id": "reasonix-2026-08-10-acp",
+  "mechanism_id": "client-server-protocol",
+  "surface": "acp",
+  "statement": "Reasonix ACP uses an NDJSON JSON-RPC 2.0 connection over stdin/stdout, runs requests and notifications concurrently, maps engine events to session updates, and forwards gated tool decisions as client permission requests.",
+  "display_text": {
+    "zh-CN": "Reasonix ACP 通过 stdin/stdout 使用 NDJSON JSON-RPC 2.0 connection，并发处理 request/notification，把 engine events 映射为 session updates，并把受控工具决策转发为 client permission request。",
+    "en": "Reasonix ACP uses an NDJSON JSON-RPC 2.0 connection over stdin/stdout, runs requests and notifications concurrently, maps engine events to session updates, and forwards gated tool decisions as client permission requests."
+  },
+  "status": "reviewed",
+  "evidence": [
+    {
+      "type": "source",
+      "title": "Reasonix ACP connection",
+      "source_url": "https://github.com/esengine/DeepSeek-Reasonix/blob/6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993/internal/acp/server.go",
+      "captured_at": "2026-08-10",
+      "locator": "Conn; Serve; JSON-RPC framing",
+      "commit": "6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993"
+    },
+    {
+      "type": "source",
+      "title": "Reasonix ACP event and approval projection",
+      "source_url": "https://github.com/esengine/DeepSeek-Reasonix/blob/6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993/internal/acp/dispatch.go",
+      "captured_at": "2026-08-10",
+      "locator": "updateSink; requestPermission",
+      "commit": "6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993"
+    }
+  ],
+  "reviewed_at": "2026-08-10",
+  "reviewers": ["foundation-maintainers"],
+  "notes": "Protocol interoperability with a real editor client remains an explicit experiment gap."
+}

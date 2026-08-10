@@ -1,0 +1,14 @@
+{
+  "schema_version": "0.1.0",
+  "id": "workspace-tools",
+  "title": "Workspace Tools",
+  "summary": "Expose file, command, and edit effects through explicit, inspectable tool boundaries.",
+  "category": "tools",
+  "status": "core",
+  "prerequisites": ["tool-dispatch"],
+  "reference_lessons": ["s04-workspace-tools"],
+  "agent_implementations": [],
+  "experiments": [],
+  "open_questions": ["Which effect types need atomic checkpoints before execution?"],
+  "reader_layer_status": {"L0": "partial", "L1": "complete", "L2": "partial", "L3": "missing", "L4": "missing"}
+}

@@ -1,0 +1,35 @@
+{
+  "schema_version": "0.1.0",
+  "id": "codex-source-execution-policy",
+  "agent_id": "codex",
+  "snapshot_id": "codex-2026-08-10-source",
+  "mechanism_id": "execution-policy",
+  "surface": "cli",
+  "statement": "The pinned Codex core models approval decisions separately from sandbox transformation, with policy-dependent outcomes that can forbid, request approval for, skip approval for, or sandbox a tool attempt.",
+  "display_text": {
+    "zh-CN": "固定版本的 Codex core 将 approval decision 与 sandbox transformation 分离；根据策略，工具尝试可以被禁止、请求批准、跳过批准或进入 sandbox。",
+    "en": "The pinned Codex core models approval decisions separately from sandbox transformation, with policy-dependent outcomes that can forbid, request approval for, skip approval for, or sandbox a tool attempt."
+  },
+  "status": "reviewed",
+  "evidence": [
+    {
+      "type": "source",
+      "title": "Codex approval resolution",
+      "source_url": "https://github.com/openai/codex/blob/89a335ed50258dc9dc5b3d7f410db61b431244f9/codex-rs/core/src/tools/approvals.rs",
+      "captured_at": "2026-08-10",
+      "locator": "ApprovalAction; approval precedence and resolution",
+      "commit": "89a335ed50258dc9dc5b3d7f410db61b431244f9"
+    },
+    {
+      "type": "source",
+      "title": "Codex sandbox attempt policy",
+      "source_url": "https://github.com/openai/codex/blob/89a335ed50258dc9dc5b3d7f410db61b431244f9/codex-rs/core/src/tools/sandboxing.rs",
+      "captured_at": "2026-08-10",
+      "locator": "ExecApprovalRequirement; SandboxAttempt; ToolRuntime",
+      "commit": "89a335ed50258dc9dc5b3d7f410db61b431244f9"
+    }
+  ],
+  "reviewed_at": "2026-08-10",
+  "reviewers": ["foundation-maintainers"],
+  "notes": "This source map does not assert that a specific operating-system sandbox was active in any unobserved run."
+}

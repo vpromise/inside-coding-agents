@@ -1,0 +1,35 @@
+{
+  "schema_version": "0.1.0",
+  "id": "reasonix-source-retry-recovery",
+  "agent_id": "reasonix",
+  "snapshot_id": "reasonix-2026-08-10-source",
+  "mechanism_id": "retry-recovery",
+  "surface": "cli",
+  "statement": "Reasonix replays one frozen sampling payload across bounded stream-recovery attempts, commits only the selected clean attempt, and separately breaks repeated identical write-like failures after a small threshold unless a safe state recheck clears the signature.",
+  "display_text": {
+    "zh-CN": "Reasonix 会在有限次 stream-recovery attempt 中重放同一个冻结 sampling payload，只提交选定的 clean attempt；对重复的相同 write-like failure 则在小阈值后中断，除非安全的状态复查清除该 signature。",
+    "en": "Reasonix replays one frozen sampling payload across bounded stream-recovery attempts, commits only the selected clean attempt, and separately breaks repeated identical write-like failures after a small threshold unless a safe state recheck clears the signature."
+  },
+  "status": "reviewed",
+  "evidence": [
+    {
+      "type": "source",
+      "title": "Reasonix sampling recovery",
+      "source_url": "https://github.com/esengine/DeepSeek-Reasonix/blob/6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993/internal/agent/run_loop.go",
+      "captured_at": "2026-08-10",
+      "locator": "streamWithSamplingRecovery",
+      "commit": "6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993"
+    },
+    {
+      "type": "source",
+      "title": "Reasonix repeated failure guard",
+      "source_url": "https://github.com/esengine/DeepSeek-Reasonix/blob/6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993/internal/agent/repeat_failure_guard.go",
+      "captured_at": "2026-08-10",
+      "locator": "repeat failure threshold, signatures, and state recheck",
+      "commit": "6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993"
+    }
+  ],
+  "reviewed_at": "2026-08-10",
+  "reviewers": ["foundation-maintainers"],
+  "notes": "This supports the control-flow design only; the project has not injected live network or provider failures."
+}

@@ -1,0 +1,160 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:inside-coding-agents:schema:trace-event:0.1.0",
+  "title": "Inside Coding Agents Trace Event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "trace_version",
+    "event_id",
+    "session_id",
+    "sequence",
+    "timestamp",
+    "type",
+    "actor",
+    "payload",
+    "provenance",
+    "redaction"
+  ],
+  "properties": {
+    "trace_version": {
+      "const": "0.1.0"
+    },
+    "event_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "session_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sequence": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "type": {
+      "enum": [
+        "session.start",
+        "session.stop",
+        "user.message",
+        "model.request",
+        "model.response",
+        "tool.request",
+        "tool.result",
+        "approval.request",
+        "approval.decision",
+        "file.patch",
+        "context.prune",
+        "context.compact",
+        "agent.spawn",
+        "agent.message",
+        "agent.stop",
+        "metric.sample",
+        "error"
+      ]
+    },
+    "actor": {
+      "$ref": "#/$defs/actor"
+    },
+    "payload": {
+      "type": "object"
+    },
+    "provenance": {
+      "$ref": "#/$defs/provenance"
+    },
+    "redaction": {
+      "$ref": "#/$defs/redaction"
+    },
+    "duration_ms": {
+      "type": "number",
+      "minimum": 0
+    },
+    "parent_event_id": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "$defs": {
+    "stableId": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "actor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "id"],
+      "properties": {
+        "kind": {
+          "enum": ["user", "model", "agent", "tool", "harness", "policy", "environment"]
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "parent_id": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["agent_id", "snapshot_id", "surface", "harness_mode", "run_id"],
+      "properties": {
+        "agent_id": {
+          "$ref": "#/$defs/stableId"
+        },
+        "snapshot_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "surface": {
+          "type": "string",
+          "minLength": 1
+        },
+        "harness_mode": {
+          "enum": ["fake", "native", "controlled", "adversarial"]
+        },
+        "run_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "experiment_id": {
+          "$ref": "#/$defs/stableId"
+        },
+        "model": {
+          "type": "string"
+        },
+        "provider": {
+          "type": "string"
+        }
+      }
+    },
+    "redaction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "fields"],
+      "properties": {
+        "status": {
+          "enum": ["clean", "redacted", "restricted"]
+        },
+        "fields": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

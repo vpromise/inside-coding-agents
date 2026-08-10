@@ -1,0 +1,44 @@
+{
+  "schema_version": "0.1.0",
+  "id": "subagent-orchestration",
+  "title": "Subagent Orchestration",
+  "summary": "Delegate bounded work into isolated contexts, control capabilities and lifecycle, and merge results without confusing ownership or workspace state.",
+  "category": "orchestration",
+  "status": "emerging",
+  "prerequisites": ["agent-loop", "execution-policy"],
+  "reference_lessons": ["s01-agent-loop"],
+  "agent_implementations": [
+    {
+      "agent_id": "codex",
+      "snapshot_id": "codex-2026-08-10-source",
+      "coverage": "partial",
+      "claim_ids": ["codex-source-subagent-routing"]
+    },
+    {
+      "agent_id": "pi",
+      "snapshot_id": "pi-2026-08-10-source",
+      "coverage": "substantial",
+      "claim_ids": ["pi-source-orchestration-boundary"],
+      "notes": "The source-backed result is an intentional absence from core plus documented extension points."
+    },
+    {
+      "agent_id": "reasonix",
+      "snapshot_id": "reasonix-2026-08-10-source",
+      "coverage": "partial",
+      "claim_ids": ["reasonix-source-subagents"]
+    },
+    {
+      "agent_id": "claude-code",
+      "snapshot_id": "claude-code-2026-08-10-docs",
+      "coverage": "partial",
+      "claim_ids": ["claude-code-doc-subagents"]
+    }
+  ],
+  "experiments": [],
+  "open_questions": [
+    "Which context, permissions, and instructions should a child inherit?",
+    "When is a worktree a sufficient isolation boundary?",
+    "How should cancellation, partial results, and nested delegation be represented in traces?"
+  ],
+  "reader_layer_status": {"L0": "partial", "L1": "missing", "L2": "partial", "L3": "partial", "L4": "partial"}
+}

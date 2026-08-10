@@ -1,0 +1,265 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:inside-coding-agents:schema:agent-profile:0.1.0",
+  "title": "Inside Coding Agents Agent Profile",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "id",
+    "name",
+    "summary",
+    "coverage_tier",
+    "source_availability",
+    "homepage",
+    "surfaces",
+    "model_strategy",
+    "lifecycle",
+    "snapshots"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "0.1.0"
+    },
+    "id": {
+      "$ref": "#/$defs/stableId"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1
+    },
+    "coverage_tier": {
+      "enum": ["A", "B", "C"]
+    },
+    "source_availability": {
+      "enum": ["open", "partial", "closed", "unknown"]
+    },
+    "homepage": {
+      "type": "string",
+      "format": "uri"
+    },
+    "upstream": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "documentation": {
+          "type": "string",
+          "format": "uri"
+        },
+        "release_feed": {
+          "type": "string",
+          "format": "uri"
+        },
+        "repositories": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["component", "url"],
+            "properties": {
+              "component": {
+                "type": "string",
+                "minLength": 1
+              },
+              "url": {
+                "type": "string",
+                "format": "uri"
+              },
+              "default_branch": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    "licenses": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["component", "spdx"],
+        "properties": {
+          "component": {
+            "type": "string",
+            "minLength": 1
+          },
+          "spdx": {
+            "type": "string",
+            "minLength": 1
+          },
+          "url": {
+            "type": "string",
+            "format": "uri"
+          }
+        }
+      }
+    },
+    "surfaces": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/surface"
+      }
+    },
+    "model_strategy": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "first-party",
+          "single-provider",
+          "multi-provider",
+          "openai-compatible",
+          "local-models",
+          "unknown"
+        ]
+      }
+    },
+    "lifecycle": {
+      "enum": ["active", "maintenance", "deprecated", "archived", "unknown"]
+    },
+    "tags": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/stableId"
+      }
+    },
+    "stewards": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "snapshots": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/snapshot"
+      }
+    }
+  },
+  "$defs": {
+    "stableId": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "surface": {
+      "enum": [
+        "cli",
+        "tui",
+        "ide",
+        "desktop",
+        "web",
+        "cloud",
+        "sdk",
+        "server",
+        "acp",
+        "api",
+        "ci",
+        "other"
+      ]
+    },
+    "snapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "observed_at",
+        "surface",
+        "version",
+        "freshness",
+        "claims_path"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*-[0-9]{4}-[0-9]{2}-[0-9]{2}-[a-z0-9]+(?:-[a-z0-9]+)*$"
+        },
+        "observed_at": {
+          "type": "string",
+          "format": "date"
+        },
+        "surface": {
+          "$ref": "#/$defs/surface"
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "freshness": {
+          "enum": ["current", "needs-review", "stale", "historical"]
+        },
+        "docs_captured_at": {
+          "type": "string",
+          "format": "date"
+        },
+        "source_ref": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["repository", "commit"],
+          "properties": {
+            "repository": {
+              "type": "string",
+              "format": "uri"
+            },
+            "commit": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{40}$"
+            },
+            "paths": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "environment": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "os": {
+              "type": "string"
+            },
+            "runtime": {
+              "type": "string"
+            },
+            "permission_mode": {
+              "type": "string"
+            },
+            "sandbox_mode": {
+              "type": "string"
+            },
+            "network_mode": {
+              "type": "string"
+            }
+          }
+        },
+        "claims_path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "supersedes": {
+          "type": "string",
+          "minLength": 1
+        },
+        "notes": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

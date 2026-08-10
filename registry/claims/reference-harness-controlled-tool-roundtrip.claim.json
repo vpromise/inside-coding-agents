@@ -1,0 +1,27 @@
+{
+  "schema_version": "0.1.0",
+  "id": "reference-harness-controlled-tool-roundtrip",
+  "agent_id": "reference-harness",
+  "snapshot_id": "reference-harness-2026-08-10-controlled",
+  "mechanism_id": "tool-dispatch",
+  "surface": "sdk",
+  "statement": "In the controlled reference experiment, the project harness validates and executes one declared read_file call, records the successful tool result between two model turns, and produces the same normalized trace fingerprint across two repetitions.",
+  "display_text": {
+    "zh-CN": "在受控参考实验中，项目 Harness 校验并执行一次声明过的 read_file 调用，在两次模型回合之间记录成功结果，并在两次重复运行中产生相同的规范化 Trace 指纹。",
+    "en": "In the controlled reference experiment, the project harness validates and executes one declared read_file call, records the successful result between two model turns, and produces the same normalized trace fingerprint across two repetitions."
+  },
+  "status": "reviewed",
+  "evidence": [
+    {
+      "type": "reproduced",
+      "title": "Reference tool roundtrip controlled run",
+      "captured_at": "2026-08-10",
+      "experiment_id": "reference-tool-roundtrip-v1",
+      "trace_path": "labs/results/reference-tool-roundtrip-v1/run-001.trace.jsonl",
+      "notes": "The scripted model and read-only fixture isolate the harness pipeline. This is not evidence about any vendor agent."
+    }
+  ],
+  "reviewed_at": "2026-08-10",
+  "reviewers": ["foundation-maintainers"],
+  "notes": "The claim is intentionally limited to the committed controlled fixture, runner, and normalized trace output."
+}

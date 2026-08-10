@@ -1,0 +1,105 @@
+{
+  "schema_version": "0.1.0",
+  "experiment_id": "reference-tool-roundtrip-v1",
+  "generated_at": "2026-08-10T02:00:00Z",
+  "runner": {
+    "id": "reference-experiment-runner",
+    "version": "0.1.0",
+    "command": "python3 labs/runner.py reference-tool-roundtrip-v1 --check"
+  },
+  "status": "passed",
+  "summary": {
+    "total_runs": 2,
+    "successful_runs": 2,
+    "failed_runs": 0,
+    "criteria_passed": true
+  },
+  "criteria": [
+    {
+      "statement": "Both repetitions emit the declared event sequence and a successful read_file result.",
+      "passed": true
+    },
+    {
+      "statement": "Both repetitions return the exact expected final answer without modifying the fixture.",
+      "passed": true
+    },
+    {
+      "statement": "Both repetitions have the same normalized Trace fingerprint.",
+      "passed": true
+    }
+  ],
+  "fixture_sha256": "8d962551cb790e0401896c6bab495fbd63f25c1194b70c9f5e0a79f2909ddcaf",
+  "prompt_sha256": "4a1376db3ab987fd384e91931d34930c35856f1a379a017a237db9f60f408760",
+  "runs": [
+    {
+      "run_id": "reference-tool-roundtrip-v1-run-001",
+      "repetition": 1,
+      "status": "passed",
+      "trace_path": "labs/results/reference-tool-roundtrip-v1/run-001.trace.jsonl",
+      "event_count": 9,
+      "event_types": [
+        "session.start",
+        "user.message",
+        "model.request",
+        "model.response",
+        "tool.request",
+        "tool.result",
+        "model.request",
+        "model.response",
+        "session.stop"
+      ],
+      "final_text": "input.txt contains exactly two values: alpha and beta.",
+      "stop_reason": "completed",
+      "metrics": {
+        "event-order-valid": true,
+        "tool-result-recorded": true,
+        "final-answer-match": true,
+        "fixture-unchanged": true,
+        "deterministic-replay": true
+      },
+      "deterministic_fingerprint": "a59806d5bd056ac750112dcaf356879b72d7d87b52fac970248fa8f72b94b886",
+      "redaction": {
+        "status": "clean",
+        "fields": []
+      }
+    },
+    {
+      "run_id": "reference-tool-roundtrip-v1-run-002",
+      "repetition": 2,
+      "status": "passed",
+      "trace_path": "labs/results/reference-tool-roundtrip-v1/run-002.trace.jsonl",
+      "event_count": 9,
+      "event_types": [
+        "session.start",
+        "user.message",
+        "model.request",
+        "model.response",
+        "tool.request",
+        "tool.result",
+        "model.request",
+        "model.response",
+        "session.stop"
+      ],
+      "final_text": "input.txt contains exactly two values: alpha and beta.",
+      "stop_reason": "completed",
+      "metrics": {
+        "event-order-valid": true,
+        "tool-result-recorded": true,
+        "final-answer-match": true,
+        "fixture-unchanged": true,
+        "deterministic-replay": true
+      },
+      "deterministic_fingerprint": "a59806d5bd056ac750112dcaf356879b72d7d87b52fac970248fa8f72b94b886",
+      "redaction": {
+        "status": "clean",
+        "fields": []
+      }
+    }
+  ],
+  "limitations": [
+    "The Scripted Model is a deterministic test double and does not measure model capability.",
+    "The Reference Harness is not a native vendor agent, so this result cannot raise Codex, Claude Code, Pi, or Reasonix coverage.",
+    "The workspace boundary prevents path escape but is not an operating-system sandbox.",
+    "The experiment does not measure latency, token usage, cost, or behavior under failure."
+  ]
+}

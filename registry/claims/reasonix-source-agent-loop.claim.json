@@ -1,0 +1,27 @@
+{
+  "schema_version": "0.1.0",
+  "id": "reasonix-source-agent-loop",
+  "agent_id": "reasonix",
+  "snapshot_id": "reasonix-2026-08-10-source",
+  "mechanism_id": "agent-loop",
+  "surface": "cli",
+  "statement": "The pinned Reasonix engine runs a bounded tool-round loop that captures a cache prefix shape, streams a provider turn, commits only a clean terminal attempt, then either finalizes or dispatches the committed tool calls before the next round.",
+  "display_text": {
+    "zh-CN": "固定版本的 Reasonix engine 运行有边界的 tool-round loop：先捕获 cache prefix shape，再流式采样 provider，仅提交 clean terminal attempt，随后 finalize 或分派已提交的 tool calls。",
+    "en": "The pinned Reasonix engine runs a bounded tool-round loop that captures a cache prefix shape, streams a provider turn, commits only a clean terminal attempt, then either finalizes or dispatches the committed tool calls before the next round."
+  },
+  "status": "reviewed",
+  "evidence": [
+    {
+      "type": "source",
+      "title": "Reasonix run loop",
+      "source_url": "https://github.com/esengine/DeepSeek-Reasonix/blob/6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993/internal/agent/run_loop.go",
+      "captured_at": "2026-08-10",
+      "locator": "runToolLoop",
+      "commit": "6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993"
+    }
+  ],
+  "reviewed_at": "2026-08-10",
+  "reviewers": ["foundation-maintainers"],
+  "notes": "This is a source-level engine claim. It does not establish live DeepSeek or other provider behavior."
+}

@@ -1,0 +1,41 @@
+{
+  "schema_version": "0.1.0",
+  "id": "reference-harness",
+  "name": "Reference Harness",
+  "summary": "The project's dependency-free, deterministic teaching harness and controlled-experiment baseline; it is not a production coding-agent product.",
+  "coverage_tier": "C",
+  "source_availability": "open",
+  "homepage": "https://github.com/vpromise/inside-coding-agents",
+  "upstream": {
+    "repositories": [
+      {
+        "component": "reference-harness",
+        "url": "https://github.com/vpromise/inside-coding-agents",
+        "default_branch": "main"
+      }
+    ]
+  },
+  "surfaces": ["sdk"],
+  "model_strategy": ["local-models"],
+  "lifecycle": "active",
+  "tags": ["reference", "deterministic", "teaching", "controlled"],
+  "stewards": ["foundation-maintainers"],
+  "snapshots": [
+    {
+      "id": "reference-harness-2026-08-10-controlled",
+      "observed_at": "2026-08-10",
+      "surface": "sdk",
+      "version": "0.1.0",
+      "freshness": "current",
+      "environment": {
+        "os": "temporary fixture workspace",
+        "runtime": "Python 3.11+ standard library",
+        "permission_mode": "read-only tool registry",
+        "sandbox_mode": "path boundary only; not an OS sandbox",
+        "network_mode": "off by design; no network tool"
+      },
+      "claims_path": "registry/claims/reference-harness-controlled-tool-roundtrip.claim.json",
+      "notes": "A controlled, scripted baseline used to validate the Lab pipeline. It must not be compared with a native vendor agent or presented as production-grade isolation."
+    }
+  ]
+}

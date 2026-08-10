@@ -1,0 +1,35 @@
+{
+  "schema_version": "0.1.0",
+  "id": "reasonix-source-event-log",
+  "agent_id": "reasonix",
+  "snapshot_id": "reasonix-2026-08-10-source",
+  "mechanism_id": "event-stream",
+  "surface": "cli",
+  "statement": "Reasonix designates an append-only events JSONL file as transcript authority and keeps derived context, event-index, display-index, conflict, checkpoint, and job artifacts in separate sidecars.",
+  "display_text": {
+    "zh-CN": "Reasonix 将 append-only events JSONL 指定为 transcript authority，并把派生的 context、event index、display index、conflict、checkpoint 与 job artifacts 放在独立 sidecars 中。",
+    "en": "Reasonix designates an append-only events JSONL file as transcript authority and keeps derived context, event-index, display-index, conflict, checkpoint, and job artifacts in separate sidecars."
+  },
+  "status": "reviewed",
+  "evidence": [
+    {
+      "type": "source",
+      "title": "Reasonix session artifact authority",
+      "source_url": "https://github.com/esengine/DeepSeek-Reasonix/blob/6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993/internal/store/session.go",
+      "captured_at": "2026-08-10",
+      "locator": "SessionEventLog and session sidecars",
+      "commit": "6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993"
+    },
+    {
+      "type": "source",
+      "title": "Reasonix native session events",
+      "source_url": "https://github.com/esengine/DeepSeek-Reasonix/blob/6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993/internal/agent/session_events.go",
+      "captured_at": "2026-08-10",
+      "locator": "native event append and projection",
+      "commit": "6376bd4a6d7fa97c7bdb2166af3c1d9d290b8993"
+    }
+  ],
+  "reviewed_at": "2026-08-10",
+  "reviewers": ["foundation-maintainers"],
+  "notes": "The project has not yet imported a Reasonix native trace or tested crash-tail repair."
+}

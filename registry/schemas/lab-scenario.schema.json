@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:inside-coding-agents:schema:lab-scenario:0.1.0",
+  "title": "Inside Coding Agents Lab Scenario",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "id",
+    "experiment_id",
+    "prompt",
+    "system_prompt",
+    "run_started_at",
+    "result_generated_at",
+    "repetition_interval_seconds",
+    "turns",
+    "expected"
+  ],
+  "properties": {
+    "schema_version": { "const": "0.1.0" },
+    "id": { "$ref": "#/$defs/stableId" },
+    "experiment_id": { "$ref": "#/$defs/stableId" },
+    "prompt": { "type": "string", "minLength": 1 },
+    "system_prompt": { "type": "string" },
+    "run_started_at": { "type": "string", "format": "date-time" },
+    "result_generated_at": { "type": "string", "format": "date-time" },
+    "repetition_interval_seconds": { "type": "integer", "minimum": 0 },
+    "turns": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["content", "stop", "tool_calls"],
+        "properties": {
+          "content": { "type": "string" },
+          "stop": { "type": "boolean" },
+          "tool_calls": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["id", "name", "arguments"],
+              "properties": {
+                "id": { "type": "string", "minLength": 1 },
+                "name": { "$ref": "#/$defs/toolName" },
+                "arguments": { "type": "object" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "expected": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["final_text", "stop_reason", "event_types", "tool_result"],
+      "properties": {
+        "final_text": { "type": "string" },
+        "stop_reason": { "type": "string", "minLength": 1 },
+        "event_types": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "tool_result": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["tool", "path", "content"],
+          "properties": {
+            "tool": { "$ref": "#/$defs/toolName" },
+            "path": { "type": "string", "minLength": 1 },
+            "content": { "type": "string" }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "stableId": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+    },
+    "toolName": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    }
+  }
+}
