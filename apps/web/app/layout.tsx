@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { LocaleProvider, LocalizedText } from "./components/LocaleProvider";
 import { SiteFooter } from "./components/SiteFooter";
 import { SiteHeader } from "./components/SiteHeader";
+import { withBasePath } from "./lib/paths";
 import { siteUrl } from "./lib/site";
 import "./globals.css";
 
@@ -23,6 +24,8 @@ export const metadata: Metadata = {
     "context management",
     "Codex",
     "Claude Code",
+    "OpenCode",
+    "Grok Build",
   ],
   openGraph: {
     type: "website",
@@ -42,6 +45,15 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        {process.env.DEPLOY_TARGET !== "github-pages" && (
+          <meta
+            name="description"
+            content="A visual, evidence-backed handbook and reproducible lab for coding agent architecture and agent harness engineering."
+          />
+        )}
+        <link rel="icon" href={withBasePath("/favicon.svg")} type="image/svg+xml" />
+      </head>
       <body>
         <LocaleProvider>
           <a className="skip-link" href="#main-content">

@@ -34,6 +34,8 @@ test("server-renders the product homepage", async () => {
   assert.match(html, /TRACE 0\.1/);
   assert.match(html, /<strong>13<\/strong>.*runnable lessons/);
   assert.match(html, /href="\/search"/);
+  assert.match(html, /<meta[^>]+name="description"[^>]+content="A visual, evidence-backed handbook/);
+  assert.match(html, /<link[^>]+rel="icon"[^>]+href="\/favicon\.svg"/);
   assert.match(html, /aria-controls="primary-navigation"/);
   assert.match(html, /aria-pressed="true"/);
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape|react-loading-skeleton/);
@@ -277,9 +279,11 @@ test("content synchronization is collection-driven rather than brand-specific", 
   assert.doesNotMatch(source, /codex\.agent\.json|content\/agents\/codex/);
 });
 
-test("removes disposable starter assets and publishes the trace download", async () => {
+test("removes disposable starter assets and publishes branded downloads", async () => {
   await assert.rejects(access(new URL("../app/_sites-preview", import.meta.url)));
-  await assert.rejects(access(new URL("../public/favicon.svg", import.meta.url)));
+  const favicon = await readFile(new URL("../public/favicon.svg", import.meta.url), "utf8");
+  assert.match(favicon, />ICA<\/text>/);
+  assert.doesNotMatch(favicon, /vercel|next\.svg/i);
   const trace = await readFile(
     new URL("../public/data/example-trace.jsonl", import.meta.url),
     "utf8",

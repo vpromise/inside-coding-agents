@@ -56,7 +56,7 @@ jobs:
   web:
     name: Web
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: apps/web
@@ -90,6 +90,15 @@ jobs:
 
       - name: Build and test every published route
         run: npm test
+
+      - name: Install the pinned Chromium runtime
+        run: npx playwright install --with-deps chromium
+
+      - name: Run browser accessibility and visual regression gates
+        run: npm run test:browser
+
+      - name: Enforce Lighthouse category budgets
+        run: npm run test:lighthouse
 
       - name: Build and test the GitHub Pages export
         run: npm run test:pages

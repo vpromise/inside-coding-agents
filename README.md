@@ -54,6 +54,7 @@ The same material is useful as a beginner's coding-agent tutorial, an engineer's
 - 10 controlled experiments, 20 reproduced traces, structured results, and readable reports;
 - a bilingual, searchable website with Architecture Compare, 78-record Evidence Explorer, Agent timelines, structural Snapshot Diff, interactive Architecture Atlas, and generic data-driven routes;
 - an automatic 90-day snapshot freshness gate that runs in CI every week without rewriting research claims;
+- automated axe WCAG A/AA scans across 14 representative route families, reviewed desktop/mobile screenshot regression, and Lighthouse category budgets;
 - JSON Schema, graph, digest, trace, link, safety, and web-build validation.
 
 ## Quick start
@@ -100,6 +101,10 @@ npm run audit:ci
 npm run lint
 npm run typecheck
 npm test
+npx playwright install chromium
+npm run test:browser
+npm run test:lighthouse
+npm run test:pages
 ```
 
 ## Agent coverage

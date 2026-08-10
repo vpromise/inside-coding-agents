@@ -159,7 +159,7 @@ export default async function LessonPage({ params }: { params: Promise<{ slug: s
               <div><span>{String(index + 1).padStart(2, "0")}</span><span>{check.level}</span></div>
               <h3><LocalizedText zh={check.title["zh-CN"]} en={check.title.en} /></h3>
               <p><LocalizedText zh={check.acceptance["zh-CN"]} en={check.acceptance.en} /></p>
-              <code>{check.command}</code>
+              <code role="region" aria-label="验收命令 / acceptance command" tabIndex={0}>{check.command}</code>
             </article>
           ))}
         </div>

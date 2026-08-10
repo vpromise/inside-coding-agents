@@ -35,6 +35,15 @@ const eslintConfig = defineConfig([
         version: "detect",
       },
     },
+    rules: {
+      "jsx-a11y/no-noninteractive-tabindex": ["error", { roles: ["region"] }],
+    },
+  },
+  {
+    files: ["lighthouserc.cjs"],
+    rules: {
+      "@typescript-eslint/no-require-imports": "off",
+    },
   },
 ]);
 

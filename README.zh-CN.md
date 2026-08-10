@@ -54,6 +54,7 @@ Inside Coding Agents 是一个开源、双语的教程、架构图谱和实验�
 - 10 项受控实验、20 条 reproduced Trace、结构化 Result 与可读报告；
 - Architecture Compare、78 条 Evidence Explorer、Agent Timeline、结构化 Snapshot Diff、可搜索 Architecture Atlas、双语全文搜索和交互式 Trace Player；
 - 每周自动运行的 90 天 Snapshot freshness 门禁；它只要求人工复核，不自动改写研究 Claim；
+- 覆盖 14 类代表性路由的 axe WCAG A/AA 扫描、经过审核的桌面/移动端截图回归与 Lighthouse 类别预算；
 - Schema、内容图谱、digest、trace、链接、发布安全和网站构建校验。
 
 ## 快速开始
@@ -100,6 +101,10 @@ npm run audit:ci
 npm run lint
 npm run typecheck
 npm test
+npx playwright install chromium
+npm run test:browser
+npm run test:lighthouse
+npm run test:pages
 ```
 
 ## Agent 覆盖

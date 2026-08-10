@@ -110,7 +110,7 @@ export default async function ExperimentPage({
         <section className="experiment-section">
           <div className="section-heading section-heading--split">
             <div><span className="eyebrow">RUNS + METRICS</span><h2><LocalizedText zh="重复运行是否一致？" en="Are repeated runs consistent?" /></h2></div>
-            <code className="run-command">{result.runner.command}</code>
+            <code className="run-command" role="region" aria-label="实验运行命令 / experiment runner command" tabIndex={0}>{result.runner.command}</code>
           </div>
           <div className="run-result-grid">
             {result.runs.map((run) => {

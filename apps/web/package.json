@@ -16,6 +16,10 @@
     "start": "WRANGLER_LOG_PATH=.wrangler/wrangler.log vinext start",
     "test": "npm run build && node --test tests/audit-policy.test.mjs tests/rendered-html.test.mjs",
     "test:pages": "npm run build:pages && node --test tests/static-export.test.mjs",
+    "test:browser": "playwright test",
+    "test:browser:update": "playwright test --update-snapshots",
+    "test:lighthouse": "lhci autorun",
+    "test:quality": "npm run test:browser && npm run test:lighthouse",
     "prelint": "npm run sync:content",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "typecheck": "npm run sync:content && tsc --noEmit"
@@ -25,9 +29,12 @@
     "react-dom": "19.2.8"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.12.1",
     "@cloudflare/vite-plugin": "1.51.1",
     "@eslint/js": "9.39.4",
+    "@lhci/cli": "0.15.1",
     "@next/eslint-plugin-next": "16.3.0",
+    "@playwright/test": "1.62.1",
     "@tailwindcss/postcss": "4.3.3",
     "@types/node": "22.19.19",
     "@types/react": "19.2.18",
@@ -47,6 +54,9 @@
     "vinext": "1.0.0-beta.5",
     "vite": "8.2.1",
     "wrangler": "4.120.0"
+  },
+  "overrides": {
+    "tmp": "0.2.7"
   },
   "type": "module"
 }

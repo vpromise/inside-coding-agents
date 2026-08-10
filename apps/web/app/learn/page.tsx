@@ -54,7 +54,7 @@ export default function LearnPage() {
               <div className="tag-row">
                 {lesson.mechanism_ids.map((id) => <span key={id}>{id}</span>)}
               </div>
-              <code className="run-command">{lesson.run}</code>
+              <code className="run-command" role="region" aria-label="课程运行命令 / lesson run command" tabIndex={0}>{lesson.run}</code>
               <Link className="text-link" href={`/learn/${lesson.slug}`}><LocalizedText zh="进入本章" en="Open lesson" /> <span>→</span></Link>
             </div>
           </article>

@@ -236,7 +236,7 @@ export default async function MechanismPage({ params }: { params: Promise<{ mech
               <div><span>{lesson.id}</span><span>{check.level}</span></div>
               <strong><LocalizedText zh={check.title["zh-CN"]} en={check.title.en} /></strong>
               <p><LocalizedText zh={check.acceptance["zh-CN"]} en={check.acceptance.en} /></p>
-              <code>{check.command}</code>
+              <code role="region" aria-label="机制验收命令 / mechanism acceptance command" tabIndex={0}>{check.command}</code>
             </article>
           )))}
         </div>

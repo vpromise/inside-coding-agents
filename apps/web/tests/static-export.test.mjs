@@ -49,7 +49,7 @@ async function collectFiles(directory) {
 }
 
 test("GitHub Pages export contains every content route with repository-safe URLs", async () => {
-  assert.equal(expectedRoutes.length, 109, "the route inventory changed; review the export contract");
+  assert.equal(expectedRoutes.length, 115, "the route inventory changed; review the export contract");
   assert.equal(new Set(expectedRoutes).size, expectedRoutes.length, "route inventory contains duplicates");
 
   for (const route of expectedRoutes) {
@@ -97,6 +97,8 @@ test("GitHub Pages export publishes discoverability metadata and working deep li
   assert.match(home, new RegExp(`href="${basePath}/learn/agent-loop/"`));
   assert.match(home, new RegExp(`${basePath}/_next/`));
   assert.match(home, new RegExp(`${siteUrl}/og\\.png`));
+  assert.match(home, new RegExp(`href="${basePath}/favicon\\.svg"`));
+  assert.equal((home.match(/name="description"/g) ?? []).length, 1);
   assert.doesNotMatch(home, /rel="canonical"/, "a shared root canonical would mislabel deep pages");
   assert.match(trace, new RegExp(`href="${basePath}/data/example-trace\\.jsonl"`));
   assert.match(goldenTrace, new RegExp(`href="${basePath}/data/traces/run-s01-agent-loop-golden\\.jsonl"`));

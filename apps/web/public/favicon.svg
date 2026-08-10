@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" fill="#c8ff4d"/>
+  <rect x="3" y="3" width="58" height="58" fill="none" stroke="#111713" stroke-width="6"/>
+  <text x="32" y="39" fill="#111713" font-family="Arial, sans-serif" font-size="18" font-weight="800" text-anchor="middle">ICA</text>
+</svg>
