@@ -317,6 +317,162 @@
           "command": "python3 -m unittest curriculum.tests.test_vertical_slice.VerticalSliceTests.test_s06_truncates_and_prunes -v"
         }
       ]
+    },
+    {
+      "id": "s07-session-replay",
+      "number": "07",
+      "slug": "session-replay",
+      "title": {"zh-CN": "Session Event Log、Replay 与 Branch", "en": "Session Event Logs, Replay, and Branching"},
+      "summary": {"zh-CN": "从 append-only 事件重建派生状态，并创建保留 lineage 的分支。", "en": "Rebuild derived state from append-only events and create lineage-preserving branches."},
+      "mechanism_ids": ["event-stream", "session-replay"],
+      "status": "implemented",
+      "estimated_minutes": 38,
+      "difficulty": "intermediate",
+      "code_path": "curriculum/lessons/s07_session_replay/demo.py",
+      "content_paths": {"zh-CN": "curriculum/lessons/s07_session_replay/lesson.zh.md", "en": "curriculum/lessons/s07_session_replay/lesson.en.md"},
+      "run": "python3 -m curriculum.lessons.s07_session_replay.demo",
+      "change_contract": {
+        "previous_lesson_id": "s06-context-budget",
+        "summary": {"zh-CN": "把 Trace 从观察输出提升为可重建状态和 lineage 的事实日志。", "en": "Promote the trace from observation output to a factual log that can rebuild state and lineage."},
+        "adds": [
+          {"zh-CN": "严格 sequence、单 session/run 的 append-only SessionJournal", "en": "An append-only SessionJournal with strict sequence and one session/run identity"},
+          {"zh-CN": "确定性 replay projection、fingerprint 与 parent-preserving branch", "en": "Deterministic replay projections, fingerprints, and parent-preserving branches"}
+        ],
+        "preserves": [
+          {"zh-CN": "原始事件保持不可变；replay view 和 branch 都是派生产物。", "en": "Raw events remain immutable; replay views and branches are derived artifacts."}
+        ]
+      },
+      "golden_trace": {
+        "path": "curriculum/lessons/s07_session_replay/golden.trace.jsonl",
+        "run_id": "run-s07-session-replay-golden",
+        "expected_event_count": 7,
+        "focus_event_types": ["session.stop", "session.replay", "session.branch"]
+      },
+      "agent_bridge": {
+        "relationship": "adjacent",
+        "claim_ids": ["codex-source-event-stream", "pi-source-session-events", "reasonix-source-event-log"],
+        "notes": {"zh-CN": "固定源码 Claim 证明三种事件/会话记录边界；本章的 ReplayState 与 SessionBranch 是教学协议，不声称复制任一产品格式。", "en": "Pinned source claims establish three event/session recording boundaries; the lesson's ReplayState and SessionBranch are teaching protocols, not copies of any product format."}
+      },
+      "exercise_checks": [
+        {
+          "id": "s07-golden-trace",
+          "level": "observe",
+          "title": {"zh-CN": "复核 Replay Lineage", "en": "Verify replay lineage"},
+          "acceptance": {"zh-CN": "同一运行稳定地产生 replay fingerprint 和指向 sequence 2 的 branch。", "en": "The same run produces a stable replay fingerprint and a branch at sequence 2."},
+          "command": "python3 -m curriculum.golden verify s07-session-replay"
+        },
+        {
+          "id": "s07-journal-contract",
+          "level": "modify",
+          "title": {"zh-CN": "验证 Journal 不变量", "en": "Test journal invariants"},
+          "acceptance": {"zh-CN": "缺口 sequence、混合 run 或越界 fork 都被拒绝，父日志不被改写。", "en": "Gapped sequences, mixed runs, and out-of-range forks are rejected without rewriting the parent log."},
+          "command": "python3 -m unittest curriculum.tests.test_vertical_slice.VerticalSliceTests.test_s07_replays_and_branches -v"
+        }
+      ]
+    },
+    {
+      "id": "s08-context-compaction",
+      "number": "08",
+      "slug": "context-compaction",
+      "title": {"zh-CN": "Context Compaction 与 Checkpoint", "en": "Context Compaction and Checkpoints"},
+      "summary": {"zh-CN": "用带 provenance 的语义 checkpoint 替换过长历史，同时保留原始事实日志。", "en": "Replace long visible history with a provenance-bearing semantic checkpoint while retaining the factual log."},
+      "mechanism_ids": ["context-budget", "context-compaction"],
+      "status": "implemented",
+      "estimated_minutes": 42,
+      "difficulty": "advanced",
+      "code_path": "curriculum/lessons/s08_context_compaction/demo.py",
+      "content_paths": {"zh-CN": "curriculum/lessons/s08_context_compaction/lesson.zh.md", "en": "curriculum/lessons/s08_context_compaction/lesson.en.md"},
+      "run": "python3 -m curriculum.lessons.s08_context_compaction.demo",
+      "change_contract": {
+        "previous_lesson_id": "s07-session-replay",
+        "summary": {"zh-CN": "在可重放事实日志之上，为下一轮模型编译更小的语义 checkpoint。", "en": "Compile a smaller semantic checkpoint for the next model turn on top of a replayable factual log."},
+        "adds": [
+          {"zh-CN": "显式 trigger、可注入 summarizer 与 recent-tail 策略", "en": "An explicit trigger, injectable summarizer, and recent-tail policy"},
+          {"zh-CN": "context.compact 事件、source fingerprint 与 before/after 大小", "en": "A context.compact event with source fingerprint and before/after size"}
+        ],
+        "preserves": [
+          {"zh-CN": "摘要只是模型可见投影，不能覆盖或替代原始 SessionJournal。", "en": "A summary is only a model-visible projection and never overwrites the original SessionJournal."}
+        ]
+      },
+      "golden_trace": {
+        "path": "curriculum/lessons/s08_context_compaction/golden.trace.jsonl",
+        "run_id": "run-s08-context-compaction-golden",
+        "expected_event_count": 10,
+        "focus_event_types": ["tool.result", "context.compact", "model.request", "session.stop"]
+      },
+      "agent_bridge": {
+        "relationship": "direct",
+        "claim_ids": ["codex-source-auto-compaction", "pi-source-context-compaction", "reasonix-source-context-maintenance"],
+        "notes": {"zh-CN": "三个固定源码 Snapshot 都有直接 compaction Claim；比较时仍区分触发阈值、保留 tail、缓存与恢复语义。", "en": "All three pinned source snapshots have direct compaction claims; comparison still separates trigger thresholds, retained tails, caching, and resume semantics."}
+      },
+      "exercise_checks": [
+        {
+          "id": "s08-golden-trace",
+          "level": "observe",
+          "title": {"zh-CN": "复核 Compaction 决策", "en": "Verify the compaction decision"},
+          "acceptance": {"zh-CN": "第二次模型请求前出现 context.compact，且 final_chars 小于 original_chars。", "en": "context.compact appears before the second model request and final_chars is below original_chars."},
+          "command": "python3 -m curriculum.golden verify s08-context-compaction"
+        },
+        {
+          "id": "s08-checkpoint-contract",
+          "level": "modify",
+          "title": {"zh-CN": "验证 Checkpoint Provenance", "en": "Test checkpoint provenance"},
+          "acceptance": {"zh-CN": "模型收到 compacted checkpoint，Trace 保留被压缩范围的稳定 SHA-256。", "en": "The model receives a compacted checkpoint and the trace retains a stable SHA-256 for the compacted range."},
+          "command": "python3 -m unittest curriculum.tests.test_vertical_slice.VerticalSliceTests.test_s08_compacts_with_provenance -v"
+        }
+      ]
+    },
+    {
+      "id": "s09-memory-skills",
+      "number": "09",
+      "slug": "memory-skills",
+      "title": {"zh-CN": "Memory 与按需 Skills", "en": "Memory and On-Demand Skills"},
+      "summary": {"zh-CN": "把长期事实与完整能力说明移出常驻上下文，只在相关时检索和加载。", "en": "Move durable facts and full capability instructions out of resident context, retrieving them only when relevant."},
+      "mechanism_ids": ["memory-retrieval", "extension-runtime"],
+      "status": "implemented",
+      "estimated_minutes": 40,
+      "difficulty": "advanced",
+      "code_path": "curriculum/lessons/s09_memory_skills/demo.py",
+      "content_paths": {"zh-CN": "curriculum/lessons/s09_memory_skills/lesson.zh.md", "en": "curriculum/lessons/s09_memory_skills/lesson.en.md"},
+      "run": "python3 -m curriculum.lessons.s09_memory_skills.demo",
+      "change_contract": {
+        "previous_lesson_id": "s08-context-compaction",
+        "summary": {"zh-CN": "从“压缩旧上下文”前进到“按需取回外部事实与能力说明”。", "en": "Move from compressing old context to retrieving external facts and capability instructions on demand."},
+        "adds": [
+          {"zh-CN": "带 scope/source 的 MemoryRecord 与确定性 retrieval", "en": "Source- and scope-attributed MemoryRecord objects with deterministic retrieval"},
+          {"zh-CN": "轻量 descriptor 常驻、完整 skill instructions 延迟加载", "en": "Resident lightweight descriptors with lazily loaded full skill instructions"}
+        ],
+        "preserves": [
+          {"zh-CN": "检索与加载都通过可观察事件进入上下文，不把外部数据伪装成模型记忆。", "en": "Retrieval and loading enter context through observable events; external data is never disguised as model memory."}
+        ]
+      },
+      "golden_trace": {
+        "path": "curriculum/lessons/s09_memory_skills/golden.trace.jsonl",
+        "run_id": "run-s09-memory-skills-golden",
+        "expected_event_count": 13,
+        "focus_event_types": ["memory.read", "skill.load", "tool.result", "model.request"]
+      },
+      "agent_bridge": {
+        "relationship": "adjacent",
+        "claim_ids": ["codex-source-extension-runtime", "pi-source-extension-runtime", "reasonix-source-extension-runtime", "claude-code-doc-hooks"],
+        "notes": {"zh-CN": "Claim 直接覆盖 skills/plugins/hooks 或 lazy extension runtime，但当前没有统一的跨产品 durable-memory 语义，因此 Memory 部分保持相邻映射。", "en": "The claims directly cover skills, plugins, hooks, or lazy extension runtimes, but no uniform cross-product durable-memory semantics are established, so the memory portion remains an adjacent mapping."}
+      },
+      "exercise_checks": [
+        {
+          "id": "s09-golden-trace",
+          "level": "observe",
+          "title": {"zh-CN": "复核按需加载", "en": "Verify on-demand loading"},
+          "acceptance": {"zh-CN": "memory.read 和 skill.load 各出现一次，并且结果带 source 或 skill identity。", "en": "memory.read and skill.load each appear once with source or skill identity."},
+          "command": "python3 -m curriculum.golden verify s09-memory-skills"
+        },
+        {
+          "id": "s09-retrieval-contract",
+          "level": "modify",
+          "title": {"zh-CN": "验证 Retrieval 合同", "en": "Test the retrieval contract"},
+          "acceptance": {"zh-CN": "查询只返回相关、带来源的 memory；未知 skill 明确失败，不静默注入。", "en": "Queries return only relevant source-attributed memory; unknown skills fail explicitly rather than being silently injected."},
+          "command": "python3 -m unittest curriculum.tests.test_vertical_slice.VerticalSliceTests.test_s09_retrieves_memory_and_loads_skill -v"
+        }
+      ]
     }
   ]
 }

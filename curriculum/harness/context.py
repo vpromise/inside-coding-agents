@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any, Callable, Sequence
 
 from .types import Message
 
@@ -129,4 +130,60 @@ class ContextBudget:
             removed_count=max(0, len(messages) - len(kept)),
             original_chars=original_chars,
             final_chars=final_chars,
+        )
+
+
+@dataclass(frozen=True)
+class CompactionReport:
+    messages: tuple[Message, ...]
+    summary: str
+    dropped_count: int
+    original_chars: int
+    final_chars: int
+    source_sha256: str
+
+
+@dataclass(frozen=True)
+class ContextCompactor:
+    """Inject a deterministic summarizer at an explicit context threshold."""
+
+    trigger_chars: int
+    keep_recent_messages: int
+    summarize: Callable[[Sequence[Message]], str]
+
+    def should_compact(self, messages: Sequence[Message]) -> bool:
+        return sum(len(message.content) for message in messages) > self.trigger_chars
+
+    def compact(self, messages: Sequence[Message]) -> CompactionReport:
+        system = tuple(messages[:1]) if messages[:1] and messages[0].role == "system" else ()
+        remaining = tuple(messages[len(system) :])
+        keep_count = min(max(0, self.keep_recent_messages), len(remaining))
+        dropped = remaining if keep_count == 0 else remaining[:-keep_count]
+        recent = () if keep_count == 0 else remaining[-keep_count:]
+        if not dropped:
+            raise ValueError("compaction has no older messages to summarize")
+        summary = self.summarize(dropped).strip()
+        if not summary:
+            raise ValueError("compaction summary must be non-empty")
+        source_wire = json.dumps(
+            [message.to_wire() for message in dropped],
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+        compacted = (
+            *system,
+            Message(
+                role="assistant",
+                content=f"[compacted checkpoint]\n{summary}",
+            ),
+            *recent,
+        )
+        return CompactionReport(
+            messages=tuple(compacted),
+            summary=summary,
+            dropped_count=len(dropped),
+            original_chars=sum(len(message.content) for message in messages),
+            final_chars=sum(len(message.content) for message in compacted),
+            source_sha256=hashlib.sha256(source_wire.encode("utf-8")).hexdigest(),
         )

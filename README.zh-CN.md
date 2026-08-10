@@ -35,8 +35,8 @@ Inside Coding Agents 是一个开源、双语的教程、架构图谱和实验�
 
 | 视图 | 解决的问题 | 从这里开始 |
 | --- | --- | --- |
-| Academy | 如何从零构建一个 Coding Agent？ | [运行 6 节课程](curriculum/README.md) |
-| Mechanisms | 不同 Agent Harness 共同面对哪些设计问题？ | [浏览 14 个机制](content/mechanisms/README.md) |
+| Academy | 如何从零构建一个 Coding Agent？ | [运行 9 节课程](curriculum/README.md) |
+| Mechanisms | 不同 Agent Harness 共同面对哪些设计问题？ | [浏览 16 个机制](content/mechanisms/README.md) |
 | Agent Atlas | 某个 Agent 如何实现这些机制？ | [查看版本化档案](content/agents/README.md) |
 | Experiment Lab | 哪些观察可以在固定条件下复现？ | [回放受控实验](labs/README.md) |
 | Registry | Claim、Evidence、Schema 和稳定 ID 存在哪里？ | [了解数据模型](registry/README.md) |
@@ -44,7 +44,7 @@ Inside Coding Agents 是一个开源、双语的教程、架构图谱和实验�
 
 ### v0.1 公开预览已包含
 
-- 6 篇可运行的双语长文教程，每篇都包含心智模型、逐步实现、失败模式、分级练习、生产边界与完整源码；
+- 9 篇可运行的双语长文教程，每篇都包含逐字节验证的 Golden Trace、心智模型、逐步实现、失败模式、分级练习、生产边界与完整源码；
 - 14 个跨 Agent Mechanism；
 - 5 个 Agent Profile、9 个不可变 Snapshot 和 30 条已审查 Claim；
 - Codex、Pi、Reasonix 的固定 commit 源码地图；

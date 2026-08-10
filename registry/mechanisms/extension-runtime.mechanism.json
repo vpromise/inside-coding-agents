@@ -6,7 +6,7 @@
   "category": "extensibility",
   "status": "core",
   "prerequisites": ["tool-dispatch", "instruction-discovery"],
-  "reference_lessons": ["s03-tool-dispatch", "s05-instructions"],
+  "reference_lessons": ["s03-tool-dispatch", "s05-instructions", "s09-memory-skills"],
   "agent_implementations": [
     {
       "agent_id": "codex",

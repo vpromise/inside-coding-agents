@@ -1,0 +1,18 @@
+{
+  "schema_version": "0.1.0",
+  "id": "memory-retrieval",
+  "title": "Memory Retrieval",
+  "summary": "Store selected, source-attributed facts outside the immediate context and retrieve only relevant records for the current turn.",
+  "category": "context",
+  "status": "core",
+  "prerequisites": ["context-compaction"],
+  "reference_lessons": ["s09-memory-skills"],
+  "agent_implementations": [],
+  "experiments": [],
+  "open_questions": [
+    "Which facts deserve durable memory instead of session-local state?",
+    "How should stale or contradicted memories be invalidated?",
+    "What retrieval evidence should be visible to the user and model?"
+  ],
+  "reader_layer_status": {"L0": "complete", "L1": "complete", "L2": "partial", "L3": "missing", "L4": "missing"}
+}

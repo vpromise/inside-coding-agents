@@ -17,7 +17,10 @@
       "curriculum/lessons/s03_tool_dispatch/golden.trace.jsonl",
       "curriculum/lessons/s04_workspace_tools/golden.trace.jsonl",
       "curriculum/lessons/s05_instructions/golden.trace.jsonl",
-      "curriculum/lessons/s06_context_budget/golden.trace.jsonl"
+      "curriculum/lessons/s06_context_budget/golden.trace.jsonl",
+      "curriculum/lessons/s07_session_replay/golden.trace.jsonl",
+      "curriculum/lessons/s08_context_compaction/golden.trace.jsonl",
+      "curriculum/lessons/s09_memory_skills/golden.trace.jsonl"
     ]
   },
   "curriculum": {
@@ -655,6 +658,324 @@
         "content": {
           "zh-CN": "# s06 · Context Budget 与截断\n\n> 上下文不是无限聊天记录，而是 Harness 为下一次模型调用编译的一份有预算输入。\n\n## 学完这一章，你会得到什么 {#learn}\n\n到 s05 为止，Harness 会不断累积 system prompt、项目指令、用户消息、assistant turn、tool results 和 tool descriptors。任何有限上下文窗口最终都会被填满。等 provider 返回 “context length exceeded” 才处理，已经太晚。\n\n本章加入两道独立预算：工具结果进入消息前先截断；每次模型请求前再裁剪整个消息列表。为了离线、确定性教学，我们用字符数代替 tokenizer，并把每次策略动作写入 Trace。\n\n完成本章后，你应该能够：\n\n- 画出 system、messages、tools、输出预留共同争夺窗口的预算模型。\n- 区分 tool-output truncation、history pruning 和 semantic compaction。\n- 解释为什么要先限制单条工具结果，再处理全局消息预算。\n- 读懂“保留 system、优先最近消息”的反向选择算法。\n- 指出教学算法在 token 计数、消息配对和超大 system prompt 上的局限。\n\n---\n\n## 问题：上下文会在最不方便的时候耗尽 {#problem}\n\n模型窗口通常同时容纳：\n\n```text\nsystem + project instructions + tool schemas\n+ conversation history + tool results\n+ reserved output tokens\n<= provider context window\n```\n\n如果 Harness 只把消息不断 append，两个现象会先后出现：\n\n1. 成本与延迟随历史增长。\n2. 最终 request 被 provider 拒绝，Agent 在任务中途停止。\n\n工具输出尤其危险：一次测试日志、搜索结果或依赖树就可能比此前全部对话更大。只裁旧聊天而不限制单条结果，会让一个 tool message 独占窗口。\n\n> Context management 的目标不是“永远保留最多文本”，而是在预算内保留完成下一步所需的状态，并让信息损失可见。\n\n---\n\n## 心智模型：两级保险丝 {#mental-model}\n\n本章使用两级策略：\n\n```text\nraw tool result\n      │\n      ├─ Level 1: max_tool_output_chars\n      │       └─ bounded result + truncated metadata\n      ▼\nappend tool message\n      │\n      ├─ Level 2: max_input_chars before next model call\n      │       └─ keep system + recent messages\n      ▼\nmodel request\n```\n\n| 策略 | 作用对象 | 发生时机 | 是否理解语义 |\n| --- | --- | --- | --- |\n| Truncation | 单个 tool result | 结果进入 messages 前 | 否 |\n| Pruning | 消息列表 | 每次 model request 前 | 否 |\n| Compaction | 一段历史 | 超预算前或策略触发时 | 是，生成摘要/状态 |\n\n教学实现前两种。Compaction 会生成新的语义投影，需要更强的 provenance、失败处理和评测，因此没有伪装成简单字符串截断。\n\n### 预算决定是 Harness policy\n\n模型可以建议“这段历史不重要”，但最终输入包含什么、删除什么、为输出预留多少，必须由 Harness 执行并记录。否则同一会话无法可靠重放。\n\n---\n\n## 逐步实现两级预算 {#build}\n\n### 第 1 步：声明两个独立上限\n\n```python\n@dataclass(frozen=True)\nclass ContextBudget:\n    max_input_chars: int = 8_000\n    max_tool_output_chars: int = 2_000\n```\n\n把它们分开，才能判断到底是某个工具异常膨胀，还是长期历史自然增长。生产配置还会为 system、tool schema 和输出分别预留 token。\n\n### 第 2 步：稳定编码工具结果\n\n```python\nencoded = json.dumps(value, ensure_ascii=False, sort_keys=True)\nif len(encoded) <= self.max_tool_output_chars:\n    return value, False\n```\n\n预算针对将进入消息的序列化形式，而不是 Python 对象数量。排序让同一对象在测试中得到稳定长度与 fingerprint。\n\n### 第 3 步：超限时返回带元数据的 preview\n\n```python\npreview_size = max(0, self.max_tool_output_chars - 96)\nreturn {\n    \"truncated\": True,\n    \"original_chars\": len(encoded),\n    \"preview\": encoded[:preview_size],\n}, True\n```\n\n结果不能只是无提示地切掉尾部。`truncated` 告诉模型和 UI 内容不完整，`original_chars` 说明损失规模，`preview` 保留可辨认片段。\n\n常数 96 是教学实现为 JSON 包装预留的近似空间，不保证最终编码严格等于上限；生产代码应对最终 wire representation 再次测量。\n\n### 第 4 步：在每次 model request 前调用 `fit`\n\n```python\nif self.budget is not None:\n    report = self.budget.fit(messages)\n    if report.removed_count or report.final_chars < report.original_chars:\n        messages = list(report.messages)\n        self._emit(\n            \"context.prune\",\n            actor_kind=\"harness\",\n            actor_id=self.config.agent_id,\n            payload={\n                \"removed_messages\": report.removed_count,\n                \"original_chars\": report.original_chars,\n                \"final_chars\": report.final_chars,\n            },\n        )\n```\n\n预算检查必须发生在 request 之前；把 prune 放在 response 之后只能保护下一轮，无法挽救当前已经超限的请求。\n\n### 第 5 步：固定 system，反向保留最近历史\n\n```python\nsystem = [message for message in messages[:1] if message.role == \"system\"]\nremaining = list(messages[len(system):])\nkept_reversed = []\nused = sum(len(message.content) for message in system)\n\nfor message in reversed(remaining):\n    if kept_reversed and used + len(message.content) > self.max_input_chars:\n        continue\n    kept_reversed.append(message)\n    used += len(message.content)\n```\n\n算法从最新消息向前选择，因为最近的用户意图、assistant action 和 tool result 通常最直接影响下一步。最后再 reverse 回原始时间顺序。\n\n### 第 6 步：至少保留最新消息的尾部\n\n```python\nif not kept_reversed and used + len(message.content) > self.max_input_chars:\n    room = max(0, self.max_input_chars - used)\n    message = Message(\n        role=message.role,\n        content=message.content[-room:] if room else \"\",\n        name=message.name,\n        tool_call_id=message.tool_call_id,\n    )\n```\n\n这避免预算极小时把全部动态历史删除。但保留“尾部”只是确定性教学选择：代码文件可能需要开头，错误日志可能需要首尾，tool-call/result pair 也不应被拆散。\n\n---\n\n## 运行超大工具结果示例 {#run}\n\n本章注册一个故意返回大 payload 的工具：\n\n```python\nhandler=lambda args: {\"content\": \"context-data-\" * 80}\n```\n\nRunner 配置为：\n\n```python\nContextBudget(\n    max_input_chars=300,\n    max_tool_output_chars=180,\n)\n```\n\n执行：\n\n```bash\npython3 -m curriculum.lessons.s06_context_budget.demo\n```\n\n你应该在 Trace 中先后看到：\n\n```text\ntool.result             payload.truncated = true\ncontext.prune           original_chars > final_chars\nmodel.request           receives the bounded projection\n```\n\n验证代码：\n\n```python\nrunner, trace = build_demo()\nresult = runner.run(\"Fetch the large result, then explain the budget behavior.\")\n\ntool_result = next(e for e in result.events if e[\"type\"] == \"tool.result\")\nassert tool_result[\"payload\"][\"truncated\"] is True\n\nprune = next(e for e in result.events if e[\"type\"] == \"context.prune\")\nassert prune[\"payload\"][\"final_chars\"] < \\\n       prune[\"payload\"][\"original_chars\"]\n```\n\n### 检查模型实际看到的第二轮\n\n```python\nsecond_request = runner.model.requests[1]\nfor message in second_request:\n    print(message.role, len(message.content), message.content[:60])\n```\n\n不要只看 `result.messages`：它表示运行结束时的内部列表；`model.requests[1]` 才是第二轮真正传给模型的投影。\n\n---\n\n## 读懂算法，也要看见它的局限 {#code-reading}\n\n### 字符不等于 token\n\n中文、英文、代码和 JSON 的 token/character 比例不同，不同 tokenizer 也不同。字符预算只为了离线确定性。Provider adapter 应使用实际 tokenizer 或服务端计数，并保留安全余量。\n\n### System prompt 可能自己就超预算\n\n教学算法始终保留第一条 system message。如果它大于 `max_input_chars`，最终输入仍会超限。生产系统必须对 prompt 各 section 单独预算，或者在启动前拒绝不可能满足的配置。\n\n### 独立消息不一定能独立删除\n\nAssistant tool call 与对应 tool result 是协议对；只保留一边可能让 provider 拒绝消息结构。更稳健的算法以 turn 或 atomic group 为单位裁剪，而不是逐条 message。\n\n### Pruning 会永久丢信息\n\n简单删除不能恢复旧目标、约束和未完成任务。Semantic compaction 会把旧历史转成摘要、todo state、文件变化和 unresolved questions，但摘要本身也可能失真，需要 provenance 和质量评测。\n\n### Preview 需要取样策略\n\n只保留前缀适合某些文件，却可能漏掉错误栈尾部。工具可以提供结构化 pagination、head+tail、匹配窗口或 artifact handle，让模型按需继续读取。\n\n---\n\n## 常见失败模式 {#failure-modes}\n\n| 错误 | 后果 | 更好的策略 |\n| --- | --- | --- |\n| 等 provider 报超限 | 任务中途硬失败 | request 前预估并留余量 |\n| 只限制总历史 | 单个 tool result 独占窗口 | 单结果与全局两级预算 |\n| 静默截断 | 模型把片段当完整事实 | 明确 truncated、原始大小、读取方式 |\n| 删除 tool-call 一半 | 协议无效或语义断裂 | 按 atomic turn/group 裁剪 |\n| 永远保留全部 system | 配置本身超限 | Section budget 与启动时验证 |\n| 摘要覆盖原始记录 | 无法审计摘要错误 | 原始 transcript 外存，context 只存投影 |\n| 每轮重新总结全部历史 | 成本和漂移不断累积 | 增量 compaction 与稳定 checkpoint |\n| 没有 prune 事件 | 无法解释模型为何遗忘 | 记录策略、前后大小与丢弃范围 |\n\n---\n\n## 动手实验 {#exercises}\n\n### A. 调低输入预算\n\n把 `max_input_chars` 降到 120。验收条件：最新 tool result 仍保留可辨认 preview；Trace 报告裁剪前后字符数；运行仍有明确 stop reason。\n\n### B. 超大 system prompt\n\n创建长度 500 的 system prompt，却设置输入预算 100。运行并解释为何当前 `final_chars` 仍可能超过预算。然后设计启动时 validation，拒绝这组配置。\n\n### C. Atomic turn pruning\n\n把 messages 分成 system、user turn、assistant+tool group。实现按 group 从后往前保留，保证 tool-call 与 result 不分离。为“单个 group 自身超限”定义策略。\n\n### D. Head + tail 工具结果\n\n修改 `truncate_tool_result`，同时保留前 60% 与后 40%，中间插入省略元数据。验收条件：最终 JSON 有稳定上限，模型能看见错误日志结尾。\n\n### E. Token adapter\n\n为 `ContextBudget` 注入 `measure(text) -> int`，测试字符计数器和一个 fake tokenizer。核心算法不应该依赖具体 provider SDK。\n\n### F. Compaction manifest\n\n设计一个摘要对象，至少包含 goal、completed work、open tasks、changed files、constraints 和 source event range。说明每个字段如何从原始 Trace 追溯。\n\n---\n\n## 深入：从预算到长期记忆 {#deep-dive}\n\n生产 Context Manager 往往组合四种层：\n\n1. **Immediate window**：最近 turn 与当前工具结果，原样保留。\n2. **Compacted history**：旧对话的结构化摘要和 checkpoint。\n3. **External artifacts**：大文件、日志和搜索结果保存在窗口外，用 handle 按需读取。\n4. **Durable memory**：跨会话仍有价值的项目事实，经过选择与更新。\n\n关键不是“存在哪里”，而是每次模型调用如何选择投影。一个成熟预算器可能计算：\n\n```text\navailable_input\n= context_window\n- reserved_output\n- system_sections\n- tool_descriptors\n- safety_margin\n```\n\n然后把剩余空间分给 current task、recent turns、tool results、retrieved memory 和 compacted state。每一类都需要优先级、最小保证和最大上限。\n\n### 如何评测 compaction？\n\n压缩率不够。至少要测：\n\n- 后续任务完成率是否下降。\n- 关键约束是否仍被遵循。\n- 未完成任务是否被保留。\n- 文件与 tool-call identity 是否正确。\n- 摘要是否引入原文没有的事实。\n- 多次 compaction 后错误是否累积。\n\n> Context window 是模型的工作记忆，不是系统的唯一数据库。可靠 Harness 会保存完整事实记录，再为每轮编译一个有限投影。\n\n---\n\n## 本章检查点 {#checkpoint}\n\n完成 foundations 前，请确认你能回答：\n\n1. 为什么单工具结果与全局历史需要不同预算？\n2. 为什么字符数只适合教学？\n3. Tool call 与 result 为什么应作为 atomic group？\n4. Pruning 与 semantic compaction 的信息损失有何不同？\n5. 为什么 `context.prune` 必须成为 Trace 事件？\n\n至此，你已经拥有一条可运行的 reference harness vertical slice：有界 loop、流式事件、结构化工具、工作区边界、分层指令和上下文预算。下一步不是盲目加功能，而是用 Mechanism、Agent Snapshot、Claim、Experiment 与 Trace 去比较真实 coding agent 如何解决同一组问题。\n",
           "en": "# s06 · Context Budgets and Truncation\n\n> Context is not an infinite transcript. It is a budgeted input projection compiled by the harness for the next model call.\n\n## What you will build {#learn}\n\nBy s05, the harness keeps accumulating system text, project instructions, user messages, assistant turns, tool results, and tool descriptors. Every finite context window eventually fills. Waiting for the provider to return “context length exceeded” is too late.\n\nThis chapter adds two independent budgets: truncate a tool result before it enters messages, then prune the message list before every model request. For offline deterministic teaching, characters stand in for tokens, and every policy action becomes a trace event.\n\nBy the end, you should be able to:\n\n- Model how system text, messages, tools, and output reservation compete for a window.\n- Distinguish tool-output truncation, history pruning, and semantic compaction.\n- Explain why individual results are bounded before global history is fitted.\n- Read the “keep system, prefer recent messages” reverse-selection algorithm.\n- Identify limitations around token counting, message pairing, and oversized system prompts.\n\n---\n\n## The problem: context runs out at the worst time {#problem}\n\nA model window usually contains:\n\n```text\nsystem + project instructions + tool schemas\n+ conversation history + tool results\n+ reserved output tokens\n<= provider context window\n```\n\nIf the harness only appends, two things happen:\n\n1. Cost and latency grow with history.\n2. Eventually the provider rejects a request and the agent stops mid-task.\n\nTool output is particularly dangerous. One test log, search result, or dependency tree can exceed the entire conversation so far. Pruning old chat without bounding an individual result lets one tool message monopolize the window.\n\n> Context management does not preserve the most text. It preserves enough state for the next step within budget and makes information loss visible.\n\n---\n\n## Mental model: two fuses {#mental-model}\n\nThe lesson uses two policy levels:\n\n```text\nraw tool result\n      │\n      ├─ Level 1: max_tool_output_chars\n      │       └─ bounded result + truncated metadata\n      ▼\nappend tool message\n      │\n      ├─ Level 2: max_input_chars before next model call\n      │       └─ keep system + recent messages\n      ▼\nmodel request\n```\n\n| Policy | Target | Timing | Semantic understanding? |\n| --- | --- | --- | --- |\n| Truncation | One tool result | Before it enters messages | No |\n| Pruning | Message list | Before every request | No |\n| Compaction | A history span | Before overflow or on policy trigger | Yes, creates a summary/state projection |\n\nThe teaching harness implements the first two. Compaction creates a new semantic projection and needs stronger provenance, failure handling, and evaluation; it should not be disguised as substring slicing.\n\n### Budget decisions are harness policy\n\nThe model may suggest that history is unimportant, but the harness decides what enters the request, what is removed, and what output space is reserved. Otherwise the same session cannot be replayed reliably.\n\n---\n\n## Implement the two-level budget step by step {#build}\n\n### Step 1: declare independent limits\n\n```python\n@dataclass(frozen=True)\nclass ContextBudget:\n    max_input_chars: int = 8_000\n    max_tool_output_chars: int = 2_000\n```\n\nSeparate limits distinguish one abnormal tool from normal long-session growth. Production configuration also reserves tokens separately for system sections, tool schemas, and output.\n\n### Step 2: measure the serialized result\n\n```python\nencoded = json.dumps(value, ensure_ascii=False, sort_keys=True)\nif len(encoded) <= self.max_tool_output_chars:\n    return value, False\n```\n\nMeasure the representation that will enter the message, not the number of Python objects. Key sorting stabilizes length and fingerprints in deterministic tests.\n\n### Step 3: return a metadata-bearing preview\n\n```python\npreview_size = max(0, self.max_tool_output_chars - 96)\nreturn {\n    \"truncated\": True,\n    \"original_chars\": len(encoded),\n    \"preview\": encoded[:preview_size],\n}, True\n```\n\nDo not silently chop the tail. `truncated` tells the model and UI that content is incomplete, `original_chars` describes loss, and `preview` preserves an identifiable sample.\n\nThe constant 96 is a teaching approximation for JSON wrapper overhead. It does not guarantee a final wire size exactly equal to the limit; production code should measure the final representation again.\n\n### Step 4: call `fit` before every model request\n\n```python\nif self.budget is not None:\n    report = self.budget.fit(messages)\n    if report.removed_count or report.final_chars < report.original_chars:\n        messages = list(report.messages)\n        self._emit(\n            \"context.prune\",\n            actor_kind=\"harness\",\n            actor_id=self.config.agent_id,\n            payload={\n                \"removed_messages\": report.removed_count,\n                \"original_chars\": report.original_chars,\n                \"final_chars\": report.final_chars,\n            },\n        )\n```\n\nBudgeting belongs before the request. Pruning after a response can protect the next turn but cannot rescue the already oversized call.\n\n### Step 5: pin system and select recent history backward\n\n```python\nsystem = [message for message in messages[:1] if message.role == \"system\"]\nremaining = list(messages[len(system):])\nkept_reversed = []\nused = sum(len(message.content) for message in system)\n\nfor message in reversed(remaining):\n    if kept_reversed and used + len(message.content) > self.max_input_chars:\n        continue\n    kept_reversed.append(message)\n    used += len(message.content)\n```\n\nRecent user intent, assistant action, and tool output are usually most relevant to the next step. Reverse the selected list again to restore chronological order.\n\n### Step 6: retain at least the newest message tail\n\n```python\nif not kept_reversed and used + len(message.content) > self.max_input_chars:\n    room = max(0, self.max_input_chars - used)\n    message = Message(\n        role=message.role,\n        content=message.content[-room:] if room else \"\",\n        name=message.name,\n        tool_call_id=message.tool_call_id,\n    )\n```\n\nThis prevents a tiny budget from deleting all dynamic history. Keeping the tail is only a deterministic teaching choice: source files may need their beginning, logs may need both ends, and tool-call/result pairs must not be split.\n\n---\n\n## Run the oversized-result example {#run}\n\nThe lesson registers a deliberately large result:\n\n```python\nhandler=lambda args: {\"content\": \"context-data-\" * 80}\n```\n\nThe runner uses:\n\n```python\nContextBudget(\n    max_input_chars=300,\n    max_tool_output_chars=180,\n)\n```\n\nExecute:\n\n```bash\npython3 -m curriculum.lessons.s06_context_budget.demo\n```\n\nThe trace should show, in order:\n\n```text\ntool.result             payload.truncated = true\ncontext.prune           original_chars > final_chars\nmodel.request           receives the bounded projection\n```\n\nVerify it:\n\n```python\nrunner, trace = build_demo()\nresult = runner.run(\"Fetch the large result, then explain the budget behavior.\")\n\ntool_result = next(e for e in result.events if e[\"type\"] == \"tool.result\")\nassert tool_result[\"payload\"][\"truncated\"] is True\n\nprune = next(e for e in result.events if e[\"type\"] == \"context.prune\")\nassert prune[\"payload\"][\"final_chars\"] < \\\n       prune[\"payload\"][\"original_chars\"]\n```\n\n### Inspect the actual second request\n\n```python\nsecond_request = runner.model.requests[1]\nfor message in second_request:\n    print(message.role, len(message.content), message.content[:60])\n```\n\nDo not inspect only `result.messages`, which is end-of-run internal state. `model.requests[1]` is the projection the model actually received.\n\n---\n\n## Understand the algorithm and its limits {#code-reading}\n\n### Characters are not tokens\n\nChinese, English, code, and JSON have different token-to-character ratios, and tokenizers differ. Character counts are deterministic teaching proxies. A provider adapter should use a real tokenizer or server count with safety margin.\n\n### The system prompt may exceed the budget alone\n\nThe teaching algorithm always keeps the first system message. If it exceeds `max_input_chars`, final input still exceeds the limit. Production systems budget prompt sections or reject impossible configuration at startup.\n\n### Messages are not always independently removable\n\nAn assistant tool call and its tool result form a protocol pair. Keeping only one side may make provider history invalid. Stronger algorithms prune atomic turns or groups rather than arbitrary messages.\n\n### Pruning permanently loses information\n\nDeletion cannot recover old goals, constraints, or unfinished work. Semantic compaction projects history into a summary, todo state, file changes, and unresolved questions—but summaries can distort facts and need provenance and quality evaluation.\n\n### Preview selection needs semantics\n\nA prefix helps some files but may lose the end of a stack trace. Tools can expose pagination, head+tail, match windows, or artifact handles so the model retrieves more on demand.\n\n---\n\n## Common failure modes {#failure-modes}\n\n| Mistake | Consequence | Better strategy |\n| --- | --- | --- |\n| Wait for provider overflow | Hard failure mid-task | Estimate before request with margin |\n| Limit only total history | One tool result owns the window | Per-result and global limits |\n| Silent truncation | Model treats a fragment as complete | Expose truncation, size, and retrieval path |\n| Split half a tool pair | Invalid protocol or broken meaning | Prune atomic turns/groups |\n| Always retain all system text | Configuration itself overflows | Section budgets and startup validation |\n| Replace source transcript with summary | Summary errors cannot be audited | Store raw facts externally; project context |\n| Resummarize everything every turn | Cost and drift compound | Incremental compaction with checkpoints |\n| No prune event | Forgetting is inexplicable | Trace policy, before/after size, and range |\n\n---\n\n## Exercises {#exercises}\n\n### A. Lower the input budget\n\nSet `max_input_chars` to 120. Acceptance: the newest tool result retains an identifiable preview, the trace reports before/after characters, and the run has an explicit stop reason.\n\n### B. Oversized system prompt\n\nCreate a 500-character system prompt with a 100-character budget. Explain why current `final_chars` may remain over budget, then design startup validation that rejects the configuration.\n\n### C. Atomic-turn pruning\n\nGroup messages into system, user turn, and assistant+tool bundles. Retain groups from newest backward without splitting tool pairs. Define a policy for one group that exceeds the budget alone.\n\n### D. Head-and-tail output\n\nModify `truncate_tool_result` to retain 60% from the head and 40% from the tail with omission metadata. Acceptance: final JSON has a stable limit and includes the end of an error log.\n\n### E. Token adapter\n\nInject `measure(text) -> int` into `ContextBudget` and test a character counter plus a fake tokenizer. The core selection algorithm should remain provider-neutral.\n\n### F. Compaction manifest\n\nDesign a summary object containing goal, completed work, open tasks, changed files, constraints, and source event range. Explain how every field traces back to raw events.\n\n---\n\n## Deep dive: from budget to long-term memory {#deep-dive}\n\nA production context manager often combines four layers:\n\n1. **Immediate window**: recent turns and current tool results in original form.\n2. **Compacted history**: structured summaries and checkpoints for older work.\n3. **External artifacts**: large files, logs, and searches stored outside the window and read through handles.\n4. **Durable memory**: selected project facts that remain useful across sessions.\n\nThe key is not storage location but projection selection for each call. A mature budgeter may calculate:\n\n```text\navailable_input\n= context_window\n- reserved_output\n- system_sections\n- tool_descriptors\n- safety_margin\n```\n\nIt then allocates space to current task, recent turns, tool results, retrieved memory, and compacted state. Every class needs priority, minimum guarantee, and maximum cap.\n\n### How should compaction be evaluated?\n\nCompression ratio is insufficient. Measure:\n\n- Downstream task completion.\n- Retention of critical constraints.\n- Preservation of unfinished work.\n- Correct file and tool-call identity.\n- Facts invented by the summary.\n- Error accumulation across repeated compactions.\n\n> The context window is model working memory, not the system’s only database. A reliable harness preserves the complete record and compiles a finite projection for each turn.\n\n---\n\n## Checkpoint {#checkpoint}\n\nTo complete Foundations, make sure you can answer:\n\n1. Why do one tool result and global history need separate budgets?\n2. Why are character counts only suitable for teaching?\n3. Why should tool call and result form an atomic group?\n4. How do pruning and semantic compaction lose information differently?\n5. Why must `context.prune` be a trace event?\n\nYou now have a runnable reference-harness vertical slice: bounded loop, streaming events, structured tools, workspace boundaries, layered instructions, and context budgets. The next step is not blind feature growth; it is using Mechanisms, Agent Snapshots, Claims, Experiments, and Traces to compare how real coding agents solve the same problems.\n"
+        }
+      },
+      {
+        "id": "s07-session-replay",
+        "number": "07",
+        "slug": "session-replay",
+        "title": {
+          "zh-CN": "Session Event Log、Replay 与 Branch",
+          "en": "Session Event Logs, Replay, and Branching"
+        },
+        "summary": {
+          "zh-CN": "从 append-only 事件重建派生状态，并创建保留 lineage 的分支。",
+          "en": "Rebuild derived state from append-only events and create lineage-preserving branches."
+        },
+        "mechanism_ids": [
+          "event-stream",
+          "session-replay"
+        ],
+        "status": "implemented",
+        "estimated_minutes": 38,
+        "difficulty": "intermediate",
+        "code_path": "curriculum/lessons/s07_session_replay/demo.py",
+        "content_paths": {
+          "zh-CN": "curriculum/lessons/s07_session_replay/lesson.zh.md",
+          "en": "curriculum/lessons/s07_session_replay/lesson.en.md"
+        },
+        "run": "python3 -m curriculum.lessons.s07_session_replay.demo",
+        "change_contract": {
+          "previous_lesson_id": "s06-context-budget",
+          "summary": {
+            "zh-CN": "把 Trace 从观察输出提升为可重建状态和 lineage 的事实日志。",
+            "en": "Promote the trace from observation output to a factual log that can rebuild state and lineage."
+          },
+          "adds": [
+            {
+              "zh-CN": "严格 sequence、单 session/run 的 append-only SessionJournal",
+              "en": "An append-only SessionJournal with strict sequence and one session/run identity"
+            },
+            {
+              "zh-CN": "确定性 replay projection、fingerprint 与 parent-preserving branch",
+              "en": "Deterministic replay projections, fingerprints, and parent-preserving branches"
+            }
+          ],
+          "preserves": [
+            {
+              "zh-CN": "原始事件保持不可变；replay view 和 branch 都是派生产物。",
+              "en": "Raw events remain immutable; replay views and branches are derived artifacts."
+            }
+          ]
+        },
+        "golden_trace": {
+          "path": "curriculum/lessons/s07_session_replay/golden.trace.jsonl",
+          "run_id": "run-s07-session-replay-golden",
+          "expected_event_count": 7,
+          "focus_event_types": [
+            "session.stop",
+            "session.replay",
+            "session.branch"
+          ],
+          "download_path": "/data/traces/run-s07-session-replay-golden.jsonl"
+        },
+        "agent_bridge": {
+          "relationship": "adjacent",
+          "claim_ids": [
+            "codex-source-event-stream",
+            "pi-source-session-events",
+            "reasonix-source-event-log"
+          ],
+          "notes": {
+            "zh-CN": "固定源码 Claim 证明三种事件/会话记录边界；本章的 ReplayState 与 SessionBranch 是教学协议，不声称复制任一产品格式。",
+            "en": "Pinned source claims establish three event/session recording boundaries; the lesson's ReplayState and SessionBranch are teaching protocols, not copies of any product format."
+          }
+        },
+        "exercise_checks": [
+          {
+            "id": "s07-golden-trace",
+            "level": "observe",
+            "title": {
+              "zh-CN": "复核 Replay Lineage",
+              "en": "Verify replay lineage"
+            },
+            "acceptance": {
+              "zh-CN": "同一运行稳定地产生 replay fingerprint 和指向 sequence 2 的 branch。",
+              "en": "The same run produces a stable replay fingerprint and a branch at sequence 2."
+            },
+            "command": "python3 -m curriculum.golden verify s07-session-replay"
+          },
+          {
+            "id": "s07-journal-contract",
+            "level": "modify",
+            "title": {
+              "zh-CN": "验证 Journal 不变量",
+              "en": "Test journal invariants"
+            },
+            "acceptance": {
+              "zh-CN": "缺口 sequence、混合 run 或越界 fork 都被拒绝，父日志不被改写。",
+              "en": "Gapped sequences, mixed runs, and out-of-range forks are rejected without rewriting the parent log."
+            },
+            "command": "python3 -m unittest curriculum.tests.test_vertical_slice.VerticalSliceTests.test_s07_replays_and_branches -v"
+          }
+        ],
+        "source_code": "from curriculum.harness import (\n    AgentRunner,\n    ModelTurn,\n    RunResult,\n    ScriptedModel,\n    SessionJournal,\n)\nfrom curriculum.lessons.common import lesson_trace, print_run\n\n\nclass ReplayDemoRunner(AgentRunner):\n    def run(self, user_input: str) -> RunResult:\n        result = super().run(user_input)\n        journal = SessionJournal(result.events)\n        self.replay_state = journal.replay()\n        self.branch_record = journal.branch(\n            fork_sequence=2,\n            branch_id=\"branch-alternative-response\",\n        )\n        replay_event_id = self.trace.emit(\n            \"session.replay\",\n            actor_kind=\"harness\",\n            actor_id=self.config.agent_id,\n            parent_event_id=result.events[-1][\"event_id\"],\n            payload={\n                \"applied_events\": len(self.replay_state.applied_sequences),\n                \"stop_reason\": self.replay_state.stop_reason,\n                \"fingerprint\": self.replay_state.fingerprint,\n            },\n        )\n        self.trace.emit(\n            \"session.branch\",\n            actor_kind=\"harness\",\n            actor_id=self.config.agent_id,\n            parent_event_id=replay_event_id,\n            payload={\n                \"branch_id\": self.branch_record.branch_id,\n                \"parent_run_id\": self.branch_record.parent_run_id,\n                \"fork_sequence\": self.branch_record.fork_sequence,\n                \"inherited_events\": len(self.branch_record.inherited_event_ids),\n                \"parent_fingerprint\": self.branch_record.parent_fingerprint,\n            },\n        )\n        return RunResult(\n            final_text=result.final_text,\n            stop_reason=result.stop_reason,\n            messages=result.messages,\n            events=tuple(self.trace.events),\n        )\n\n\ndef build_demo() -> tuple[AgentRunner, object]:\n    trace = lesson_trace(\"s07-session-replay\")\n    model = ScriptedModel(\n        [ModelTurn(content=\"Replay derives state; branching preserves its parent.\", stop=True)]\n    )\n    return ReplayDemoRunner(model=model, trace=trace), trace\n\n\ndef main() -> None:\n    runner, trace = build_demo()\n    result = runner.run(\"Explain replay and branch lineage in one sentence.\")\n    print_run(result.final_text, trace)\n\n\nif __name__ == \"__main__\":\n    main()\n",
+        "content": {
+          "zh-CN": "# s07 · Session Event Log、Replay 与 Branch\n\n> 一个可持久化 Session 不是可随意修改的聊天对象，而是有序事实日志；Harness 可以从中重建视图、证明 lineage，并在不改写历史的前提下创建分支。\n\n## 学完这一章，你会得到什么 {#learn}\n\ns01–s06 主要把 Trace 0.1 当作观察层：事件解释 loop、model、tool 与 context policy 做过什么。本章再向前一步，把同一组规范化事件变成 **append-only SessionJournal**。确定性 reducer 从日志重放出可用视图，branch record 则指向父运行中的精确 sequence。\n\n完成本章后，你应该能够：\n\n- 区分事实事件、派生 replay view 与未来 command；\n- 校验 sequence、session identity、run identity、parent 顺序与稳定 event ID；\n- 重建 user message、最终 assistant message、tool result 与 stop state；\n- 解释 streaming delta 在 replay 时为什么需要 final-event 规则；\n- 创建包含 parent run、fork sequence、继承 event IDs 与 fingerprint 的 branch；\n- 识别教学 journal 距离 crash-safe 生产存储还缺哪些边界。\n\n### 先修知识\n\n你需要理解 s02 的事件流以及 s03 的完整工具往返。s06 已经区分“完整事实记录”与“模型可见 context projection”。这个区分在本章非常关键：replay 读取事实记录，但不会假设历史中的每个事件都曾被模型看到。\n\n---\n\n## 问题：可变 Session State 无法解释自己 {#problem}\n\n假设一个进程只维护一个 Python 对象，里面放着 `messages`、`status`、`files_changed` 和 `current_turn`。只要进程不崩、版本不升级、用户不要求回到过去，它看起来就够用。然而一旦最后一次写入不完整，或者审计者询问“这个值为什么存在”，最终对象只能回答“现在有什么”，无法回答“哪个被接受的事实产生了它”。\n\nCoding agent 的 Session 同时面对多种需求：\n\n| 需求 | 只有可变 Snapshot | Append-only Journal |\n| --- | --- | --- |\n| 崩溃后恢复 | 依赖最后一次保存完整成功 | 重放 durable events，必要时从 checkpoint 继续 |\n| 解释工具结果 | 最终状态可能丢掉 request | request、result、actor 与 parent 都保留 |\n| 从早期分支 | 复制后手工修改 state | 引用精确 prefix，并建立新 lineage |\n| 升级派生视图 | 旧对象 shape 消失后很难迁移 | 用新 reducer 读取保留事件 |\n| 发现篡改或漂移 | 没有 provenance 时很弱 | 对精确有序 prefix 计算 fingerprint |\n\nJournal 也不会因为“只追加”就自动正确。错误 stream 可能跳过 sequence、混入两个 session、引用未来 parent、重复 event ID，或者在 durable write 之前就向调用方确认成功。Harness 必须明确并测试这些不变量。\n\n> Event sourcing 不是“保存全部 debug log”。只有属于 Session 合同的规范化事实才应驱动 replay，诊断噪声可以进入另一条日志。\n\n---\n\n## 心智模型：Facts、Projection 与 Lineage {#mental-model}\n\n不要让一个 Session 对象同时承担全部职责，而是拆成三层：\n\n```text\n事实日志                           派生视图\nevt-000 session.start   ─┐\nevt-001 user.message     ├── replay reducer ──> ReplayState\nevt-002 model.request    │                      messages / results / stop\nevt-003 model.response   │\nevt-004 session.stop    ─┘\n          │\n          └── 在 sequence 2 分支 ──> SessionBranch\n                                          parent run + exact prefix\n```\n\n- **Fact** 表示已被系统接受的可观察事实，例如 user message 到达、完整 model response 结束、tool result 返回。\n- **Projection** 是可以重建的答案，例如当前 transcript、changed-file list、成本累计或 UI timeline。\n- **Lineage** 指出新 branch 继承了哪一段事实 prefix。\n- **Command** 请求未来动作。Branch record 不会假装替代响应已经发生。\n\n### 五条 Journal 不变量\n\n1. 一个 run 内的 `sequence` 从 0 开始且连续。\n2. 一个 journal 只包含一个 `session_id` 与一个 provenance `run_id`。\n3. `parent_event_id` 如果存在，只能指向更早的事件。\n4. Replay 必须确定性：相同有序 bytes 得到相同 projection fingerprint。\n5. Branch 创建不能修改、删除或重新编号父 prefix。\n\nReference implementation 在 `SessionJournal` 内强制前两条；仓库级 Trace validator 负责 parent 顺序和重复 ID；Golden Trace test 验证确定性输出与 lineage。\n\n---\n\n## 逐步构建 Journal 与 Reducer {#build}\n\n### 第 1 步：把输入保持为不可追加外的形式\n\n`SessionJournal` 接收 sequence 后立即保存成 tuple：\n\n```python\nclass SessionJournal:\n    def __init__(self, events):\n        if not events:\n            raise ValueError(\"a session journal needs at least one event\")\n        self.events = tuple(events)\n```\n\nTuple 并不会深度冻结里面的 dictionary，因此这里只是教学边界，不是防篡改存储。生产系统通常会在 append boundary 序列化 accepted event、计算 content hash，并避免调用方继续持有可变引用。\n\n### 第 2 步：拒绝缺口与混合 Identity\n\nSequence 规则刻意严格：\n\n```python\nsequences = [event.get(\"sequence\") for event in self.events]\nif sequences != list(range(len(self.events))):\n    raise ValueError(\"event sequence must be contiguous and start at zero\")\n```\n\n随后计算 session IDs 和 run IDs 的集合。任意集合包含多个值都属于错误。这样可以阻止一种看似方便却危险的做法：把几份 event file 拼接后冒充一个可恢复 run。\n\n### 第 3 步：按照语义类型 Reduce\n\n`replay()` 只遍历选定 prefix 一次。Reducer 不会把每个 payload 全部复制进 state，而是选择当前视图需要的字段：\n\n```python\nif event_type == \"user.message\":\n    users.append(str(payload.get(\"content\", \"\")))\nelif event_type == \"tool.result\":\n    tool_results.append(dict(payload))\nelif event_type == \"session.stop\":\n    stop_reason = str(payload.get(\"reason\", \"unknown\"))\n```\n\n另一套 reducer 可以用相同 journal 计算 elapsed time、permission decisions 或 changed paths。把 reducer 分离，UI 需求就不会反向修改事实 Schema。\n\n### 第 4 步：Replay 时规范化 Streaming Response\n\ns02 会为每个 delta 发出一条 `model.response`。如果把每个 delta 都当成完整 assistant message，文字就会重复。Reducer 因而只接受普通 response 的 `content`，或者 streaming 中 `final == true` 的事件：\n\n```python\nif \"content\" in payload:\n    assistants.append(str(payload[\"content\"]))\nelif payload.get(\"final\") is True:\n    assistants.append(str(payload.get(\"accumulated\", \"\")))\n```\n\n这是 projection contract 的一部分。如果 provider adapter 对 final delta 有另一种表达，必须在事件进入 canonical journal 前完成 normalization。\n\n### 第 5 步：给精确 Prefix 计算 Fingerprint\n\n教学实现用排序 JSON key 序列化事件，再对 bytes 做 SHA-256：\n\n```python\nwire = json.dumps(\n    events,\n    ensure_ascii=False,\n    sort_keys=True,\n    separators=(\",\", \":\"),\n)\nfingerprint = hashlib.sha256(wire.encode(\"utf-8\")).hexdigest()\n```\n\n它能检测 projection input 漂移，但不是数字签名，也不能证明写入者身份。生产级完整性可能需要 hash chain、authenticated storage 或 signed checkpoint。\n\n### 第 6 步：把 Branch 建模为 Lineage，而不是复制 Transcript\n\n`branch()` 先 replay 到 `fork_sequence`，再记录精确继承 ID：\n\n```python\nreturn SessionBranch(\n    branch_id=branch_id,\n    parent_session_id=parent.session_id,\n    parent_run_id=parent.run_id,\n    fork_sequence=fork_sequence,\n    inherited_event_ids=tuple(event[\"event_id\"] for event in selected),\n    parent_fingerprint=parent.fingerprint,\n)\n```\n\n新 branch 以后可以获得自己的 session/run identity 和新事件。Record 不会声称继承事件被重新执行过。对有副作用的 tool 而言，这个区别极其重要：在一次 file write 之前做逻辑分支，并不会撤销真实工作区里已经发生的写入。\n\n### 第 7 步：让 Replay 与 Branch 可见\n\nDemo 先运行普通 bounded session，再构造 journal，并追加两个观察事件：\n\n```text\nsession.replay  -> applied_events, stop_reason, fingerprint\nsession.branch  -> branch_id, parent_run_id, fork_sequence, inherited_events\n```\n\n它们位于 `session.stop` 之后，因为描述的是 run 完成后的 journal 操作，而不是又一次 model turn。生产事件分类也可以把 lifecycle facts 与 administrative journal operations 放在相关但独立的 stream。\n\n---\n\n## 运行并检查 Golden Trace {#run}\n\n从仓库根目录执行：\n\n```bash\npython3 -m curriculum.lessons.s07_session_replay.demo\n```\n\n预期顺序是：\n\n```text\nsession.start → user.message → model.request → model.response\n→ session.stop → session.replay → session.branch\n```\n\n再把提交的 Trace 与真实运行逐字节比较：\n\n```bash\npython3 -m curriculum.golden verify s07-session-replay\n```\n\n### 阅读 Replay Payload\n\n`session.replay` 报告 5 个已应用 execution event 和 `completed` stop reason。Fingerprint 覆盖从开头到 `session.stop` 的原始 prefix，不包含 replay event 自己。\n\n### 阅读 Branch Payload\n\nBranch 在 sequence 2 分叉，也就是第一次 `model.request` 之后。它继承 `evt-000` 到 `evt-002`。父历史中的原 response 与 stop event 仍然保留，只是不属于新 branch 的 inherited prefix。\n\n### 在本地证明确定性\n\n运行 demo 两次并比较 `TRACE:` 后面的 JSONL。教学 recorder 使用固定 clock、确定性 ID 与 Scripted Model，所以 bytes 相同。真实 Session 会使用真实时间与全局唯一 ID；比较语义时通常要先规范化 volatile fields。\n\n---\n\n## 常见失败与恢复边界 {#failure-modes}\n\n| 失败 | 危险在哪里 | 应对方式 |\n| --- | --- | --- |\n| Sequence 缺口 | 某个事实可能丢失或只写了一半 | 停止 replay 或从 durable storage 恢复，绝不静默重编号 |\n| 重复投递 | Retry 可能让工具结果应用两次 | 稳定 event ID 与 idempotent append |\n| 混合 Run ID | 两条因果历史被伪装成一条 | Replay 前按 session/run 分区 |\n| Future parent | 因果关系指向尚未接受的事件 | 作为无效或不完整事件拒绝 |\n| Delta 被当作 message | Assistant 文本重复 | 只 reduce 最终 accumulated streaming state |\n| Branch 被误认为 undo | 文件与进程仍保持改变 | s13 用 workspace checkpoint/rollback 配合逻辑 lineage |\n| Payload 之后被修改 | Fingerprint 与审计不一致 | 在 append boundary 序列化或深度冻结 |\n| 新 reducer 读不了旧 event | 升级后无法 resume | 版本化 Schema，迁移 projection，不原地改写历史事实 |\n\n> Replay 只能复现日志捕获到的行为。它不能恢复隐藏模型状态、外部网络变化或没有记录的文件系统修改。\n\n---\n\n## 动手练习与验收条件 {#exercises}\n\n### A. 拒绝 Sequence Gap\n\n复制前三个事件，把最后一个 sequence 从 `2` 改成 `4`，再创建 `SessionJournal`。验收：在返回任何 replay view 前抛出 `ValueError`。\n\n### B. Partial Replay\n\n只 replay 到 sequence 2。验收：projection 有 user message，没有 assistant message，没有 stop reason，而且 applied sequences 恰好是三个。\n\n### C. Streaming Reducer\n\n把 s02 trace 作为输入。验收：projection 只有一条 assistant message，内容等于最终 accumulated text，而不是三条 delta message。\n\n### D. Stable Branch Identity\n\n在同一 sequence 创建两个不同 branch ID。验收：parent fingerprint 和 inherited event IDs 相同，branch IDs 不同。\n\n### E. Duplicate Delivery Policy\n\n设计带稳定 event ID 的 `append(event)`。说明相同 retry 是否忽略、冲突 duplicate 是否拒绝，并用表格写明 durable acknowledgement point。\n\n### F. Snapshot Acceleration\n\n增加包含 reducer version、source sequence、source fingerprint 与 serialized projection 的 checkpoint。验收：从 checkpoint 加 tail replay 的结果与从 event 0 replay 完全一致。\n\n运行聚焦验收：\n\n```bash\npython3 -m unittest \\\n  curriculum.tests.test_vertical_slice.VerticalSliceTests.test_s07_replays_and_branches -v\n```\n\n---\n\n## 深入：生产级 Session Architecture {#deep-dive}\n\n### Durability 与 Acknowledgement\n\n关键顺序是“durable append 先于 success acknowledgement”。如果 UI 在 event 持久化前显示 tool result，崩溃后用户会相信一件 replay 无法恢复的事实。Storage 可以是 transaction database、fsync segment 或 remote log，但合同必须明确 durable point。\n\n### Idempotency 与 Exactly-once 幻觉\n\n网络一定会 retry。跨 model provider、tool、storage 与 UI 通常无法真正保证 exactly once。系统会组合 stable call ID、deduplicated event ID、idempotent handler 与显式 reconciliation。Journal 只说明 Harness 接受了什么，不会让一个非幂等 shell command 自动安全。\n\n### 不删除事实的 Checkpoint\n\n长日志 replay 昂贵。Checkpoint 可以缓存 sequence N 的 projection，只重放 N+1 之后的 tail。它必须记录 reducer/schema version 和 source fingerprint。删除 source events 会让 acceleration structure 变成不可逆 authority，并削弱审计能力。\n\n### Schema Evolution\n\n增加 optional field 通常比改变语义容易。Reducer 可以容忍未知 optional field；但如果忽略未知 event type 会改变 state，就必须失败。Migration 可以生成新 projection version，同时保留原始 wire event 与 provenance。\n\n### Branch 与真实 Workspace\n\n逻辑 branch 只选择 conversation history；coding agent 还会作用于文件、Git state、process、service 和 remote system。因此安全分支需要 artifact policy：immutable artifact handle 可以共享，mutable workspace 则可能需要 Git commit、copy-on-write directory、container 或 worktree。s13 会把 lineage 与 checkpoint/rollback 连接起来。\n\n### Privacy 与删除\n\nAppend-only 是 reliability property，不是永久保留 secret 的许可。发布前要脱敏，私有存储需要 retention、encryption、access control 与 deletion procedure。某些合规删除可能依赖 tombstone 或加密密钥销毁，而不是假装历史事件从未发生。\n\n### 真实 Agent Mapping 能证明什么\n\n链接的 Codex、Pi 与 Reasonix Claim 证明固定版本中的 event 或 session logging boundary。它们不能证明产品使用这里的 `SessionJournal`、fingerprint format 或 branch record，所以关系明确标记为 **adjacent**。\n\n---\n\n## 本章检查点 {#checkpoint}\n\n进入 semantic compaction 前，请确认你能回答：\n\n1. 为什么 replay projection 不是事实源？\n2. Streaming response 中哪一条 event 才应形成 assistant message？\n3. 哪些信息让 branch 的 parent lineage 可审计？\n4. 为什么 session branching 不会 rollback 文件副作用？\n5. Harness 确认 event 前，什么必须 durable？\n6. Checkpoint 如何加速 replay 又不取代事实日志？\n\ns08 会把完整可 replay journal 当作 lossy context compaction 之下的安全网。模型看到的是更小 checkpoint，而 Harness 仍保留可审计、可重建的 source events。\n",
+          "en": "# s07 · Session Event Logs, Replay, and Branching\n\n> A durable session is not a mutable chat object. It is an ordered factual log from which the harness can rebuild views, prove lineage, and start a branch without rewriting history.\n\n## What you will build {#learn}\n\ns01–s06 used Trace 0.1 primarily for observation: events explained what the loop, model, tools, and context policy had done. This chapter makes the next architectural move. The same normalized events become an **append-only session journal**. A deterministic reducer replays the journal into a useful view, and a branch record points at an exact parent sequence.\n\nBy the end, you should be able to:\n\n- distinguish a factual event from a derived replay view and from a future command;\n- validate sequence, session identity, run identity, parent ordering, and stable event IDs;\n- rebuild user messages, final assistant messages, tool results, and stop state;\n- explain why streaming deltas need a final-event rule during replay;\n- create a branch that records its parent run, fork sequence, inherited event IDs, and fingerprint;\n- identify what this teaching journal still lacks for crash-safe production storage.\n\n### Prerequisites\n\nYou should understand the event stream from s02 and the full tool roundtrip from s03. s06 introduced the separation between the complete factual record and the model-visible context projection. That separation is essential here: replay reads the factual record; it does not assume that every historical event was visible to the model.\n\n---\n\n## The problem: mutable session state cannot explain itself {#problem}\n\nSuppose a process keeps one Python object containing `messages`, `status`, `files_changed`, and `current_turn`. It works until the process crashes, an upgrade changes the object shape, a user asks to rewind, or an auditor asks why a value exists. Saving the latest object answers “what is present now,” but often loses “which accepted fact produced it.”\n\nA coding-agent session has several competing needs:\n\n| Need | A mutable snapshot alone | An append-only journal |\n| --- | --- | --- |\n| Resume after a crash | Only if the latest write was complete | Replay all durable events, possibly after a checkpoint |\n| Explain a tool result | Final state may hide the request | Request, result, actor, and parent remain visible |\n| Branch from an earlier point | Requires copying and editing state | Reference an exact prefix and add a new lineage |\n| Migrate a derived view | Hard when old state shape is gone | Run a new reducer over preserved events |\n| Detect tampering or drift | Weak without provenance | Fingerprint an exact ordered prefix |\n\nThe journal is not automatically correct merely because it is append-only. A malformed stream can skip a sequence, mix two sessions, reference a future parent, duplicate an event ID, or contain an event that was acknowledged before it became durable. The harness must define and test these invariants.\n\n> Event sourcing is not “save every debug log.” Only normalized facts that belong to the session contract should drive replay. Diagnostic noise can live elsewhere.\n\n---\n\n## Mental model: facts, projections, and lineage {#mental-model}\n\nUse three layers instead of one overloaded session object:\n\n```text\nFACT LOG                         DERIVED VIEW\nevt-000 session.start   ─┐\nevt-001 user.message     ├── replay reducer ──> ReplayState\nevt-002 model.request    │                      messages / results / stop\nevt-003 model.response   │\nevt-004 session.stop    ─┘\n          │\n          └── branch at sequence 2 ──> SessionBranch\n                                           parent run + exact prefix\n```\n\n- **Facts** say what was observably accepted: a user message arrived, a model response completed, or a tool result returned.\n- **Projections** are rebuildable answers to a question: current transcript, changed-file list, cost totals, or UI timeline.\n- **Lineage** identifies which factual prefix a new branch inherits.\n- **Commands** request future work. A branch record does not pretend that the alternative response has already happened.\n\n### Five journal invariants\n\n1. `sequence` starts at zero and is contiguous inside one run.\n2. A journal contains exactly one `session_id` and one provenance `run_id`.\n3. Each `parent_event_id`, when present, refers to an earlier event.\n4. Replay is deterministic: the same ordered bytes produce the same projection fingerprint.\n5. Branch creation never edits, deletes, or renumbers the parent prefix.\n\nThe reference implementation enforces the first two in `SessionJournal`. The repository-wide trace validator enforces parent ordering and duplicate IDs. Golden Trace tests cover deterministic output and lineage.\n\n---\n\n## Build the journal and reducer step by step {#build}\n\n### Step 1: keep the input immutable\n\n`SessionJournal` accepts a sequence and immediately stores a tuple:\n\n```python\nclass SessionJournal:\n    def __init__(self, events):\n        if not events:\n            raise ValueError(\"a session journal needs at least one event\")\n        self.events = tuple(events)\n```\n\nThe tuple does not deeply freeze nested dictionaries, so it is a teaching boundary rather than tamper-proof storage. Production code normally serializes accepted events, computes a content hash, and prevents callers from retaining mutable references.\n\n### Step 2: reject gaps and mixed identity\n\nThe sequence rule is deliberately strict:\n\n```python\nsequences = [event.get(\"sequence\") for event in self.events]\nif sequences != list(range(len(self.events))):\n    raise ValueError(\"event sequence must be contiguous and start at zero\")\n```\n\nThen the journal computes the set of session IDs and run IDs. Either set having more than one value is an error. This prevents an attractive but dangerous shortcut: concatenating event files and treating the result as one resumable run.\n\n### Step 3: reduce events by semantic type\n\n`replay()` walks the selected prefix once. The reducer does not copy every payload into state. It chooses fields relevant to this view:\n\n```python\nif event_type == \"user.message\":\n    users.append(str(payload.get(\"content\", \"\")))\nelif event_type == \"tool.result\":\n    tool_results.append(dict(payload))\nelif event_type == \"session.stop\":\n    stop_reason = str(payload.get(\"reason\", \"unknown\"))\n```\n\nAnother reducer could compute elapsed time, permission decisions, or changed paths from the same log. Keeping reducers separate prevents UI concerns from changing the factual schema.\n\n### Step 4: normalize streaming responses during replay\n\ns02 emits one `model.response` per delta. Replaying every delta as a complete assistant message would duplicate text. The reducer therefore accepts a normal response with `content`, or only the streaming event whose `final` field is true:\n\n```python\nif \"content\" in payload:\n    assistants.append(str(payload[\"content\"]))\nelif payload.get(\"final\") is True:\n    assistants.append(str(payload.get(\"accumulated\", \"\")))\n```\n\nThis rule belongs to the projection contract. If a provider adapter changes how it marks the final delta, normalization must happen before the event enters the canonical journal.\n\n### Step 5: fingerprint the exact prefix\n\nThe teaching implementation serializes selected events with sorted JSON keys and hashes the bytes:\n\n```python\nwire = json.dumps(\n    events,\n    ensure_ascii=False,\n    sort_keys=True,\n    separators=(\",\", \":\"),\n)\nfingerprint = hashlib.sha256(wire.encode(\"utf-8\")).hexdigest()\n```\n\nThis detects projection input drift; it is not a signature and does not establish who wrote the events. Production integrity may require a hash chain, authenticated storage, or signed checkpoints.\n\n### Step 6: model a branch as lineage, not a copied transcript\n\n`branch()` first replays through `fork_sequence`, then records the exact inherited IDs:\n\n```python\nreturn SessionBranch(\n    branch_id=branch_id,\n    parent_session_id=parent.session_id,\n    parent_run_id=parent.run_id,\n    fork_sequence=fork_sequence,\n    inherited_event_ids=tuple(event[\"event_id\"] for event in selected),\n    parent_fingerprint=parent.fingerprint,\n)\n```\n\nThe new branch can later receive its own session/run identity and new events. The record never claims that inherited events were re-executed. This distinction matters for tools with side effects: branching before a file write does not undo the write in the real workspace.\n\n### Step 7: make replay and branch visible\n\nThe demo runs an ordinary bounded agent session, creates a journal, and appends two observation events:\n\n```python\nsession.replay  -> applied_events, stop_reason, fingerprint\nsession.branch  -> branch_id, parent_run_id, fork_sequence, inherited_events\n```\n\nThey occur after `session.stop` because they describe post-run journal operations, not another model turn. A production event taxonomy may store lifecycle facts and administrative journal operations in related streams instead.\n\n---\n\n## Run and inspect the Golden Trace {#run}\n\nFrom the repository root:\n\n```bash\npython3 -m curriculum.lessons.s07_session_replay.demo\n```\n\nThe expected event order is:\n\n```text\nsession.start → user.message → model.request → model.response\n→ session.stop → session.replay → session.branch\n```\n\nVerify the committed trace against a fresh execution:\n\n```bash\npython3 -m curriculum.golden verify s07-session-replay\n```\n\n### Read the replay payload\n\nThe `session.replay` payload reports five applied execution events and a completed stop reason. Its fingerprint covers the original prefix through `session.stop`; it does not include the replay event itself.\n\n### Read the branch payload\n\nThe branch forks at sequence 2, immediately after the first `model.request`. It inherits event IDs `evt-000` through `evt-002`. The original response and stop event remain in the parent history but are not part of the inherited prefix.\n\n### Prove determinism locally\n\nRun the demo twice and compare the JSONL below the `TRACE:` marker. The teaching recorder uses a fixed clock, deterministic IDs, and a scripted model, so the bytes match. Real sessions use real time and globally unique IDs; their semantic fingerprint usually normalizes volatile fields before comparison.\n\n---\n\n## Failure modes and recovery boundaries {#failure-modes}\n\n| Failure | Why it is dangerous | Required response |\n| --- | --- | --- |\n| Missing sequence | A fact may have been lost or only partially written | Stop replay or recover from durable storage; never silently renumber |\n| Duplicate delivery | A retry can apply a tool result twice | Use stable event IDs and idempotent append semantics |\n| Mixed run IDs | Two causal histories become one false transcript | Partition by session/run before replay |\n| Future parent | Causality points to an event not yet accepted | Reject the event as invalid or incomplete |\n| Delta replayed as message | Assistant text is duplicated | Reduce only final accumulated streaming state |\n| Branch assumed to undo effects | Files or processes remain changed | Pair logical lineage with workspace checkpoint/rollback in s13 |\n| Mutable payload changed later | Fingerprints and audits disagree | Serialize or deep-freeze at the append boundary |\n| New reducer cannot read old event | Upgrade breaks resume | Version schemas and migrate projections, not historical facts in place |\n\n> Replay makes behavior reproducible only to the degree captured by the log. It cannot recreate hidden model state, external network changes, or an unrecorded filesystem mutation.\n\n---\n\n## Exercises with acceptance criteria {#exercises}\n\n### A. Reject a sequence gap\n\nCopy the first three events, change the last sequence from `2` to `4`, and construct `SessionJournal`. Acceptance: it raises `ValueError` before any replay view is returned.\n\n### B. Partial replay\n\nReplay through sequence 2. Acceptance: the projection contains the user message, no assistant message, no stop reason, and exactly three applied sequences.\n\n### C. Streaming reducer\n\nUse the s02 trace as input. Acceptance: the projection contains one assistant message equal to the final accumulated text, not three delta messages.\n\n### D. Stable branch identity\n\nCreate two branches at the same sequence with different branch IDs. Acceptance: parent fingerprint and inherited event IDs match, while branch IDs differ.\n\n### E. Duplicate-delivery policy\n\nDesign `append(event)` with a stable event ID. Decide whether an identical retry is ignored and a conflicting duplicate is rejected. Write a table covering both cases and the durable acknowledgement point.\n\n### F. Snapshot acceleration\n\nAdd a checkpoint containing reducer version, source sequence, source fingerprint, and serialized projection. Acceptance: replay from the checkpoint plus tail equals replay from event zero.\n\nRun the focused contract:\n\n```bash\npython3 -m unittest \\\n  curriculum.tests.test_vertical_slice.VerticalSliceTests.test_s07_replays_and_branches -v\n```\n\n---\n\n## Deep dive: production session architecture {#deep-dive}\n\n### Durability and acknowledgement\n\nThe critical ordering is “durable append before success acknowledgement.” If the UI displays a tool result before the event is durable, a crash can leave the user believing a fact that replay cannot recover. Storage can be a transactional database, an fsynced segment, or a remote log, but the contract must name the durable point.\n\n### Idempotency and exactly-once illusions\n\nNetworks retry. Most systems cannot guarantee exactly-once delivery across model providers, tools, storage, and UI. They approximate safe behavior with stable call IDs, deduplicated event IDs, idempotent handlers, and explicit reconciliation. A journal records what the harness accepted; it does not magically make a non-idempotent shell command safe.\n\n### Checkpoints without deleting facts\n\nLong logs make replay expensive. A checkpoint can cache a projection at sequence N and replay only N+1 onward. It must record reducer/schema version and source fingerprint. Deleting the source events turns an acceleration structure into an irreversible authority and weakens auditability.\n\n### Schema evolution\n\nAdditive event fields are usually easier than changing meaning. Reducers should tolerate unknown optional fields but reject an unknown event type if ignoring it would change state. Migrations can produce a new projection version while retaining original wire events and provenance.\n\n### Branches and real workspaces\n\nA logical branch selects conversation history. A coding agent also acts on files, Git state, processes, services, and remote systems. Safe branching therefore needs an artifact policy: immutable artifact handles may be shared; mutable workspaces may need Git commits, copy-on-write directories, containers, or worktrees. s13 connects lineage to checkpoints and rollback.\n\n### Privacy and deletion\n\nAppend-only is a reliability property, not permission to retain secrets forever. Redaction should happen before publication, and private storage needs retention, encryption, access control, and deletion procedures. Some compliance deletions may require tombstones or encrypted-key destruction rather than pretending the historical event never existed.\n\n### What real-agent mappings prove\n\nThe linked Codex, Pi, and Reasonix Claims establish source-backed event or session logging mechanisms at pinned revisions. They do not prove that those products use this `SessionJournal`, fingerprint format, or branch record. The relationship is intentionally marked **adjacent**.\n\n---\n\n## Checkpoint {#checkpoint}\n\nBefore moving to semantic compaction, make sure you can answer:\n\n1. Why is a replay projection not the source of truth?\n2. Which event should produce an assistant message for a streamed response?\n3. What exact information makes a branch's parent lineage auditable?\n4. Why does branching a session not roll back filesystem effects?\n5. What must be durable before the harness acknowledges an event?\n6. How can a checkpoint accelerate replay without replacing the factual log?\n\ns08 will use this complete, replayable journal as the safety net beneath lossy context compaction. The model may see a smaller checkpoint, while the harness keeps the source events needed to audit or rebuild it.\n"
+        }
+      },
+      {
+        "id": "s08-context-compaction",
+        "number": "08",
+        "slug": "context-compaction",
+        "title": {
+          "zh-CN": "Context Compaction 与 Checkpoint",
+          "en": "Context Compaction and Checkpoints"
+        },
+        "summary": {
+          "zh-CN": "用带 provenance 的语义 checkpoint 替换过长历史，同时保留原始事实日志。",
+          "en": "Replace long visible history with a provenance-bearing semantic checkpoint while retaining the factual log."
+        },
+        "mechanism_ids": [
+          "context-budget",
+          "context-compaction"
+        ],
+        "status": "implemented",
+        "estimated_minutes": 42,
+        "difficulty": "advanced",
+        "code_path": "curriculum/lessons/s08_context_compaction/demo.py",
+        "content_paths": {
+          "zh-CN": "curriculum/lessons/s08_context_compaction/lesson.zh.md",
+          "en": "curriculum/lessons/s08_context_compaction/lesson.en.md"
+        },
+        "run": "python3 -m curriculum.lessons.s08_context_compaction.demo",
+        "change_contract": {
+          "previous_lesson_id": "s07-session-replay",
+          "summary": {
+            "zh-CN": "在可重放事实日志之上，为下一轮模型编译更小的语义 checkpoint。",
+            "en": "Compile a smaller semantic checkpoint for the next model turn on top of a replayable factual log."
+          },
+          "adds": [
+            {
+              "zh-CN": "显式 trigger、可注入 summarizer 与 recent-tail 策略",
+              "en": "An explicit trigger, injectable summarizer, and recent-tail policy"
+            },
+            {
+              "zh-CN": "context.compact 事件、source fingerprint 与 before/after 大小",
+              "en": "A context.compact event with source fingerprint and before/after size"
+            }
+          ],
+          "preserves": [
+            {
+              "zh-CN": "摘要只是模型可见投影，不能覆盖或替代原始 SessionJournal。",
+              "en": "A summary is only a model-visible projection and never overwrites the original SessionJournal."
+            }
+          ]
+        },
+        "golden_trace": {
+          "path": "curriculum/lessons/s08_context_compaction/golden.trace.jsonl",
+          "run_id": "run-s08-context-compaction-golden",
+          "expected_event_count": 10,
+          "focus_event_types": [
+            "tool.result",
+            "context.compact",
+            "model.request",
+            "session.stop"
+          ],
+          "download_path": "/data/traces/run-s08-context-compaction-golden.jsonl"
+        },
+        "agent_bridge": {
+          "relationship": "direct",
+          "claim_ids": [
+            "codex-source-auto-compaction",
+            "pi-source-context-compaction",
+            "reasonix-source-context-maintenance"
+          ],
+          "notes": {
+            "zh-CN": "三个固定源码 Snapshot 都有直接 compaction Claim；比较时仍区分触发阈值、保留 tail、缓存与恢复语义。",
+            "en": "All three pinned source snapshots have direct compaction claims; comparison still separates trigger thresholds, retained tails, caching, and resume semantics."
+          }
+        },
+        "exercise_checks": [
+          {
+            "id": "s08-golden-trace",
+            "level": "observe",
+            "title": {
+              "zh-CN": "复核 Compaction 决策",
+              "en": "Verify the compaction decision"
+            },
+            "acceptance": {
+              "zh-CN": "第二次模型请求前出现 context.compact，且 final_chars 小于 original_chars。",
+              "en": "context.compact appears before the second model request and final_chars is below original_chars."
+            },
+            "command": "python3 -m curriculum.golden verify s08-context-compaction"
+          },
+          {
+            "id": "s08-checkpoint-contract",
+            "level": "modify",
+            "title": {
+              "zh-CN": "验证 Checkpoint Provenance",
+              "en": "Test checkpoint provenance"
+            },
+            "acceptance": {
+              "zh-CN": "模型收到 compacted checkpoint，Trace 保留被压缩范围的稳定 SHA-256。",
+              "en": "The model receives a compacted checkpoint and the trace retains a stable SHA-256 for the compacted range."
+            },
+            "command": "python3 -m unittest curriculum.tests.test_vertical_slice.VerticalSliceTests.test_s08_compacts_with_provenance -v"
+          }
+        ],
+        "source_code": "from curriculum.harness import (\n    AgentRunner,\n    ContextCompactor,\n    ModelTurn,\n    ScriptedModel,\n    Tool,\n    ToolCall,\n    ToolRegistry,\n)\nfrom curriculum.lessons.common import lesson_trace, print_run\n\n\ndef summarize_history(messages) -> str:\n    return (\n        \"The user requested an artifact inspection. The artifact was stored as \"\n        \"artifact://large-report and its verified conclusion is: tests remain green.\"\n    )\n\n\ndef build_demo() -> tuple[AgentRunner, object]:\n    registry = ToolRegistry()\n    registry.register(\n        Tool(\n            name=\"inspect_artifact\",\n            description=\"Return a deliberately verbose artifact preview.\",\n            parameters={\n                \"type\": \"object\",\n                \"additionalProperties\": False,\n                \"properties\": {},\n            },\n            handler=lambda args: {\n                \"artifact\": \"artifact://large-report\",\n                \"preview\": \"verified-output-\" * 32,\n            },\n        )\n    )\n    model = ScriptedModel(\n        [\n            ModelTurn(\n                content=\"I will inspect the artifact.\",\n                tool_calls=(\n                    ToolCall(id=\"call-artifact\", name=\"inspect_artifact\", arguments={}),\n                ),\n            ),\n            ModelTurn(content=\"The compacted checkpoint preserves the verified conclusion.\", stop=True),\n        ]\n    )\n    trace = lesson_trace(\"s08-context-compaction\")\n    return (\n        AgentRunner(\n            model=model,\n            tools=registry,\n            trace=trace,\n            system_prompt=\"Use explicit artifact handles and preserve verified constraints.\",\n            compactor=ContextCompactor(\n                trigger_chars=260,\n                keep_recent_messages=0,\n                summarize=summarize_history,\n            ),\n        ),\n        trace,\n    )\n\n\ndef main() -> None:\n    runner, trace = build_demo()\n    result = runner.run(\"Inspect the report, then continue from a compacted checkpoint.\")\n    print_run(result.final_text, trace)\n\n\nif __name__ == \"__main__\":\n    main()\n",
+        "content": {
+          "zh-CN": "# s08 · Context Compaction 与 Checkpoint\n\n> Compaction 是有损编译步骤：Harness 用更小的 checkpoint 替换过长的模型可见历史，同时保留 source events、provenance 和足够继续任务的状态。\n\n## 学完这一章，你会得到什么 {#learn}\n\ns06 用确定性 truncation 与 pruning 给 context 加上硬边界，但这些策略不理解文字语义。s07 又建立了 append-only journal，使事实 run 不会因为模型可见 projection 改变而消失。本章把两者组合起来：当历史超过 trigger 时，可注入 summarizer 把旧 messages 编译成 semantic checkpoint，记录它总结的精确来源，然后在同一 loop 中继续。\n\n完成后你应该能够：\n\n- 区分 pruning、truncation、semantic compaction、replay checkpoint 与 durable memory；\n- 把 compaction 放在下一次 model request 之前，而不是等 overflow 后补救；\n- 注入 summarizer，又不让核心 loop 绑定 provider；\n- 记录 source size、output size、dropped-message count 与 source SHA-256；\n- 解释 summary 为什么是可能出错的 projection，而不是 authoritative history；\n- 为 constraint retention、unfinished work、file identity 与 repeated-compaction drift 设计评测。\n\n### 先修知识\n\n你需要理解 s06 的 `ContextBudget`，以及 s07 中 immutable factual log 与 rebuildable projection 的区别。Demo 仍然离线：`summarize_history` 是确定性函数，不是模型调用。生产系统可以使用 model summarizer、structured reducer 或混合方案。\n\n---\n\n## 问题：可预测删除仍然不够 {#problem}\n\nRecent-first pruning 能把 request 压进硬上限，却不知道 goal、constraint、unfinished work、test result 或 artifact identity。设想一段长 coding session：\n\n```text\nuser goal\nproject instructions\ndesign decision\ntool call: 读取 2,000 行 log\ntool result\nfile edit\nfocused test passes\nnew user correction\n```\n\n纯位置策略可能保留最后的 correction，却丢掉 edit 的原因或哪项 test 已通过。保留所有文字不可能，盲目删除便宜但语义脆弱。Compaction 会有意识地为旧区间创建更小表示。\n\n| 操作 | 输入 | 输出 | 是否理解语义 | Source 是否另行保留 |\n| --- | --- | --- | --- | --- |\n| Tool truncation | 单个 oversized result | preview 与 omission metadata | 否 | 应通过 artifact handle 保留 |\n| Message pruning | message sequence | 选中的 messages | 否 | 是，位于 journal |\n| Context compaction | 较旧 history span | summary/checkpoint | 是 | 审计与恢复必须保留 |\n| Replay checkpoint | event prefix + reducer | cached derived state | 确定性 | 是 |\n| Durable memory | 经过选择的 fact | 跨 turn/session record | 是，主动策展 | 必须保存 source attribution |\n\nCompaction 的失败比 overflow 隐蔽。它可能漏掉否定约束、混淆两个文件名、把 hypothesis 变成 fact、丢掉 unresolved question，或反复总结早期错误。因此 Harness 必须让 compaction 可见、可评测。\n\n> Prompt 变短不是 context manager 变好的证据。真正的问题是后续工作是否仍正确、连续并可追踪。\n\n---\n\n## 心智模型：Compiler、Source Map 与 Checkpoint {#mental-model}\n\n把 compaction 看成把 source 编译为更小 intermediate representation：\n\n```text\nappend-only SessionJournal（事实）\n             │\n             ├── 选择 source message range\n             │\n             ├── summarize / structure / validate\n             │          └── source_sha256 + policy version\n             ▼\nmodel-visible checkpoint + optional recent tail\n             │\n             └── next model.request\n```\n\nJournal 类似 source code，checkpoint 是 artifact。Compiler output 可以再生成、版本化、测试和拒绝，但不应该删除输入。\n\n### 四份合同\n\n1. **Trigger contract**：何时触发——token threshold、turn boundary、tool result、latency budget 还是显式请求？\n2. **Selection contract**：哪些 message 进入旧 span，哪些 verbatim 保留，哪些 protocol group 必须 atomic？\n3. **Summary contract**：哪些字段必须存活——goal、constraints、completed、open tasks、artifacts、tests 与 unknowns？\n4. **Provenance contract**：哪个 source range、algorithm/model、configuration、hash 与时间产生 checkpoint？\n\n教学代码实现 character trigger、injected callable、recent-message count 和 source fingerprint；模型质量与 token accounting 刻意留在 core 外面。\n\n---\n\n## 逐步构建 Semantic Compaction {#build}\n\n### 第 1 步：定义结构化 Report\n\n`CompactionReport` 同时返回下一轮 messages 与审计 metadata：\n\n```python\n@dataclass(frozen=True)\nclass CompactionReport:\n    messages: tuple[Message, ...]\n    summary: str\n    dropped_count: int\n    original_chars: int\n    final_chars: int\n    source_sha256: str\n```\n\n字段叫 `dropped_count` 是有意为之：messages 离开了 model-visible projection，即使 source events 仍然 durable。明确写出 loss，可以避免“summary”听起来像无损转换。\n\n### 第 2 步：注入 Summarizer\n\nPolicy 接收 `summarize: Callable[[Sequence[Message]], str]`：\n\n```python\nContextCompactor(\n    trigger_chars=260,\n    keep_recent_messages=0,\n    summarize=summarize_history,\n)\n```\n\nCore loop 不需要知道 callable 使用 deterministic rules、local model、remote provider 还是人工 checkpoint。Provider credentials、retry 与成本留在 adapter boundary。\n\n### 第 3 步：在 Request 前触发\n\n每个 turn 开始、`model.request` 之前，runner 检查 visible size：\n\n```python\nif self.compactor is not None and self.compactor.should_compact(messages):\n    report = self.compactor.compact(messages)\n    messages = list(report.messages)\n    self._emit(\"context.compact\", ...)\n```\n\n等 provider 拒绝 oversized request 后才运行属于 recovery，不是 prevention。生产 trigger 还要预留 output tokens、tool descriptors、system sections 与 safety margin。\n\n### 第 4 步：固定 System Message 并选择旧 Span\n\n本章保留第一条 system message，把其余内容分成 `dropped` 与 `recent`：\n\n```python\nsystem = tuple(messages[:1]) if messages[:1] and messages[0].role == \"system\" else ()\nremaining = tuple(messages[len(system):])\nkeep_count = min(max(0, keep_recent_messages), len(remaining))\ndropped = remaining if keep_count == 0 else remaining[:-keep_count]\nrecent = () if keep_count == 0 else remaining[-keep_count:]\n```\n\n按 message count 划分只是教学简化。生产实现应把 user turn、assistant tool call、tool result、approval 与 file patch 组成 atomic group。把 tool request 和 result 分开可能产生 provider 无法接受的 history。\n\n### 第 5 步：拒绝空 Summary\n\n空 checkpoint 不能静默取代旧状态：\n\n```python\nsummary = self.summarize(dropped).strip()\nif not summary:\n    raise ValueError(\"compaction summary must be non-empty\")\n```\n\n更强实现会验证 typed manifest。例如 `goal`、`constraints`、`completed`、`open_tasks`、`artifacts`、`tests`、`unknowns` 与 `source_event_range` 可以分别拥有 required schema。\n\n### 第 6 步：给被压缩 Source 计算 Fingerprint\n\nSource messages 使用 provider-neutral wire representation 序列化并哈希：\n\n```python\nsource_wire = json.dumps(\n    [message.to_wire() for message in dropped],\n    ensure_ascii=False,\n    sort_keys=True,\n    separators=(\",\", \":\"),\n)\nsource_sha256 = hashlib.sha256(source_wire.encode(\"utf-8\")).hexdigest()\n```\n\nFingerprint 让 reviewer 核对哪一组 bytes 被总结。它不度量 summary quality；durable implementation 还应该绑定 source event IDs。\n\n### 第 7 步：创建显式 Checkpoint Message\n\nCompacted projection 带有可见 marker：\n\n```python\nMessage(\n    role=\"assistant\",\n    content=f\"[compacted checkpoint]\\n{summary}\",\n)\n```\n\nMarker 告诉 adapter、UI 与 eval：这段文字是 synthesized state，不是 verbatim model response。生产 provider 可以使用专用内部 message type，再编译为合法 wire role。\n\n### 第 8 步：记录 Decision，不记录隐藏推理\n\n事件包含 count 与 provenance，而不是 summarizer 的隐藏思考：\n\n```text\ncontext.compact\n  dropped_messages\n  original_chars / final_chars\n  summary_chars\n  source_sha256\n```\n\nSummary 正文是否适合记录，取决于内容与 retention policy。教学 Trace 只放 metadata，下一次 model request 则消费 checkpoint。\n\n---\n\n## 运行 Compaction Path {#run}\n\n执行：\n\n```bash\npython3 -m curriculum.lessons.s08_context_compaction.demo\n```\n\n第一轮调用 `inspect_artifact`，返回刻意冗长的 preview。第二次 request 前，visible history 超过 260 characters，runner 把三条 non-system message 压成一个 checkpoint。\n\n边界附近的事件顺序应当是：\n\n```text\ntool.request\ntool.result\ncontext.compact       original_chars=720, final_chars=232\nmodel.request         roles=[system, assistant]\nmodel.response\nsession.stop\n```\n\n验证提交产物：\n\n```bash\npython3 -m curriculum.golden verify s08-context-compaction\n```\n\n### 检查模型实际收到什么\n\n内部 model double 保存每个 request：\n\n```python\nrunner, _ = build_demo()\nrunner.run(\"Inspect and compact.\")\n\nfor message in runner.model.requests[1]:\n    print(message.role, message.content)\n```\n\n第二个 request 有原 system prompt，以及提到 `artifact://large-report` 和已验证测试结论的 assistant checkpoint；它不再包含重复 32 次的 preview fragment。\n\n### 对比 Journal 与 Projection\n\nTrace 仍有原始 `tool.result`，model request 使用 checkpoint。这就是从 s07 继承的核心不变量：compaction 改变 visibility，不改变历史事实。\n\n---\n\n## 失败模式与安全边界 {#failure-modes}\n\n| 失败 | 可观察表现 | 更好的合同 |\n| --- | --- | --- |\n| 约束被遗漏 | Agent 后续违反 requirement | Required constraint field 与 retention eval |\n| Hypothesis 被升级为 fact | Summary 声称未验证结论 | 保存 epistemic status 与 evidence/source IDs |\n| Tool pair 被拆分 | Provider 拒绝 history 或 call identity 丢失 | Compact atomic protocol groups |\n| File identity 合并 | Edit 应用到错误 path | 带 stable handle 的 structured artifact record |\n| Summary 仍超过 trigger | 立刻 overflow 或再次 compaction | 验证 final budget 并为 tail 预留空间 |\n| Recursive drift | 每轮放大早期错误 | 针对 raw source 增量压缩，并评测多周期 |\n| Summarizer 失败 | Loop 丢状态或模糊崩溃 | 保持旧 projection，记录 error，按 policy retry/fallback |\n| Secret 被复制到 summary | 绕过 redaction boundary | Source/output 双向脱敏、分级存储、canary test |\n| Fingerprint 被当质量分 | 坏 summary 看似“verified” | Hash 只证明 source identity；质量依赖 task eval |\n\n> 不要只因为 token count 下降就宣布 compaction 成功。Checkpoint 必须支持下一步任务，并保留声明的不变量。\n\n---\n\n## 动手练习与验收条件 {#exercises}\n\n### A. 观察 Trigger\n\n把 `trigger_chars` 设到 1,000 以上。验收：没有 `context.compact`，第二次 model request 仍包含原 tool result。\n\n### B. 保留近期 Correction\n\n设 `keep_recent_messages=1`，并在 compaction 前增加最后一条 user correction。验收：checkpoint 总结旧消息，correction 在它之后 verbatim 保留。\n\n### C. Empty-summary Failure\n\n注入 `lambda messages: \"\"`。验收：compaction 在替换当前 messages 前抛出明确错误。\n\n### D. Structured Checkpoint\n\n返回包含 goal、constraints、completed work、open tasks、artifacts、tests 与 unknowns 的 JSON。验收：缺少 `constraints` 或 `source_range` 时 schema validation 失败。\n\n### E. Atomic Tool Groups\n\n选择前先把 assistant tool call 与对应 tool result 分组。验收：保留 history 中不会出现只有一边的 pair。\n\n### F. Repeated-compaction Evaluation\n\n用已知 constraint 与 file ID 做五轮增量 compaction。验收：逐轮报告精确保留率、invented facts 与 identity error，而不是只给最终 compression ratio。\n\n运行聚焦检查：\n\n```bash\npython3 -m unittest \\\n  curriculum.tests.test_vertical_slice.VerticalSliceTests.test_s08_compacts_with_provenance -v\n```\n\n---\n\n## 深入：如何评测生产级 Compaction {#deep-dive}\n\n### Token-aware Budgeting\n\nCharacters 让课程确定性，但生产 policy 必须考虑 provider tokenizer、system sections、tool schemas、multimodal inputs、cached prefixes 与 reserved output。安全 trigger 要早于名义 limit，而且可随 model 不同。\n\n### Typed State 与 Prose Summary\n\nProse 灵活但难验证；typed state 能检测 missing constraint 与 invalid file ID。很多 Harness 会组合两者：structured fields 保存不变量，简短 narrative 提供上下文。Reducer 可以重新生成 display prose，而不丢 machine-readable status。\n\n### Summary Model Isolation\n\n如果用模型做 compaction，要决定它能访问哪些 tools、memory 与 instructions。Summarizer 不应执行副作用，并需要独立 timeout、retry、cost accounting 与 prompt-injection defense，因为待总结 history 可能包含不可信 tool output。\n\n### Cache Consequences\n\n替换长 prefix 可能使 provider prompt cache 失效。有些设计只在低频边界 compact，保持 stable system/tool-schema prefix，或使用 remote provider compaction。Cache efficiency 是性能问题，不能静默削弱 semantic retention。\n\n### Evaluation Dimensions\n\n一个有意义的 suite 至少包含：\n\n- **constraint retention**：required 与 forbidden actions 仍明确；\n- **task continuity**：下游任务完成率不下降；\n- **artifact identity**：path、hash、tool-call ID 与 branch 正确；\n- **epistemic fidelity**：fact、hypothesis、failure 与 unknown 不混淆；\n- **unfinished-work recall**：open task 存活；\n- **invention rate**：没有 unsupported fact；\n- **multi-cycle drift**：错误不随多次 compaction 累积；\n- **cost and latency**：节省值得额外 summarization 工作。\n\n### 直接 Real-agent Mapping\n\n链接的 Codex、Pi 与 Reasonix Claim 直接描述固定源码版本的 compaction。它们的 trigger、recent-tail rule、cache behavior 与 local/remote choice 不同。课程提供中立比较词汇，而不是声称实现等价。\n\n### Compaction 与 Memory\n\nCompaction 保存足以继续 Session 的状态；durable memory 选择未来可能有用、甚至跨 Session 的事实。把每个 summary 自动写入 memory，会混合两个不同 trust 与 retention decision。s09 会把 retrieval 与 skill loading 从 compaction path 分离。\n\n---\n\n## 本章检查点 {#checkpoint}\n\n继续之前，请回答：\n\n1. 为什么 factual journal 必须在 compaction 后仍保留？\n2. `source_sha256` 能证明什么，又不能证明什么？\n3. 为什么 tool request/result 应按 atomic group 处理？\n4. Compaction 相对 `model.request` 应位于哪里？\n5. 生产 checkpoint 中你会要求哪些字段？\n6. 如何度量 repeated-compaction drift？\n\ns09 会把选定信息与完整能力说明移出常驻 prompt。Harness 不再反复总结所有内容，而是在当前任务需要时才取回带来源的 memory 或加载 skill。\n",
+          "en": "# s08 · Context Compaction and Checkpoints\n\n> Compaction is a lossy compilation step: the harness replaces an overlong model-visible history with a smaller checkpoint while preserving the source events, provenance, and enough state to continue.\n\n## What you will build {#learn}\n\ns06 bounded context with deterministic truncation and pruning. Those policies remove text without understanding it. s07 then established an append-only journal that preserves the factual run even when a model-visible projection changes. This chapter combines the two ideas: when history crosses a trigger, an injected summarizer compiles older messages into a semantic checkpoint, records exactly what range it summarized, and resumes the same loop.\n\nBy the end, you should be able to:\n\n- distinguish pruning, truncation, semantic compaction, replay checkpoints, and durable memory;\n- place compaction before the next model request rather than after an overflow failure;\n- inject a summarizer without coupling the core loop to a provider;\n- record source size, output size, dropped-message count, and source SHA-256;\n- explain why the summary is a fallible projection rather than authoritative history;\n- design evaluations for constraint retention, unfinished work, file identity, and repeated-compaction drift.\n\n### Prerequisites\n\nYou should be comfortable with s06's `ContextBudget` and s07's distinction between an immutable factual log and rebuildable projections. The demo remains offline: `summarize_history` is a deterministic function, not a model call. Production systems may use a model summarizer, a structured reducer, or a hybrid.\n\n---\n\n## The problem: deletion is predictable but not sufficient {#problem}\n\nPruning recent-first can keep a request under a hard limit, but it knows nothing about goals, constraints, unfinished work, test results, or artifact identity. Consider a long coding session:\n\n```text\nuser goal\nproject instructions\ndesign decision\ntool call: read 2,000-line log\ntool result\nfile edit\nfocused test passes\nnew user correction\n```\n\nA purely positional policy may keep the latest correction but drop why the edit was made or which test passed. Keeping all text is impossible; deleting blindly is cheap but semantically fragile. Compaction deliberately creates a smaller representation of the old span.\n\n| Operation | Input | Output | Semantic interpretation | Source retained elsewhere? |\n| --- | --- | --- | --- | --- |\n| Tool truncation | One oversized result | Preview plus omission metadata | No | Should be, via artifact handle |\n| Message pruning | Message sequence | Selected messages | No | Yes, in journal |\n| Context compaction | Older history span | Summary/checkpoint | Yes | Required for audit and recovery |\n| Replay checkpoint | Event prefix + reducer | Cached derived state | Deterministic | Yes |\n| Durable memory | Selected fact | Cross-turn/session record | Yes, intentionally curated | Must retain source attribution |\n\nCompaction fails in subtler ways than overflow. It can omit a negative constraint, merge two file names, convert a hypothesis into a fact, lose an unresolved question, or recursively summarize an earlier mistake. Therefore the harness must make compaction visible and evaluable.\n\n> A shorter prompt is not evidence of a better context manager. The real question is whether downstream work remains correct and traceable.\n\n---\n\n## Mental model: compiler, source map, and checkpoint {#mental-model}\n\nTreat compaction like compiling source into a smaller intermediate representation:\n\n```text\nappend-only SessionJournal (facts)\n             │\n             ├── select source message range\n             │\n             ├── summarize / structure / validate\n             │          └── source_sha256 + policy version\n             ▼\nmodel-visible checkpoint + optional recent tail\n             │\n             └── next model.request\n```\n\nThe journal is analogous to source code; the checkpoint is an artifact. A compiler output can be regenerated, versioned, tested, and rejected. It should not erase its input.\n\n### Four contracts\n\n1. **Trigger contract:** when does compaction run—token threshold, turn boundary, tool result, latency budget, or explicit request?\n2. **Selection contract:** which messages form the old span, which remain verbatim, and which protocol groups must stay atomic?\n3. **Summary contract:** which fields must survive—goal, constraints, completed work, open tasks, artifacts, tests, and unknowns?\n4. **Provenance contract:** which source range, algorithm/model, configuration, hash, and time produced the checkpoint?\n\nThe teaching code implements a character trigger, an injected callable, a recent-message count, and a source fingerprint. It intentionally leaves model quality and token accounting outside the core.\n\n---\n\n## Build semantic compaction step by step {#build}\n\n### Step 1: define a structured report\n\n`CompactionReport` returns both the next messages and audit metadata:\n\n```python\n@dataclass(frozen=True)\nclass CompactionReport:\n    messages: tuple[Message, ...]\n    summary: str\n    dropped_count: int\n    original_chars: int\n    final_chars: int\n    source_sha256: str\n```\n\nCalling the field `dropped_count` is deliberate: messages leave the model-visible projection even though their source events remain durable. Naming the loss prevents “summary” from sounding lossless.\n\n### Step 2: inject the summarizer\n\nThe policy accepts `summarize: Callable[[Sequence[Message]], str]`:\n\n```python\nContextCompactor(\n    trigger_chars=260,\n    keep_recent_messages=0,\n    summarize=summarize_history,\n)\n```\n\nThe core loop does not know whether the callable uses deterministic rules, a local model, a remote provider, or a human-authored checkpoint. Provider credentials and retries stay at an adapter boundary.\n\n### Step 3: trigger before the request\n\nAt the top of each turn, before `model.request`, the runner checks visible size:\n\n```python\nif self.compactor is not None and self.compactor.should_compact(messages):\n    report = self.compactor.compact(messages)\n    messages = list(report.messages)\n    self._emit(\"context.compact\", ...)\n```\n\nRunning after the provider rejects an oversized request is recovery, not prevention. A production trigger should reserve output tokens, tool descriptors, system sections, and a safety margin.\n\n### Step 4: pin the system message and select the old span\n\nThe lesson retains the first system message and divides the remainder into `dropped` and `recent`:\n\n```python\nsystem = tuple(messages[:1]) if messages[:1] and messages[0].role == \"system\" else ()\nremaining = tuple(messages[len(system):])\nkeep_count = min(max(0, keep_recent_messages), len(remaining))\ndropped = remaining if keep_count == 0 else remaining[:-keep_count]\nrecent = () if keep_count == 0 else remaining[-keep_count:]\n```\n\nThis simple message-count policy is educational. Production code should group user turns, assistant tool calls, tool results, approvals, and file patches atomically. Splitting a tool request from its result can create invalid provider history.\n\n### Step 5: require a non-empty summary\n\nAn empty checkpoint cannot silently replace old state:\n\n```python\nsummary = self.summarize(dropped).strip()\nif not summary:\n    raise ValueError(\"compaction summary must be non-empty\")\n```\n\nA stronger implementation validates a typed manifest. For example, `goal`, `constraints`, `completed`, `open_tasks`, `artifacts`, `tests`, `unknowns`, and `source_event_range` can each have required schemas.\n\n### Step 6: fingerprint the compacted source\n\nThe source messages are serialized using their provider-neutral wire representation and hashed:\n\n```python\nsource_wire = json.dumps(\n    [message.to_wire() for message in dropped],\n    ensure_ascii=False,\n    sort_keys=True,\n    separators=(\",\", \":\"),\n)\nsource_sha256 = hashlib.sha256(source_wire.encode(\"utf-8\")).hexdigest()\n```\n\nThe fingerprint lets a reviewer verify which bytes were summarized. It does not measure summary quality and should be paired with source event IDs in a durable implementation.\n\n### Step 7: create an explicit checkpoint message\n\nThe compacted projection includes a visible marker:\n\n```python\nMessage(\n    role=\"assistant\",\n    content=f\"[compacted checkpoint]\\n{summary}\",\n)\n```\n\nThe marker tells later adapters, UIs, and evaluations that this text is synthesized state, not a verbatim model response. A production provider may use a dedicated internal message type and compile it to an accepted wire role.\n\n### Step 8: emit the decision, not the hidden reasoning\n\nThe event includes counts and provenance, not the summarizer's hidden reasoning:\n\n```text\ncontext.compact\n  dropped_messages\n  original_chars / final_chars\n  summary_chars\n  source_sha256\n```\n\nWhether the summary text itself is safe to record depends on its content and retention policy. The teaching trace records only metadata while the next model request consumes the checkpoint.\n\n---\n\n## Run the compaction path {#run}\n\nExecute:\n\n```bash\npython3 -m curriculum.lessons.s08_context_compaction.demo\n```\n\nThe first turn calls `inspect_artifact`, whose result contains a deliberately verbose preview. Before the second request, visible history crosses 260 characters. The runner compacts three non-system messages into one checkpoint.\n\nExpected event order around the boundary:\n\n```text\ntool.request\ntool.result\ncontext.compact       original_chars=720, final_chars=232\nmodel.request         roles=[system, assistant]\nmodel.response\nsession.stop\n```\n\nVerify the committed artifact:\n\n```bash\npython3 -m curriculum.golden verify s08-context-compaction\n```\n\n### Inspect what the model actually receives\n\nThe internal model double stores each request:\n\n```python\nrunner, _ = build_demo()\nrunner.run(\"Inspect and compact.\")\n\nfor message in runner.model.requests[1]:\n    print(message.role, message.content)\n```\n\nThe second request contains the original system prompt and an assistant checkpoint mentioning `artifact://large-report` and the verified test conclusion. It does not contain the 32 repeated preview fragments.\n\n### Compare journal and projection\n\nThe trace still contains the original `tool.result`, while the model request uses the checkpoint. This is the central invariant inherited from s07: compaction changes visibility, not historical facts.\n\n---\n\n## Failure modes and safety boundaries {#failure-modes}\n\n| Failure | Observable symptom | Better contract |\n| --- | --- | --- |\n| Constraint omitted | Agent violates a requirement later | Required constraint field plus retention evaluation |\n| Hypothesis promoted to fact | Summary states an unverified conclusion | Preserve epistemic status and evidence/source IDs |\n| Tool pair split | Provider rejects history or loses call identity | Compact atomic protocol groups |\n| File identities merged | Edit applies to the wrong path | Structured artifact records with stable handles |\n| Summary grows beyond trigger | Repeated overflow or immediate re-compaction | Validate final budget and reserve tail space |\n| Recursive drift | Each compaction amplifies an earlier error | Compact incremental spans against raw source; evaluate repeated cycles |\n| Summarizer fails | Loop loses old state or crashes ambiguously | Keep prior projection, emit error, retry/fallback by policy |\n| Secret copied into summary | Redaction boundary is bypassed | Redact source and output, classify storage, test canaries |\n| Fingerprint treated as quality score | Bad summary appears “verified” | Hash proves source identity only; quality needs task-based evals |\n\n> Never mark a compaction successful solely because it reduced token count. The checkpoint must support the next task and preserve declared invariants.\n\n---\n\n## Exercises with acceptance criteria {#exercises}\n\n### A. Observe the trigger\n\nSet `trigger_chars` above 1,000. Acceptance: no `context.compact` event appears and the second model request contains the original tool result.\n\n### B. Preserve a recent correction\n\nSet `keep_recent_messages=1` and add a final user correction before compaction. Acceptance: the checkpoint summarizes older messages while the correction remains verbatim after it.\n\n### C. Empty-summary failure\n\nInject `lambda messages: \"\"`. Acceptance: compaction raises an explicit error before replacing the current messages.\n\n### D. Structured checkpoint\n\nReturn JSON containing goal, constraints, completed work, open tasks, artifacts, tests, and unknowns. Acceptance: schema validation rejects a checkpoint missing `constraints` or `source_range`.\n\n### E. Atomic tool groups\n\nGroup assistant tool calls and their tool results before selection. Acceptance: no retained history contains one side without the other.\n\n### F. Repeated-compaction evaluation\n\nRun five incremental compactions with a known set of constraints and file IDs. Acceptance: report exact retention, invented facts, and identity errors after each cycle, not only final compression ratio.\n\nRun the focused check:\n\n```bash\npython3 -m unittest \\\n  curriculum.tests.test_vertical_slice.VerticalSliceTests.test_s08_compacts_with_provenance -v\n```\n\n---\n\n## Deep dive: evaluating production compaction {#deep-dive}\n\n### Token-aware budgeting\n\nCharacters make the lesson deterministic, but production policy must account for provider tokenization, system sections, tool schemas, multimodal inputs, cached prefixes, and reserved output. A safe trigger is earlier than the nominal limit and can differ per model.\n\n### Typed state versus prose summary\n\nProse is flexible but difficult to validate. Typed state makes missing constraints and invalid file IDs detectable. Many harnesses use both: structured fields for invariants and a concise narrative for context. The reducer can regenerate display prose without losing machine-readable status.\n\n### Summary model isolation\n\nIf a model performs compaction, decide which tools, memory, and instructions it can access. A summarizer should not execute side effects. It needs its own timeout, retry policy, cost accounting, and prompt-injection defenses because the history being summarized may contain untrusted tool output.\n\n### Cache consequences\n\nReplacing a long prefix can invalidate provider prompt caches. Some designs compact only at low-frequency boundaries, keep stable system/tool-schema prefixes, or use remote provider compaction. Cache efficiency is a performance concern; it must not silently weaken semantic retention.\n\n### Evaluation dimensions\n\nA useful suite includes:\n\n- **constraint retention:** required and forbidden actions remain explicit;\n- **task continuity:** downstream tasks complete at the same rate;\n- **artifact identity:** paths, hashes, tool-call IDs, and branches remain correct;\n- **epistemic fidelity:** facts, hypotheses, failures, and unknowns stay distinct;\n- **unfinished-work recall:** open tasks survive;\n- **invention rate:** no unsupported facts appear;\n- **multi-cycle drift:** errors do not compound across repeated compaction;\n- **cost and latency:** savings justify the additional summarization work.\n\n### Direct real-agent mappings\n\nThe linked Codex, Pi, and Reasonix Claims directly describe compaction at pinned source revisions. Their triggers, recent-tail rules, cache behavior, and local/remote choices differ. The lesson supplies a neutral comparison vocabulary, not a claim that implementations are equivalent.\n\n### Compaction versus memory\n\nCompaction preserves enough session state to continue. Durable memory selects facts expected to matter later, possibly across sessions. Automatically writing every summary into memory mixes two trust and retention decisions. s09 separates retrieval and skill loading from the compaction path.\n\n---\n\n## Checkpoint {#checkpoint}\n\nBefore continuing, answer:\n\n1. Why must the factual journal survive compaction?\n2. What does `source_sha256` prove, and what does it not prove?\n3. Why should tool request/result groups be atomic?\n4. Where must compaction occur relative to `model.request`?\n5. Which fields would you require in a production checkpoint?\n6. How would you measure repeated-compaction drift?\n\ns09 moves selected information and full capability instructions outside the resident prompt. Instead of repeatedly summarizing everything, the harness will retrieve a source-attributed memory or load a skill only when the current task needs it.\n"
+        }
+      },
+      {
+        "id": "s09-memory-skills",
+        "number": "09",
+        "slug": "memory-skills",
+        "title": {
+          "zh-CN": "Memory 与按需 Skills",
+          "en": "Memory and On-Demand Skills"
+        },
+        "summary": {
+          "zh-CN": "把长期事实与完整能力说明移出常驻上下文，只在相关时检索和加载。",
+          "en": "Move durable facts and full capability instructions out of resident context, retrieving them only when relevant."
+        },
+        "mechanism_ids": [
+          "memory-retrieval",
+          "extension-runtime"
+        ],
+        "status": "implemented",
+        "estimated_minutes": 40,
+        "difficulty": "advanced",
+        "code_path": "curriculum/lessons/s09_memory_skills/demo.py",
+        "content_paths": {
+          "zh-CN": "curriculum/lessons/s09_memory_skills/lesson.zh.md",
+          "en": "curriculum/lessons/s09_memory_skills/lesson.en.md"
+        },
+        "run": "python3 -m curriculum.lessons.s09_memory_skills.demo",
+        "change_contract": {
+          "previous_lesson_id": "s08-context-compaction",
+          "summary": {
+            "zh-CN": "从“压缩旧上下文”前进到“按需取回外部事实与能力说明”。",
+            "en": "Move from compressing old context to retrieving external facts and capability instructions on demand."
+          },
+          "adds": [
+            {
+              "zh-CN": "带 scope/source 的 MemoryRecord 与确定性 retrieval",
+              "en": "Source- and scope-attributed MemoryRecord objects with deterministic retrieval"
+            },
+            {
+              "zh-CN": "轻量 descriptor 常驻、完整 skill instructions 延迟加载",
+              "en": "Resident lightweight descriptors with lazily loaded full skill instructions"
+            }
+          ],
+          "preserves": [
+            {
+              "zh-CN": "检索与加载都通过可观察事件进入上下文，不把外部数据伪装成模型记忆。",
+              "en": "Retrieval and loading enter context through observable events; external data is never disguised as model memory."
+            }
+          ]
+        },
+        "golden_trace": {
+          "path": "curriculum/lessons/s09_memory_skills/golden.trace.jsonl",
+          "run_id": "run-s09-memory-skills-golden",
+          "expected_event_count": 13,
+          "focus_event_types": [
+            "memory.read",
+            "skill.load",
+            "tool.result",
+            "model.request"
+          ],
+          "download_path": "/data/traces/run-s09-memory-skills-golden.jsonl"
+        },
+        "agent_bridge": {
+          "relationship": "adjacent",
+          "claim_ids": [
+            "codex-source-extension-runtime",
+            "pi-source-extension-runtime",
+            "reasonix-source-extension-runtime",
+            "claude-code-doc-hooks"
+          ],
+          "notes": {
+            "zh-CN": "Claim 直接覆盖 skills/plugins/hooks 或 lazy extension runtime，但当前没有统一的跨产品 durable-memory 语义，因此 Memory 部分保持相邻映射。",
+            "en": "The claims directly cover skills, plugins, hooks, or lazy extension runtimes, but no uniform cross-product durable-memory semantics are established, so the memory portion remains an adjacent mapping."
+          }
+        },
+        "exercise_checks": [
+          {
+            "id": "s09-golden-trace",
+            "level": "observe",
+            "title": {
+              "zh-CN": "复核按需加载",
+              "en": "Verify on-demand loading"
+            },
+            "acceptance": {
+              "zh-CN": "memory.read 和 skill.load 各出现一次，并且结果带 source 或 skill identity。",
+              "en": "memory.read and skill.load each appear once with source or skill identity."
+            },
+            "command": "python3 -m curriculum.golden verify s09-memory-skills"
+          },
+          {
+            "id": "s09-retrieval-contract",
+            "level": "modify",
+            "title": {
+              "zh-CN": "验证 Retrieval 合同",
+              "en": "Test the retrieval contract"
+            },
+            "acceptance": {
+              "zh-CN": "查询只返回相关、带来源的 memory；未知 skill 明确失败，不静默注入。",
+              "en": "Queries return only relevant source-attributed memory; unknown skills fail explicitly rather than being silently injected."
+            },
+            "command": "python3 -m unittest curriculum.tests.test_vertical_slice.VerticalSliceTests.test_s09_retrieves_memory_and_loads_skill -v"
+          }
+        ],
+        "source_code": "from curriculum.harness import (\n    AgentRunner,\n    MemoryRecord,\n    MemoryStore,\n    ModelTurn,\n    ScriptedModel,\n    SkillCatalog,\n    SkillDefinition,\n    Tool,\n    ToolCall,\n    ToolRegistry,\n)\nfrom curriculum.lessons.common import lesson_trace, print_run\n\n\ndef build_demo() -> tuple[AgentRunner, object]:\n    trace = lesson_trace(\"s09-memory-skills\")\n    memory = MemoryStore()\n    memory.remember(\n        MemoryRecord(\n            id=\"project-test-policy\",\n            content=\"Run the focused test before the full suite.\",\n            scope=\"workspace\",\n            source=\"AGENTS.md#testing\",\n        )\n    )\n    skills = SkillCatalog()\n    skills.register(\n        SkillDefinition(\n            id=\"test-first\",\n            description=\"Choose focused checks before broad regression tests.\",\n            instructions=\"Run the smallest relevant test, inspect failure, then widen coverage.\",\n            tool_names=(\"run_command\",),\n        )\n    )\n\n    def search_memory(args):\n        matches = memory.search(args[\"query\"])\n        parent = trace.events[-1][\"event_id\"]\n        trace.emit(\n            \"memory.read\",\n            actor_kind=\"harness\",\n            actor_id=\"workspace-memory\",\n            parent_event_id=parent,\n            payload={\n                \"query\": args[\"query\"],\n                \"match_ids\": [record.id for record in matches],\n                \"sources\": [record.source for record in matches],\n            },\n        )\n        return {\n            \"matches\": [\n                {\"id\": record.id, \"content\": record.content, \"source\": record.source}\n                for record in matches\n            ]\n        }\n\n    def load_skill(args):\n        skill = skills.load(args[\"skill_id\"])\n        parent = trace.events[-1][\"event_id\"]\n        trace.emit(\n            \"skill.load\",\n            actor_kind=\"harness\",\n            actor_id=\"skill-catalog\",\n            parent_event_id=parent,\n            payload={\"skill_id\": skill.id, \"tool_names\": list(skill.tool_names)},\n        )\n        return {\n            \"id\": skill.id,\n            \"instructions\": skill.instructions,\n            \"tool_names\": list(skill.tool_names),\n        }\n\n    registry = ToolRegistry()\n    registry.register(\n        Tool(\n            name=\"memory_search\",\n            description=\"Retrieve source-attributed workspace memory on demand.\",\n            parameters={\n                \"type\": \"object\",\n                \"additionalProperties\": False,\n                \"required\": [\"query\"],\n                \"properties\": {\"query\": {\"type\": \"string\"}},\n            },\n            handler=search_memory,\n        )\n    )\n    registry.register(\n        Tool(\n            name=\"load_skill\",\n            description=\"Load full skill instructions only after selecting a descriptor.\",\n            parameters={\n                \"type\": \"object\",\n                \"additionalProperties\": False,\n                \"required\": [\"skill_id\"],\n                \"properties\": {\"skill_id\": {\"type\": \"string\"}},\n            },\n            handler=load_skill,\n        )\n    )\n    model = ScriptedModel(\n        [\n            ModelTurn(\n                tool_calls=(\n                    ToolCall(\n                        id=\"call-memory\",\n                        name=\"memory_search\",\n                        arguments={\"query\": \"project test policy\"},\n                    ),\n                    ToolCall(\n                        id=\"call-skill\",\n                        name=\"load_skill\",\n                        arguments={\"skill_id\": \"test-first\"},\n                    ),\n                )\n            ),\n            ModelTurn(\n                content=\"I will run the focused test first, then widen coverage.\",\n                stop=True,\n            ),\n        ]\n    )\n    return AgentRunner(model=model, tools=registry, trace=trace), trace\n\n\ndef main() -> None:\n    runner, trace = build_demo()\n    result = runner.run(\"Recall the project testing rule and load the relevant skill.\")\n    print_run(result.final_text, trace)\n\n\nif __name__ == \"__main__\":\n    main()\n",
+        "content": {
+          "zh-CN": "# s09 · Memory 与按需 Skills\n\n> Context 应该放下一轮真正需要的内容，而不是 Harness 曾经学到的每条事实和每种能力。Durable memory 与完整 skill instructions 留在常驻 prompt 外，只有显式检索或加载后才进入。\n\n## 学完这一章，你会得到什么 {#learn}\n\ns08 把较旧 Session history 压成 checkpoint，但 compaction 的来源仍是同一 Session 已经出现的信息。Coding agent 还需要跨 turn 存活的项目事实，以及不适合每次 request 都携带的大段能力说明。本章增加两个刻意分离的 store：\n\n- `MemoryStore` 保存带稳定 identity、scope 与 source attribution 的精选事实。\n- `SkillCatalog` 让轻量 descriptor 常驻，只在选中 skill 后加载完整 instructions。\n\n两者都通过 structured tool 和可见的 `memory.read` / `skill.load` event 进入 loop。Harness 实际取回的数据不会被描述成模型自己“记起来了”。\n\n完成后你应该能够：\n\n- 区分 message history、compacted checkpoint、durable memory、artifact、instruction 与 skill；\n- 定义带 provenance 的 memory record 与确定性 retrieval contract；\n- 解释为什么 memory write 比 read 需要更严格审核；\n- 保持 skill descriptor 精简，并按需加载完整 instructions 与 tool requirement；\n- 在不暴露隐藏推理的前提下追踪 retrieval/loading；\n- 识别 stale memory、poisoning、prompt injection、capability escalation 与 privacy 风险。\n\n### 先修知识\n\n你需要理解 s03、s05、s06 与 s08 的 context budget、compaction、tool dispatch 和 instruction precedence。这里的 retrieval algorithm 刻意采用 lexical deterministic 方式，教学重点是系统边界，不是最先进 semantic search。\n\n---\n\n## 问题：“全部放进 Prompt”无法扩展 {#problem}\n\n成熟 Agent 可能知道 repository conventions、过往 architecture decision、test command、用户偏好、几十个 skills、数百个 MCP tools 与大量 artifacts。把全部内容注入每次 model request 会产生四类失败：\n\n1. **Budget pressure**：静态能力文字与当前任务竞争窗口。\n2. **Attention dilution**：无关 instruction 让真正相关规则更难遵守。\n3. **Staleness**：项目变化后，旧 fact 仍静默生效。\n4. **Authority confusion**：retrieved data、project policy、tool output 与 model text 看起来同样可信。\n\n相反极端是完全不保留信息，导致重复 discovery，并丢失 durable decision。Harness 需要 selective persistence 与 explicit retrieval。\n\n| 数据类别 | 常见生命周期 | Authority | 如何进入 Context |\n| --- | --- | --- | --- |\n| Recent messages | 当前 Session | User/model/tool event | Loop state |\n| Compacted checkpoint | 当前 Session/branch | Derived from journal | Context policy |\n| Project instructions | Directory/version scope | Repository policy | Instruction discovery |\n| Artifact | Task 或 durable storage | Tool/environment result | Handle + explicit read |\n| Memory record | Turn/session/project/user scope | 带 source 的 curated fact | Retrieval result |\n| Skill descriptor | Installation scope | Extension metadata | 小型常驻 catalog |\n| Skill instructions | Loaded task scope | Reviewed extension content | Explicit load |\n\n> Memory 不是更大的 system prompt，而是一座需要 selection、provenance、invalidation、trust 与 observability 的数据库。\n\n---\n\n## 心智模型：External Store 与 Context Compiler {#mental-model}\n\n模型每轮看到的是有限 projection：\n\n```text\ncurrent user task\n      │\n      ├── memory_search(query) ──> source-attributed facts\n      │                                  │\n      ├── skill descriptors ── select ── load_skill(id)\n      │                                  │\n      └──────────── context compiler ◄───┘\n                         │\n                         ▼\n                  next model.request\n```\n\nMemory 与 skill 都是“按需加载”，但语义不同：\n\n- **Memory** 声明关于 project、user 或过去工作的事实，需要 freshness 与 evidence。\n- **Skill** 贡献 procedure instructions、tools 或 workflow，需要 installation trust 与 capability review。\n- **Artifact** 通常是通过 handle 寻址的大型 immutable/versioned result。\n- **Instruction** 有 policy precedence，可能约束某个目录下的所有工作。\n\n把它们混成一袋 text，会让 authority 无法分析。\n\n### Retrieval Contract\n\n有用的 retrieval response 应回答：\n\n1. 使用了什么 query 与 scope？\n2. 哪些 record IDs 命中，稳定顺序是什么？\n3. 每条 record 的 source 是什么？\n4. 何时写入或最后验证？\n5. Result 是否 truncated、filtered 或 denied？\n\n课程实现前三项。生产版本还要加入 timestamp、version range、confidence、contradiction state 与 access policy。\n\n---\n\n## 逐步构建 Memory 与 Lazy Skills {#build}\n\n### 第 1 步：给每条 Memory Identity 与 Source\n\n最小 record 很明确：\n\n```python\n@dataclass(frozen=True)\nclass MemoryRecord:\n    id: str\n    content: str\n    scope: str\n    source: str\n```\n\n只有 `content` 会产生歧义。`scope=\"workspace\"` 说明 fact 在哪里生效；`source=\"AGENTS.md#testing\"` 让用户或 validator 找到支持该 policy 的位置。\n\n### 第 2 步：让 Write 成为审慎动作\n\n`remember()` 拒绝 duplicate ID 与空 content/source：\n\n```python\ndef remember(self, record):\n    if record.id in self._records:\n        raise ValueError(f\"memory already exists: {record.id}\")\n    if not record.content.strip() or not record.source.strip():\n        raise ValueError(\"memory content and source must be non-empty\")\n    self._records[record.id] = record\n```\n\nDemo 预加载一条已审核 record，不允许 model 写 memory。生产 write path 应要求 schema、scope、source evidence、secret scan、contradiction check，并经常需要 user 或 policy approval。\n\n### 第 3 步：先用确定性 Retrieval，再谈 Semantic Ranking\n\n教学 search 把 query term 转小写，计算 term matches，然后按 score 降序、stable ID 升序排列：\n\n```python\nterms = {term for term in query.lower().split() if term}\nscore = sum(term in haystack for term in terms)\nranked.sort(key=lambda item: (-item[0], item[1]))\n```\n\n它不复杂，却可重复、易测试。Vector search 会引入 embedding version、distance threshold、index freshness 与 nondeterministic tie，需要独立 experiment contract。\n\n### 第 4 步：把 Retrieval 暴露为 Bounded Tool\n\n模型通过 structured query 请求 `memory_search`，handler 只返回 matching records：\n\n```python\n{\n  \"matches\": [\n    {\n      \"id\": \"project-test-policy\",\n      \"content\": \"Run the focused test before the full suite.\",\n      \"source\": \"AGENTS.md#testing\"\n    }\n  ]\n}\n```\n\nTool result 按 s03 同一 roundtrip contract 进入 message history。Retrieval 不会绕过 tool validation 或 context budget。\n\n### 第 5 步：记录 `memory.read`\n\nHandler 在 `tool.request` 和 `tool.result` 中间发出观察事件：\n\n```python\ntrace.emit(\n    \"memory.read\",\n    actor_kind=\"harness\",\n    actor_id=\"workspace-memory\",\n    payload={\n        \"query\": query,\n        \"match_ids\": [...],\n        \"sources\": [...],\n    },\n)\n```\n\nEvent 记录 selection 与 provenance，不记录模型隐藏推理。敏感 memory content 可以从公开 Trace 删除，同时保留 ID 与 redaction status。\n\n### 第 6 步：让 Skill Descriptor 常驻\n\n`SkillCatalog.descriptors()` 只返回 identity 和短 description：\n\n```python\n{\"id\": \"test-first\", \"description\": \"Choose focused checks before broad regression tests.\"}\n```\n\n假如 50 个 skills 各有一千 tokens instructions，descriptor 允许 Harness 或模型先选择一个，而不是耗尽 context。Descriptor quality 本身就是 retrieval problem：既要足够具体，又不能把整个 skill 全塞进去。\n\n### 第 7 步：显式加载完整 Instructions\n\n选中后，`load_skill` 返回 instructions 与 tool requirements：\n\n```python\n{\n  \"id\": \"test-first\",\n  \"instructions\": \"Run the smallest relevant test, inspect failure, then widen coverage.\",\n  \"tool_names\": [\"run_command\"]\n}\n```\n\n加载 instructions 不会自动授予声明的 tools。s10 与 s11 会把 approval/sandbox policy 和 capability description 分离。\n\n### 第 8 步：记录 `skill.load`\n\nTrace event 包含 stable skill ID 和 declared tool names。生产 event 还可以加入 package version、content digest、signer/trust source、load reason 与 instruction size。\n\n### 第 9 步：继续使用普通 Loop\n\n第一轮 scripted model 同时请求两个 tools。Runner 按顺序执行，追加两条 tool message，然后进入第二次 model request。不需要 memory-specific control loop；memory 与 skills 只是现有 tool/event protocol 的扩展。\n\n---\n\n## 运行 Retrieval Path {#run}\n\n执行：\n\n```bash\npython3 -m curriculum.lessons.s09_memory_skills.demo\n```\n\n核心事件序列是：\n\n```text\ntool.request memory_search\nmemory.read\ntool.result memory_search\ntool.request load_skill\nskill.load\ntool.result load_skill\nmodel.request\n```\n\n验证全部 13 条提交事件：\n\n```bash\npython3 -m curriculum.golden verify s09-memory-skills\n```\n\n### 检查 Evidence Path\n\n`memory.read` 指出 `project-test-policy` 与 `AGENTS.md#testing`，紧随其后的 tool result 包含 content。UI 可以链接 source；公开 Trace 也可以 redacted content 而保留 record identity。\n\n### 检查 Capability Path\n\n`skill.load` 指出 `test-first` 与 `run_command`。这个 declaration 只是信息；Demo 没注册 `run_command`，因此 skill 不能静默执行。Capability grant 仍是独立 Harness decision。\n\n### 检查第二次 Request\n\n`runner.model.requests[1]` 有四条 messages：user、assistant、memory tool result 与 skill tool result。Retrieval boundary 清楚地出现在普通 model history 中。\n\n---\n\n## 失败模式与 Trust Boundary {#failure-modes}\n\n| 失败 | 后果 | 更安全设计 |\n| --- | --- | --- |\n| Stale memory | Agent 遵循过时 command 或 architecture | Version scope、validation date、invalidation 与 contradiction state |\n| Memory poisoning | 不可信 tool output 变成 durable authority | Restricted write path、source allowlist、review 与 provenance |\n| Secret retention | Credential 跨 Session 存活 | Classification、secret scan、encryption、retention 与 deletion |\n| Over-broad scope | 一个项目规则影响另一个 | 显式 workspace/user/session namespace |\n| Retrieval flood | 无关 records 占满 context | Limit、threshold、diversity、size budget 与 no-match result |\n| Descriptor ambiguity | 加载错误 skill | 具体 description、examples、conflict tests 与 explicit selection |\n| Skill prompt injection | Loaded instructions 覆盖更高 policy | Trust tier、instruction delimiter 与 precedence compiler |\n| Capability escalation | Skill 声明危险 tool 并获得权限 | Tool grant 继续受 policy 控制；声明不等于授权 |\n| Package drift | 同一 skill ID 指向新 content | Version pin 与 content digest 写入 load event |\n| Silent no-match fallback | 模型编造“记得”的事实 | 显式 empty result 与 visible uncertainty |\n\n> Retrieved text 是带 provenance 的 data，不自动成为 trusted instruction。Authority 取决于 type、scope、source 与 policy。\n\n---\n\n## 动手练习与验收条件 {#exercises}\n\n### A. No-match Behavior\n\n搜索 `deployment region`。验收：返回 empty tuple，并发出 match IDs 为空的 `memory.read`；模型不会收到 invented default。\n\n### B. Stable Ranking\n\n增加两条相同 score record。验收：按 stable ID 排序，重复运行得到相同 Golden Trace。\n\n### C. Contradictory Memory\n\n增加一条更新、但与 `project-test-policy` 冲突的 record。设计 `supersedes`、`valid_from` 与 `status`。验收：retrieval 不会把两者作为同等 current fact 返回。\n\n### D. Memory Write Gate\n\n增加不能直接 commit 的 `memory_write` proposal。验收：缺 source、secret-like content 或 workspace mismatch 都被拒绝；批准后只发出带 redacted metadata 的 `memory.write`。\n\n### E. Skill Digest\n\n对 canonical skill content 计算 SHA-256，加入 `skill.load`。验收：修改 instructions 却不更新 digest 时 validation 失败。\n\n### F. Capability Separation\n\n加载声明 `run_command` 的 skill，但 Tool Registry 不注册它。验收：skill text 可见，请求缺失 tool 时得到 unknown-tool error，而不是自动获得能力。\n\n运行聚焦合同：\n\n```bash\npython3 -m unittest \\\n  curriculum.tests.test_vertical_slice.VerticalSliceTests.test_s09_retrieves_memory_and_loads_skill -v\n```\n\n---\n\n## 深入：生产级 Retrieval Architecture {#deep-dive}\n\n### Memory Lifecycle\n\nDurable record 需要 creation、validation、retrieval、update、contradiction、expiration 与 deletion state。Append-only history 可以记录变化，current projection 选择 active version。对安全关键 constraint，last-write-wins 通常不够。\n\n### Scope 与 Identity\n\n有用 scope 包括 turn、branch、session、workspace、repository revision、user 与 organization。Memory 应绑定 stable project identity，而不只是本地 absolute path。Forked repository 与 renamed workspace 需要明确 lineage rule。\n\n### Retrieval Evaluation\n\n评测 necessary fact recall、returned fact precision、stale-record rate、contradiction handling、context cost、latency 与 downstream task success。Semantic similarity 高并不够，如果 fact 对应错误版本或 authority，结果仍然危险。\n\n### Prompt Injection 与 Data/Instruction 分离\n\nTool output 或文档可能包含命令式文本。Memory reducer 不应把“ignore previous instructions”自动变成 durable policy。保存 data 时要带 type/source，通过另一套 precedence system 编译 trusted instruction，并用清晰 delimiter 暴露 untrusted text。\n\n### Skill Supply Chain\n\nSkills 是 executable-adjacent content。生产 catalog 需要 package origin、version、digest/signature、allowed tools、network expectations、lifecycle hooks 与 update policy。即使不执行代码，加载 skill 也会改变 Agent behavior，所以 review 与 provenance 重要。\n\n### Lazy Tools 与 Schema Stability\n\n一些系统保持 placeholder descriptor 稳定，只在选中时启动 MCP server 或 reconcile live schema。这改善 startup 与 cache，却会把 load failure 推迟到任务中间。Events 应区分 selection、process startup、schema reconciliation 与 final availability。\n\n### Real-agent Evidence Boundary\n\n链接 Claim 覆盖 Codex skills/plugins、Pi extensions、Reasonix lazy plugin/MCP 行为与 Claude Code hooks，支持 adjacent extension-runtime comparison。它们并没有建立跨产品统一 durable-memory implementation。\n\n### 从 Context 走向 Safety\n\nMemory 与 skill 会影响动作，但不能拥有 authorization。Remembered preference 不能覆盖 fresh denial，要求 shell access 的 skill 也不能给自己授权。s10 将进入 Safety track，在 model request 与真实 effect 之间插入显式 approval policy。\n\n---\n\n## 本章检查点 {#checkpoint}\n\n进入 Safety 前，请回答：\n\n1. Durable memory 与 compacted checkpoint 有何区别？\n2. 为什么每条 memory record 都必须有 scope 与 source？\n3. 为什么 memory write 比 read 风险更高？\n4. Skill descriptor 应保留什么，什么应延迟加载？\n5. 为什么 skill 的 tool declaration 不等于 authorization？\n6. 哪些 events 让 retrieval 与 loading 可审计？\n\n至此 Context track 完整连接起来：确定性 instructions、hard budgets、replayable facts、semantic compaction 与 on-demand retrieval。下一章会在任何副作用发生前，明确判断请求动作是否被允许。\n",
+          "en": "# s09 · Memory and On-Demand Skills\n\n> Context should contain what the next turn needs, not every fact and capability the harness has ever learned. Durable memory and full skill instructions stay outside the resident prompt until explicit retrieval or loading.\n\n## What you will build {#learn}\n\ns08 compressed older session history into a checkpoint. Compaction still starts from information already in one session. Coding agents also need project facts that outlive a turn, and capability instructions too large to keep in every request. This chapter adds two deliberately separate stores:\n\n- `MemoryStore` holds selected facts with stable identity, scope, and source attribution.\n- `SkillCatalog` keeps lightweight descriptors resident and loads full instructions only after a skill is selected.\n\nBoth enter the loop through structured tools and visible `memory.read` / `skill.load` events. Nothing is described as the model “remembering” data that the harness actually retrieved.\n\nBy the end, you should be able to:\n\n- distinguish message history, compacted checkpoints, durable memory, artifacts, instructions, and skills;\n- define a provenance-bearing memory record and deterministic retrieval contract;\n- explain why memory writes need stricter review than reads;\n- keep skill descriptors small while loading full instructions and tool requirements on demand;\n- trace retrieval and loading without exposing hidden reasoning;\n- identify stale-memory, poisoning, prompt-injection, capability-escalation, and privacy risks.\n\n### Prerequisites\n\nYou should understand context budgets, compaction, tool dispatch, and instruction precedence from s03, s05, s06, and s08. The retrieval algorithm here is intentionally lexical and deterministic. It teaches boundaries, not state-of-the-art semantic search.\n\n---\n\n## The problem: “put everything in the prompt” does not scale {#problem}\n\nA mature agent may know about repository conventions, past architectural decisions, test commands, user preferences, dozens of skills, hundreds of MCP tools, and large artifacts. Injecting everything into every model request creates four failures:\n\n1. **Budget pressure:** static capability text competes with the current task.\n2. **Attention dilution:** irrelevant instructions make the relevant rule harder to follow.\n3. **Staleness:** an old fact remains silently active after the project changes.\n4. **Authority confusion:** retrieved data, project policy, tool output, and model text look equally trusted.\n\nThe opposite extreme—never retaining anything—forces repeated discovery and loses durable decisions. The harness needs selective persistence and explicit retrieval.\n\n| Data class | Typical lifetime | Authority | How it enters context |\n| --- | --- | --- | --- |\n| Recent messages | Current session | User/model/tool event | Loop state |\n| Compacted checkpoint | Current session/branch | Derived from journal | Context policy |\n| Project instructions | Directory/version scoped | Repository policy | Instruction discovery |\n| Artifact | Task or durable storage | Tool/environment result | Handle plus explicit read |\n| Memory record | Turn, session, project, or user scope | Curated fact with source | Retrieval result |\n| Skill descriptor | Installation scope | Extension metadata | Small resident catalog |\n| Skill instructions | Loaded task scope | Reviewed extension content | Explicit load |\n\n> Memory is not a larger system prompt. It is a database with selection, provenance, invalidation, trust, and observability requirements.\n\n---\n\n## Mental model: external stores and a context compiler {#mental-model}\n\nThe model sees a finite projection compiled for one turn:\n\n```text\ncurrent user task\n      │\n      ├── memory_search(query) ──> source-attributed facts\n      │                                  │\n      ├── skill descriptors ── select ── load_skill(id)\n      │                                  │\n      └──────────── context compiler ◄───┘\n                         │\n                         ▼\n                  next model.request\n```\n\nMemory and skills share “load on demand,” but their semantics differ:\n\n- A **memory** claims something about a project, user, or prior work. It needs freshness and evidence.\n- A **skill** contributes procedural instructions, tools, or workflow. It needs installation trust and capability review.\n- An **artifact** is usually a large immutable or versioned result addressed by a handle.\n- An **instruction** has policy precedence and may constrain all work under a directory.\n\nTreating these as one bag of text makes it impossible to reason about authority.\n\n### Retrieval contract\n\nA useful retrieval response answers:\n\n1. Which query and scope were used?\n2. Which record IDs matched, in what stable order?\n3. What source supports each record?\n4. When was it written or last validated?\n5. Was the result truncated, filtered, or denied?\n\nThe lesson implements the first three. Later production work should add timestamps, version ranges, confidence, contradiction state, and access policy.\n\n---\n\n## Build memory and lazy skills step by step {#build}\n\n### Step 1: give each memory identity and source\n\nThe smallest record is explicit:\n\n```python\n@dataclass(frozen=True)\nclass MemoryRecord:\n    id: str\n    content: str\n    scope: str\n    source: str\n```\n\n`content` alone would be ambiguous. `scope=\"workspace\"` says where the fact applies; `source=\"AGENTS.md#testing\"` lets a user or validator find the policy that supports it.\n\n### Step 2: make writes deliberate\n\n`remember()` rejects duplicate IDs and empty content/source:\n\n```python\ndef remember(self, record):\n    if record.id in self._records:\n        raise ValueError(f\"memory already exists: {record.id}\")\n    if not record.content.strip() or not record.source.strip():\n        raise ValueError(\"memory content and source must be non-empty\")\n    self._records[record.id] = record\n```\n\nThe demo preloads one reviewed record. It does not let the model write memory. A production write path should require a schema, scope, source evidence, secret scan, contradiction check, and often user or policy approval.\n\n### Step 3: use deterministic retrieval before semantic ranking\n\nThe teaching search lowercases query terms, counts term matches, and sorts by descending score then stable ID:\n\n```python\nterms = {term for term in query.lower().split() if term}\nscore = sum(term in haystack for term in terms)\nranked.sort(key=lambda item: (-item[0], item[1]))\n```\n\nThis is not sophisticated, but it is reproducible and easy to test. Vector search introduces embedding versions, distance thresholds, index freshness, and nondeterministic ties that need their own experiment contract.\n\n### Step 4: expose retrieval as a bounded tool\n\nThe model requests `memory_search` with a structured query. The handler returns only matching records:\n\n```python\n{\n  \"matches\": [\n    {\n      \"id\": \"project-test-policy\",\n      \"content\": \"Run the focused test before the full suite.\",\n      \"source\": \"AGENTS.md#testing\"\n    }\n  ]\n}\n```\n\nThe tool result enters message history using the same roundtrip contract as s03. Retrieval does not bypass tool validation or context budgets.\n\n### Step 5: record `memory.read`\n\nThe handler emits an observation between `tool.request` and `tool.result`:\n\n```python\ntrace.emit(\n    \"memory.read\",\n    actor_kind=\"harness\",\n    actor_id=\"workspace-memory\",\n    payload={\n        \"query\": query,\n        \"match_ids\": [...],\n        \"sources\": [...],\n    },\n)\n```\n\nThe event records selection and provenance, not hidden model reasoning. Sensitive memory content may be omitted from public traces while IDs and redaction status remain.\n\n### Step 6: keep skill descriptors resident\n\n`SkillCatalog.descriptors()` returns only identity and a short description:\n\n```python\n{\"id\": \"test-first\", \"description\": \"Choose focused checks before broad regression tests.\"}\n```\n\nIf fifty skills each contain a thousand tokens of instructions, descriptors let the harness or model choose one without spending the entire context budget. Descriptor quality becomes a retrieval problem: it must be specific enough to select correctly without embedding the whole skill.\n\n### Step 7: load full instructions explicitly\n\nAfter selection, `load_skill` returns instructions and tool requirements:\n\n```python\n{\n  \"id\": \"test-first\",\n  \"instructions\": \"Run the smallest relevant test, inspect failure, then widen coverage.\",\n  \"tool_names\": [\"run_command\"]\n}\n```\n\nLoading instructions does not automatically grant the named tools. s10 and s11 separate approval and sandbox policy from capability description.\n\n### Step 8: record `skill.load`\n\nThe trace event includes the stable skill ID and declared tool names. A production event may also include package version, content digest, signer/trust source, load reason, and instruction size.\n\n### Step 9: continue through the ordinary loop\n\nThe first scripted model turn requests both tools. The runner executes them in order, appends two tool messages, and makes the second model request. No memory-specific control loop is required; memory and skills are extensions of the existing tool/event protocol.\n\n---\n\n## Run the retrieval path {#run}\n\nExecute:\n\n```bash\npython3 -m curriculum.lessons.s09_memory_skills.demo\n```\n\nThe central event sequence is:\n\n```text\ntool.request memory_search\nmemory.read\ntool.result memory_search\ntool.request load_skill\nskill.load\ntool.result load_skill\nmodel.request\n```\n\nVerify all 13 committed events:\n\n```bash\npython3 -m curriculum.golden verify s09-memory-skills\n```\n\n### Inspect the evidence path\n\nThe `memory.read` event names `project-test-policy` and `AGENTS.md#testing`. The following tool result includes the content. A UI can link the source; a public trace can redact content while retaining the record identity.\n\n### Inspect the capability path\n\nThe `skill.load` event names `test-first` and `run_command`. That declaration is informational. The demo does not register `run_command`, so the loaded skill cannot silently execute it. Capability grant remains a separate harness decision.\n\n### Inspect the second request\n\n`runner.model.requests[1]` has four messages: user, assistant, memory tool result, and skill tool result. This makes the retrieval boundary visible in ordinary model history.\n\n---\n\n## Failure modes and trust boundaries {#failure-modes}\n\n| Failure | Consequence | Safer design |\n| --- | --- | --- |\n| Stale memory | Agent follows an obsolete command or architecture | Version scope, validation date, invalidation and contradiction state |\n| Memory poisoning | Untrusted tool output becomes durable authority | Restricted write path, source allowlist, review and provenance |\n| Secret retention | Credential survives across sessions | Classification, secret scan, encryption, retention and deletion |\n| Over-broad scope | One project's rule affects another | Explicit workspace/user/session namespace |\n| Retrieval flood | Irrelevant records consume context | Limit, threshold, diversity, size budget and “no match” result |\n| Descriptor ambiguity | Wrong skill is loaded | Specific descriptions, examples, conflict tests and explicit selection |\n| Skill prompt injection | Loaded instructions override higher policy | Trust tiers, instruction delimiters and precedence compiler |\n| Capability escalation | Skill declares a dangerous tool and gains it | Tool grants remain policy-controlled; declaration is not authorization |\n| Package drift | Same skill ID resolves to new content | Version pin and content digest in load event |\n| Silent no-match fallback | Model invents a “remembered” fact | Explicit empty result and visible uncertainty |\n\n> Retrieved text is data with provenance, not automatically a trusted instruction. Its authority depends on type, scope, source, and policy.\n\n---\n\n## Exercises with acceptance criteria {#exercises}\n\n### A. No-match behavior\n\nSearch for `deployment region`. Acceptance: return an empty tuple and emit `memory.read` with no match IDs; the model must not receive an invented default.\n\n### B. Stable ranking\n\nAdd two records with the same score. Acceptance: results are ordered by stable ID, so repeated runs produce the same Golden Trace.\n\n### C. Contradictory memory\n\nAdd a newer record contradicting `project-test-policy`. Design fields for `supersedes`, `valid_from`, and `status`. Acceptance: retrieval never returns both as equally current facts.\n\n### D. Memory write gate\n\nAdd a `memory_write` proposal that cannot commit directly. Acceptance: missing source, secret-like content, or workspace mismatch is rejected; an approved write emits `memory.write` with redacted metadata.\n\n### E. Skill digest\n\nCalculate SHA-256 over canonical skill content and include it in `skill.load`. Acceptance: changing instructions without changing the digest fails validation.\n\n### F. Capability separation\n\nLoad a skill that declares `run_command` while the tool registry lacks it. Acceptance: the skill text is available, but any request for the absent tool receives an unknown-tool error.\n\nRun the focused contract:\n\n```bash\npython3 -m unittest \\\n  curriculum.tests.test_vertical_slice.VerticalSliceTests.test_s09_retrieves_memory_and_loads_skill -v\n```\n\n---\n\n## Deep dive: production retrieval architecture {#deep-dive}\n\n### Memory lifecycle\n\nA durable record needs creation, validation, retrieval, update, contradiction, expiration, and deletion states. Append-only history can record changes while a current projection selects the active version. “Last write wins” is rarely adequate for safety-critical constraints.\n\n### Scope and identity\n\nUseful scopes include turn, branch, session, workspace, repository revision, user, and organization. A memory should bind to stable project identity, not only a local absolute path. Forked repositories and renamed workspaces require explicit lineage rules.\n\n### Retrieval evaluation\n\nMeasure recall of necessary facts, precision of returned facts, stale-record rate, contradiction handling, context cost, latency, and downstream task success. A high semantic-similarity score is not enough if the retrieved fact has the wrong version or authority.\n\n### Prompt injection and data/instruction separation\n\nTool output or documentation can contain imperative text. A memory reducer should not automatically transform “ignore previous instructions” into durable policy. Store data with type and source, compile trusted instructions through a separate precedence system, and expose untrusted text with clear delimiters.\n\n### Skill supply chain\n\nSkills are executable-adjacent content. Production catalogs need package origin, version, digest/signature, allowed tools, network expectations, lifecycle hooks, and update policy. Loading a skill can change agent behavior even without code execution, so review and provenance matter.\n\n### Lazy tools and schema stability\n\nSome systems keep placeholder descriptors stable and start MCP servers or reconcile live schemas only when selected. This improves startup and cache behavior but introduces load failures mid-task. Events should distinguish selection, process startup, schema reconciliation, and final availability.\n\n### Real-agent evidence boundary\n\nThe linked source/documentation claims cover Codex skills/plugins, Pi extensions, Reasonix lazy plugin/MCP behavior, and Claude Code hooks. They support an adjacent extension-runtime comparison. They do not establish a shared durable-memory implementation across products.\n\n### From context to safety\n\nMemory and skills can influence actions, but they must not own authorization. A remembered preference cannot override a fresh denial, and a skill requiring shell access cannot grant itself that access. s10 begins the safety track by inserting explicit approval policy between model request and effect.\n\n---\n\n## Checkpoint {#checkpoint}\n\nBefore entering safety, answer:\n\n1. How does durable memory differ from a compacted checkpoint?\n2. Why must every memory record carry scope and source?\n3. Why are memory writes riskier than memory reads?\n4. What should stay in a skill descriptor, and what should load later?\n5. Why does a skill's tool declaration not authorize the tool?\n6. Which events make retrieval and loading auditable?\n\nYou now have the full context track: deterministic instructions, hard budgets, replayable facts, semantic compaction, and on-demand retrieval. The next chapter will decide whether a requested action is permitted before any side effect occurs.\n"
         }
       }
     ]
@@ -2385,7 +2706,8 @@
         "context-budget"
       ],
       "reference_lessons": [
-        "s06-context-budget"
+        "s06-context-budget",
+        "s08-context-compaction"
       ],
       "agent_implementations": [
         {
@@ -2420,8 +2742,8 @@
         "Which cache optimizations conflict with the most faithful context projection?"
       ],
       "reader_layer_status": {
-        "L0": "partial",
-        "L1": "missing",
+        "L0": "complete",
+        "L1": "complete",
         "L2": "partial",
         "L3": "partial",
         "L4": "partial"
@@ -2442,7 +2764,8 @@
         "agent-loop"
       ],
       "reference_lessons": [
-        "s02-events-streaming"
+        "s02-events-streaming",
+        "s07-session-replay"
       ],
       "agent_implementations": [
         {
@@ -2567,7 +2890,8 @@
       ],
       "reference_lessons": [
         "s03-tool-dispatch",
-        "s05-instructions"
+        "s05-instructions",
+        "s09-memory-skills"
       ],
       "agent_implementations": [
         {
@@ -2653,6 +2977,38 @@
     },
     {
       "schema_version": "0.1.0",
+      "id": "memory-retrieval",
+      "title": "Memory Retrieval",
+      "summary": "Store selected, source-attributed facts outside the immediate context and retrieve only relevant records for the current turn.",
+      "category": "context",
+      "status": "core",
+      "prerequisites": [
+        "context-compaction"
+      ],
+      "reference_lessons": [
+        "s09-memory-skills"
+      ],
+      "agent_implementations": [],
+      "experiments": [],
+      "open_questions": [
+        "Which facts deserve durable memory instead of session-local state?",
+        "How should stale or contradicted memories be invalidated?",
+        "What retrieval evidence should be visible to the user and model?"
+      ],
+      "reader_layer_status": {
+        "L0": "complete",
+        "L1": "complete",
+        "L2": "partial",
+        "L3": "missing",
+        "L4": "missing"
+      },
+      "content": {
+        "zh-CN": null,
+        "en": null
+      }
+    },
+    {
+      "schema_version": "0.1.0",
       "id": "path-boundary",
       "title": "Workspace Path Boundary",
       "summary": "Reject absolute paths and traversal before a file tool touches the filesystem.",
@@ -2718,6 +3074,38 @@
         "L2": "partial",
         "L3": "partial",
         "L4": "partial"
+      },
+      "content": {
+        "zh-CN": null,
+        "en": null
+      }
+    },
+    {
+      "schema_version": "0.1.0",
+      "id": "session-replay",
+      "title": "Session Replay and Branching",
+      "summary": "Rebuild derived session state from an append-only event log and create lineage-preserving branches without rewriting the parent run.",
+      "category": "reliability",
+      "status": "core",
+      "prerequisites": [
+        "event-stream"
+      ],
+      "reference_lessons": [
+        "s07-session-replay"
+      ],
+      "agent_implementations": [],
+      "experiments": [],
+      "open_questions": [
+        "Which derived views must be rebuildable after a schema migration?",
+        "Where should a branch inherit artifacts by reference instead of copying them?",
+        "How should corrupted or partially durable event tails be repaired?"
+      ],
+      "reader_layer_status": {
+        "L0": "complete",
+        "L1": "complete",
+        "L2": "partial",
+        "L3": "partial",
+        "L4": "missing"
       },
       "content": {
         "zh-CN": null,
@@ -5487,6 +5875,1085 @@
             "fields": []
           },
           "parent_event_id": "evt-008"
+        }
+      ]
+    },
+    {
+      "id": "run-s07-session-replay-golden",
+      "title": {
+        "zh-CN": "S07 Session Event Log、Replay 与 Branch · Golden Trace",
+        "en": "S07 Session Event Logs, Replay, and Branching · Golden Trace"
+      },
+      "kind": "golden",
+      "lesson_id": "s07-session-replay",
+      "run_id": "run-s07-session-replay-golden",
+      "source_path": "curriculum/lessons/s07_session_replay/golden.trace.jsonl",
+      "download_path": "/data/traces/run-s07-session-replay-golden.jsonl",
+      "events": [
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-000",
+          "session_id": "session-s07-session-replay",
+          "sequence": 0,
+          "timestamp": "2026-08-10T00:00:00Z",
+          "type": "session.start",
+          "actor": {
+            "kind": "harness",
+            "id": "reference-agent"
+          },
+          "payload": {
+            "max_turns": 8,
+            "tool_count": 0
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s07-session-replay-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          }
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-001",
+          "session_id": "session-s07-session-replay",
+          "sequence": 1,
+          "timestamp": "2026-08-10T00:00:01Z",
+          "type": "user.message",
+          "actor": {
+            "kind": "user",
+            "id": "learner"
+          },
+          "payload": {
+            "content": "Explain replay and branch lineage in one sentence."
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s07-session-replay-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-000"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-002",
+          "session_id": "session-s07-session-replay",
+          "sequence": 2,
+          "timestamp": "2026-08-10T00:00:02Z",
+          "type": "model.request",
+          "actor": {
+            "kind": "harness",
+            "id": "reference-agent"
+          },
+          "payload": {
+            "turn": 1,
+            "message_count": 1,
+            "roles": [
+              "user"
+            ],
+            "tools": []
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s07-session-replay-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-001"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-003",
+          "session_id": "session-s07-session-replay",
+          "sequence": 3,
+          "timestamp": "2026-08-10T00:00:03Z",
+          "type": "model.response",
+          "actor": {
+            "kind": "model",
+            "id": "scripted-model-v1"
+          },
+          "payload": {
+            "turn": 1,
+            "content": "Replay derives state; branching preserves its parent.",
+            "stop": true,
+            "tool_calls": []
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s07-session-replay-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-002"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-004",
+          "session_id": "session-s07-session-replay",
+          "sequence": 4,
+          "timestamp": "2026-08-10T00:00:04Z",
+          "type": "session.stop",
+          "actor": {
+            "kind": "harness",
+            "id": "reference-agent"
+          },
+          "payload": {
+            "reason": "completed",
+            "turns": 1
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s07-session-replay-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-003"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-005",
+          "session_id": "session-s07-session-replay",
+          "sequence": 5,
+          "timestamp": "2026-08-10T00:00:05Z",
+          "type": "session.replay",
+          "actor": {
+            "kind": "harness",
+            "id": "reference-agent"
+          },
+          "payload": {
+            "applied_events": 5,
+            "stop_reason": "completed",
+            "fingerprint": "1288ae16a0df9408d7a7394b16e7f29367b34832eeca1d9488ca8a410be3cb2e"
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s07-session-replay-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-004"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-006",
+          "session_id": "session-s07-session-replay",
+          "sequence": 6,
+          "timestamp": "2026-08-10T00:00:06Z",
+          "type": "session.branch",
+          "actor": {
+            "kind": "harness",
+            "id": "reference-agent"
+          },
+          "payload": {
+            "branch_id": "branch-alternative-response",
+            "parent_run_id": "run-s07-session-replay-golden",
+            "fork_sequence": 2,
+            "inherited_events": 3,
+            "parent_fingerprint": "1e38d6f6527a0c7a8cbf0e78bc9424aba27dcd718bf370f948f2e8cf030923fb"
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s07-session-replay-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-005"
+        }
+      ]
+    },
+    {
+      "id": "run-s08-context-compaction-golden",
+      "title": {
+        "zh-CN": "S08 Context Compaction 与 Checkpoint · Golden Trace",
+        "en": "S08 Context Compaction and Checkpoints · Golden Trace"
+      },
+      "kind": "golden",
+      "lesson_id": "s08-context-compaction",
+      "run_id": "run-s08-context-compaction-golden",
+      "source_path": "curriculum/lessons/s08_context_compaction/golden.trace.jsonl",
+      "download_path": "/data/traces/run-s08-context-compaction-golden.jsonl",
+      "events": [
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-000",
+          "session_id": "session-s08-context-compaction",
+          "sequence": 0,
+          "timestamp": "2026-08-10T00:00:00Z",
+          "type": "session.start",
+          "actor": {
+            "kind": "harness",
+            "id": "reference-agent"
+          },
+          "payload": {
+            "max_turns": 8,
+            "tool_count": 1
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s08-context-compaction-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          }
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-001",
+          "session_id": "session-s08-context-compaction",
+          "sequence": 1,
+          "timestamp": "2026-08-10T00:00:01Z",
+          "type": "user.message",
+          "actor": {
+            "kind": "user",
+            "id": "learner"
+          },
+          "payload": {
+            "content": "Inspect the report, then continue from a compacted checkpoint."
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s08-context-compaction-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-000"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-002",
+          "session_id": "session-s08-context-compaction",
+          "sequence": 2,
+          "timestamp": "2026-08-10T00:00:02Z",
+          "type": "model.request",
+          "actor": {
+            "kind": "harness",
+            "id": "reference-agent"
+          },
+          "payload": {
+            "turn": 1,
+            "message_count": 2,
+            "roles": [
+              "system",
+              "user"
+            ],
+            "tools": [
+              "inspect_artifact"
+            ]
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s08-context-compaction-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-001"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-003",
+          "session_id": "session-s08-context-compaction",
+          "sequence": 3,
+          "timestamp": "2026-08-10T00:00:03Z",
+          "type": "model.response",
+          "actor": {
+            "kind": "model",
+            "id": "scripted-model-v1"
+          },
+          "payload": {
+            "turn": 1,
+            "content": "I will inspect the artifact.",
+            "stop": false,
+            "tool_calls": [
+              {
+                "id": "call-artifact",
+                "name": "inspect_artifact",
+                "arguments": {}
+              }
+            ]
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s08-context-compaction-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-002"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-004",
+          "session_id": "session-s08-context-compaction",
+          "sequence": 4,
+          "timestamp": "2026-08-10T00:00:04Z",
+          "type": "tool.request",
+          "actor": {
+            "kind": "model",
+            "id": "scripted-model-v1"
+          },
+          "payload": {
+            "tool_call_id": "call-artifact",
+            "tool": "inspect_artifact",
+            "arguments": {}
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s08-context-compaction-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-003"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-005",
+          "session_id": "session-s08-context-compaction",
+          "sequence": 5,
+          "timestamp": "2026-08-10T00:00:05Z",
+          "type": "tool.result",
+          "actor": {
+            "kind": "tool",
+            "id": "inspect_artifact"
+          },
+          "payload": {
+            "tool_call_id": "call-artifact",
+            "tool": "inspect_artifact",
+            "ok": true,
+            "result": {
+              "artifact": "artifact://large-report",
+              "preview": "verified-output-verified-output-verified-output-verified-output-verified-output-verified-output-verified-output-verified-output-verified-output-verified-output-verified-output-verified-output-verified-output-verified-output-verified-output-verified-output-verified-output-verified-output-verified-output-verified-output-verified-output-verified-output-verified-output-verified-output-verified-output-verified-output-verified-output-verified-output-verified-output-verified-output-verified-output-verified-output-"
+            },
+            "truncated": false
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s08-context-compaction-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-004"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-006",
+          "session_id": "session-s08-context-compaction",
+          "sequence": 6,
+          "timestamp": "2026-08-10T00:00:06Z",
+          "type": "context.compact",
+          "actor": {
+            "kind": "harness",
+            "id": "reference-agent"
+          },
+          "payload": {
+            "dropped_messages": 3,
+            "original_chars": 720,
+            "final_chars": 232,
+            "summary_chars": 145,
+            "source_sha256": "52f6e96f6f2ff9ef899d78dc4ce685ec552ffd28ab6e3347a0dbbf41d157ef42"
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s08-context-compaction-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-005"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-007",
+          "session_id": "session-s08-context-compaction",
+          "sequence": 7,
+          "timestamp": "2026-08-10T00:00:07Z",
+          "type": "model.request",
+          "actor": {
+            "kind": "harness",
+            "id": "reference-agent"
+          },
+          "payload": {
+            "turn": 2,
+            "message_count": 2,
+            "roles": [
+              "system",
+              "assistant"
+            ],
+            "tools": [
+              "inspect_artifact"
+            ]
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s08-context-compaction-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-006"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-008",
+          "session_id": "session-s08-context-compaction",
+          "sequence": 8,
+          "timestamp": "2026-08-10T00:00:08Z",
+          "type": "model.response",
+          "actor": {
+            "kind": "model",
+            "id": "scripted-model-v1"
+          },
+          "payload": {
+            "turn": 2,
+            "content": "The compacted checkpoint preserves the verified conclusion.",
+            "stop": true,
+            "tool_calls": []
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s08-context-compaction-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-007"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-009",
+          "session_id": "session-s08-context-compaction",
+          "sequence": 9,
+          "timestamp": "2026-08-10T00:00:09Z",
+          "type": "session.stop",
+          "actor": {
+            "kind": "harness",
+            "id": "reference-agent"
+          },
+          "payload": {
+            "reason": "completed",
+            "turns": 2
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s08-context-compaction-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-008"
+        }
+      ]
+    },
+    {
+      "id": "run-s09-memory-skills-golden",
+      "title": {
+        "zh-CN": "S09 Memory 与按需 Skills · Golden Trace",
+        "en": "S09 Memory and On-Demand Skills · Golden Trace"
+      },
+      "kind": "golden",
+      "lesson_id": "s09-memory-skills",
+      "run_id": "run-s09-memory-skills-golden",
+      "source_path": "curriculum/lessons/s09_memory_skills/golden.trace.jsonl",
+      "download_path": "/data/traces/run-s09-memory-skills-golden.jsonl",
+      "events": [
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-000",
+          "session_id": "session-s09-memory-skills",
+          "sequence": 0,
+          "timestamp": "2026-08-10T00:00:00Z",
+          "type": "session.start",
+          "actor": {
+            "kind": "harness",
+            "id": "reference-agent"
+          },
+          "payload": {
+            "max_turns": 8,
+            "tool_count": 2
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s09-memory-skills-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          }
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-001",
+          "session_id": "session-s09-memory-skills",
+          "sequence": 1,
+          "timestamp": "2026-08-10T00:00:01Z",
+          "type": "user.message",
+          "actor": {
+            "kind": "user",
+            "id": "learner"
+          },
+          "payload": {
+            "content": "Recall the project testing rule and load the relevant skill."
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s09-memory-skills-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-000"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-002",
+          "session_id": "session-s09-memory-skills",
+          "sequence": 2,
+          "timestamp": "2026-08-10T00:00:02Z",
+          "type": "model.request",
+          "actor": {
+            "kind": "harness",
+            "id": "reference-agent"
+          },
+          "payload": {
+            "turn": 1,
+            "message_count": 1,
+            "roles": [
+              "user"
+            ],
+            "tools": [
+              "memory_search",
+              "load_skill"
+            ]
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s09-memory-skills-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-001"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-003",
+          "session_id": "session-s09-memory-skills",
+          "sequence": 3,
+          "timestamp": "2026-08-10T00:00:03Z",
+          "type": "model.response",
+          "actor": {
+            "kind": "model",
+            "id": "scripted-model-v1"
+          },
+          "payload": {
+            "turn": 1,
+            "content": "",
+            "stop": false,
+            "tool_calls": [
+              {
+                "id": "call-memory",
+                "name": "memory_search",
+                "arguments": {
+                  "query": "project test policy"
+                }
+              },
+              {
+                "id": "call-skill",
+                "name": "load_skill",
+                "arguments": {
+                  "skill_id": "test-first"
+                }
+              }
+            ]
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s09-memory-skills-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-002"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-004",
+          "session_id": "session-s09-memory-skills",
+          "sequence": 4,
+          "timestamp": "2026-08-10T00:00:04Z",
+          "type": "tool.request",
+          "actor": {
+            "kind": "model",
+            "id": "scripted-model-v1"
+          },
+          "payload": {
+            "tool_call_id": "call-memory",
+            "tool": "memory_search",
+            "arguments": {
+              "query": "project test policy"
+            }
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s09-memory-skills-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-003"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-005",
+          "session_id": "session-s09-memory-skills",
+          "sequence": 5,
+          "timestamp": "2026-08-10T00:00:05Z",
+          "type": "memory.read",
+          "actor": {
+            "kind": "harness",
+            "id": "workspace-memory"
+          },
+          "payload": {
+            "query": "project test policy",
+            "match_ids": [
+              "project-test-policy"
+            ],
+            "sources": [
+              "AGENTS.md#testing"
+            ]
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s09-memory-skills-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-004"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-006",
+          "session_id": "session-s09-memory-skills",
+          "sequence": 6,
+          "timestamp": "2026-08-10T00:00:06Z",
+          "type": "tool.result",
+          "actor": {
+            "kind": "tool",
+            "id": "memory_search"
+          },
+          "payload": {
+            "tool_call_id": "call-memory",
+            "tool": "memory_search",
+            "ok": true,
+            "result": {
+              "matches": [
+                {
+                  "id": "project-test-policy",
+                  "content": "Run the focused test before the full suite.",
+                  "source": "AGENTS.md#testing"
+                }
+              ]
+            },
+            "truncated": false
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s09-memory-skills-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-004"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-007",
+          "session_id": "session-s09-memory-skills",
+          "sequence": 7,
+          "timestamp": "2026-08-10T00:00:07Z",
+          "type": "tool.request",
+          "actor": {
+            "kind": "model",
+            "id": "scripted-model-v1"
+          },
+          "payload": {
+            "tool_call_id": "call-skill",
+            "tool": "load_skill",
+            "arguments": {
+              "skill_id": "test-first"
+            }
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s09-memory-skills-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-006"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-008",
+          "session_id": "session-s09-memory-skills",
+          "sequence": 8,
+          "timestamp": "2026-08-10T00:00:08Z",
+          "type": "skill.load",
+          "actor": {
+            "kind": "harness",
+            "id": "skill-catalog"
+          },
+          "payload": {
+            "skill_id": "test-first",
+            "tool_names": [
+              "run_command"
+            ]
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s09-memory-skills-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-007"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-009",
+          "session_id": "session-s09-memory-skills",
+          "sequence": 9,
+          "timestamp": "2026-08-10T00:00:09Z",
+          "type": "tool.result",
+          "actor": {
+            "kind": "tool",
+            "id": "load_skill"
+          },
+          "payload": {
+            "tool_call_id": "call-skill",
+            "tool": "load_skill",
+            "ok": true,
+            "result": {
+              "id": "test-first",
+              "instructions": "Run the smallest relevant test, inspect failure, then widen coverage.",
+              "tool_names": [
+                "run_command"
+              ]
+            },
+            "truncated": false
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s09-memory-skills-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-007"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-010",
+          "session_id": "session-s09-memory-skills",
+          "sequence": 10,
+          "timestamp": "2026-08-10T00:00:10Z",
+          "type": "model.request",
+          "actor": {
+            "kind": "harness",
+            "id": "reference-agent"
+          },
+          "payload": {
+            "turn": 2,
+            "message_count": 4,
+            "roles": [
+              "user",
+              "assistant",
+              "tool",
+              "tool"
+            ],
+            "tools": [
+              "memory_search",
+              "load_skill"
+            ]
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s09-memory-skills-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-009"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-011",
+          "session_id": "session-s09-memory-skills",
+          "sequence": 11,
+          "timestamp": "2026-08-10T00:00:11Z",
+          "type": "model.response",
+          "actor": {
+            "kind": "model",
+            "id": "scripted-model-v1"
+          },
+          "payload": {
+            "turn": 2,
+            "content": "I will run the focused test first, then widen coverage.",
+            "stop": true,
+            "tool_calls": []
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s09-memory-skills-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-010"
+        },
+        {
+          "trace_version": "0.1.0",
+          "event_id": "evt-012",
+          "session_id": "session-s09-memory-skills",
+          "sequence": 12,
+          "timestamp": "2026-08-10T00:00:12Z",
+          "type": "session.stop",
+          "actor": {
+            "kind": "harness",
+            "id": "reference-agent"
+          },
+          "payload": {
+            "reason": "completed",
+            "turns": 2
+          },
+          "provenance": {
+            "agent_id": "reference-agent",
+            "snapshot_id": "reference-agent-2026-08-10-python",
+            "surface": "sdk",
+            "harness_mode": "fake",
+            "run_id": "run-s09-memory-skills-golden",
+            "experiment_id": "reference-foundations-golden",
+            "model": "scripted-model-v1",
+            "provider": "local-fixture"
+          },
+          "redaction": {
+            "status": "clean",
+            "fields": []
+          },
+          "parent_event_id": "evt-011"
         }
       ]
     }

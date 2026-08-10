@@ -22,7 +22,7 @@ export default function LearnPage() {
       <header className="interior-hero">
         <span className="eyebrow">ACADEMY · FOUNDATIONS</span>
         <h1><LocalizedText zh="从 40 行循环，走到" en="From a 40-line loop to" /><br /><LocalizedText zh="可观察的工具型 Agent。" en="an observable tool-using agent." /></h1>
-        <p><LocalizedText zh="六篇长文教程共用一个无依赖 Python reference harness。每章从问题、心智模型和逐步实现讲到失败路径、练习与生产边界。" en="Six long-form tutorials share one dependency-free Python reference harness. Each moves from the problem and mental model through implementation, failure paths, exercises, and production boundaries." /></p>
+        <p><LocalizedText zh={`${lessons.length} 篇长文教程共用一个无依赖 Python reference harness。每章从问题、心智模型和逐步实现讲到失败路径、练习与生产边界。`} en={`${lessons.length} long-form tutorials share one dependency-free Python reference harness. Each moves from the problem and mental model through implementation, failure paths, exercises, and production boundaries.`} /></p>
         <div className="metric-row">
           <span><strong>{lessons.length}</strong> <LocalizedText zh="课程" en="lessons" /></span>
           <span><strong>{lessons.length}</strong> Golden Traces</span>

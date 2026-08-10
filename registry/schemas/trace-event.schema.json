@@ -40,6 +40,8 @@
       "enum": [
         "session.start",
         "session.stop",
+        "session.replay",
+        "session.branch",
         "user.message",
         "model.request",
         "model.response",
@@ -50,6 +52,9 @@
         "file.patch",
         "context.prune",
         "context.compact",
+        "memory.read",
+        "memory.write",
+        "skill.load",
         "agent.spawn",
         "agent.message",
         "agent.stop",

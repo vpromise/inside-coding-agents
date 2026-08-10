@@ -6,7 +6,7 @@
   "category": "context",
   "status": "core",
   "prerequisites": ["context-budget"],
-  "reference_lessons": ["s06-context-budget"],
+  "reference_lessons": ["s06-context-budget", "s08-context-compaction"],
   "agent_implementations": [
     {
       "agent_id": "codex",
@@ -33,5 +33,5 @@
     "How should a harness expose information loss and compaction lineage to users?",
     "Which cache optimizations conflict with the most faithful context projection?"
   ],
-  "reader_layer_status": {"L0": "partial", "L1": "missing", "L2": "partial", "L3": "partial", "L4": "partial"}
+  "reader_layer_status": {"L0": "complete", "L1": "complete", "L2": "partial", "L3": "partial", "L4": "partial"}
 }

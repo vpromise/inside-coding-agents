@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 };
 
 const products = [
-  { index: "01", name: "Academy", zh: "从零构建", en: "Build from zero", copyZh: "6 章可运行课程，从 loop 走到 context budget。", copyEn: "Six runnable lessons, from the agent loop to context budgeting." },
+  { index: "01", name: "Academy", zh: "从零构建", en: "Build from zero", copyZh: "9 章可运行课程，从 loop 走到 replay、compaction 与 memory。", copyEn: "Nine runnable lessons, from the agent loop to replay, compaction, and memory." },
   { index: "02", name: "Mechanisms", zh: "横向拆解", en: "Compare designs", copyZh: "按 loop、context、tools、safety 等设计问题组织。", copyEn: "Organized by shared problems such as loops, context, tools, and safety." },
   { index: "03", name: "Atlas", zh: "版本档案", en: "Versioned records", copyZh: "每条架构事实绑定 Agent snapshot 与 surface。", copyEn: "Every architecture fact is bound to an agent snapshot and surface." },
   { index: "04", name: "Lab", zh: "复现实验", en: "Reproduce experiments", copyZh: "固定 fixture、变量、trace 与失败运行。", copyEn: "Pin fixtures, variables, traces, and failed runs." },

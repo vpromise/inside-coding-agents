@@ -20,6 +20,9 @@ from curriculum.lessons.s03_tool_dispatch.demo import build_demo as build_s03
 from curriculum.lessons.s04_workspace_tools.demo import build_demo as build_s04
 from curriculum.lessons.s05_instructions.demo import build_demo as build_s05
 from curriculum.lessons.s06_context_budget.demo import build_demo as build_s06
+from curriculum.lessons.s07_session_replay.demo import build_demo as build_s07
+from curriculum.lessons.s08_context_compaction.demo import build_demo as build_s08
+from curriculum.lessons.s09_memory_skills.demo import build_demo as build_s09
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -55,6 +58,18 @@ CASES: dict[str, GoldenCase] = {
     "s06-context-budget": GoldenCase(
         build=build_s06,
         prompt="Fetch the large result, then explain the budget behavior.",
+    ),
+    "s07-session-replay": GoldenCase(
+        build=build_s07,
+        prompt="Explain replay and branch lineage in one sentence.",
+    ),
+    "s08-context-compaction": GoldenCase(
+        build=build_s08,
+        prompt="Inspect the report, then continue from a compacted checkpoint.",
+    ),
+    "s09-memory-skills": GoldenCase(
+        build=build_s09,
+        prompt="Recall the project testing rule and load the relevant skill.",
     ),
 }
 

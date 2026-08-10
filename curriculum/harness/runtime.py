@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from .context import ContextBudget
+from .context import ContextBudget, ContextCompactor
 from .tools import ToolError, ToolRegistry, encode_tool_result
 from .trace import TraceRecorder
 from .types import Message, Model
@@ -35,6 +35,7 @@ class AgentRunner:
         tools: ToolRegistry | None = None,
         system_prompt: str = "",
         budget: ContextBudget | None = None,
+        compactor: ContextCompactor | None = None,
         config: AgentConfig | None = None,
     ) -> None:
         self.model = model
@@ -42,6 +43,7 @@ class AgentRunner:
         self.tools = tools or ToolRegistry()
         self.system_prompt = system_prompt
         self.budget = budget
+        self.compactor = compactor
         self.config = config or AgentConfig()
         self._parent_event_id: str | None = None
 
@@ -78,6 +80,21 @@ class AgentRunner:
 
         final_text = ""
         for turn_number in range(1, self.config.max_turns + 1):
+            if self.compactor is not None and self.compactor.should_compact(messages):
+                report = self.compactor.compact(messages)
+                messages = list(report.messages)
+                self._emit(
+                    "context.compact",
+                    actor_kind="harness",
+                    actor_id=self.config.agent_id,
+                    payload={
+                        "dropped_messages": report.dropped_count,
+                        "original_chars": report.original_chars,
+                        "final_chars": report.final_chars,
+                        "summary_chars": len(report.summary),
+                        "source_sha256": report.source_sha256,
+                    },
+                )
             if self.budget is not None:
                 report = self.budget.fit(messages)
                 if report.removed_count or report.final_chars < report.original_chars:

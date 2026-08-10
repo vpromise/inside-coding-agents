@@ -1,0 +1,18 @@
+{
+  "schema_version": "0.1.0",
+  "id": "session-replay",
+  "title": "Session Replay and Branching",
+  "summary": "Rebuild derived session state from an append-only event log and create lineage-preserving branches without rewriting the parent run.",
+  "category": "reliability",
+  "status": "core",
+  "prerequisites": ["event-stream"],
+  "reference_lessons": ["s07-session-replay"],
+  "agent_implementations": [],
+  "experiments": [],
+  "open_questions": [
+    "Which derived views must be rebuildable after a schema migration?",
+    "Where should a branch inherit artifacts by reference instead of copying them?",
+    "How should corrupted or partially durable event tails be repaired?"
+  ],
+  "reader_layer_status": {"L0": "complete", "L1": "complete", "L2": "partial", "L3": "partial", "L4": "missing"}
+}

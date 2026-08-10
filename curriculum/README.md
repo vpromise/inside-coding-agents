@@ -1,6 +1,6 @@
 # Coding Agent Curriculum
 
-The curriculum contains six bilingual, progressively layered lessons and a provider-neutral Python reference harness. The default path is deterministic, makes no network requests, reads no credentials, and requires no model API key.
+The curriculum contains nine bilingual, progressively layered lessons and a provider-neutral Python reference harness. The default path is deterministic, makes no network requests, reads no credentials, and requires no model API key.
 
 | Lesson | Mechanism | New idea |
 | --- | --- | --- |
@@ -10,6 +10,9 @@ The curriculum contains six bilingual, progressively layered lessons and a provi
 | s04 | Workspace tools | File effects stay within an explicit boundary |
 | s05 | Instruction discovery | Repository constraints follow deterministic precedence |
 | s06 | Context budget | History is measured and compacted before overflow |
+| s07 | Session replay | Append-only events rebuild state and preserve branch lineage |
+| s08 | Context compaction | Semantic checkpoints retain provenance while shrinking visible history |
+| s09 | Memory and skills | Source-attributed facts and full skill instructions load on demand |
 
 Each lesson includes a long-form `lesson.en.md`, a complete Chinese `lesson.zh.md`, an independently runnable `demo.py`, and a deterministic `golden.trace.jsonl`. Shared teaching code lives under `harness/`; deterministic end-to-end tests live under `tests/`. `catalog.json` is the canonical website navigation source.
 
@@ -39,6 +42,7 @@ From the repository root:
 python3 -m curriculum.lessons.s01_agent_loop.demo
 python3 -m curriculum.lessons.s03_tool_dispatch.demo
 python3 -m curriculum.lessons.s06_context_budget.demo
+python3 -m curriculum.lessons.s09_memory_skills.demo
 python3 -m curriculum.golden verify
 python3 -m unittest discover -s curriculum/tests -v
 ```

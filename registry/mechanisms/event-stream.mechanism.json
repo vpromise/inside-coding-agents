@@ -6,7 +6,7 @@
   "category": "observability",
   "status": "core",
   "prerequisites": ["agent-loop"],
-  "reference_lessons": ["s02-events-streaming"],
+  "reference_lessons": ["s02-events-streaming", "s07-session-replay"],
   "agent_implementations": [
     {
       "agent_id": "codex",

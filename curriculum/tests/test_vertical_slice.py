@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from curriculum.harness import Workspace, discover_instructions
+from curriculum.harness import SessionJournal, SkillCatalog, Workspace, discover_instructions
 from curriculum.harness.tools import ToolValidationError
 from curriculum.lessons.s01_agent_loop.demo import build_demo as build_s01
 from curriculum.lessons.s02_events_streaming.demo import build_demo as build_s02
@@ -13,6 +13,9 @@ from curriculum.lessons.s03_tool_dispatch.demo import build_demo as build_s03
 from curriculum.lessons.s04_workspace_tools.demo import build_demo as build_s04
 from curriculum.lessons.s05_instructions.demo import build_demo as build_s05
 from curriculum.lessons.s06_context_budget.demo import build_demo as build_s06
+from curriculum.lessons.s07_session_replay.demo import build_demo as build_s07
+from curriculum.lessons.s08_context_compaction.demo import build_demo as build_s08
+from curriculum.lessons.s09_memory_skills.demo import build_demo as build_s09
 
 
 class VerticalSliceTests(unittest.TestCase):
@@ -74,6 +77,42 @@ class VerticalSliceTests(unittest.TestCase):
         tool_result = next(event for event in result.events if event["type"] == "tool.result")
         self.assertTrue(tool_result["payload"]["truncated"])
         self.assertIn("context.prune", [event["type"] for event in result.events])
+
+    def test_s07_replays_and_branches(self):
+        runner, trace = build_s07()
+        result = runner.run("Replay it.")
+        self.assertEqual(result.stop_reason, "completed")
+        self.assertEqual(runner.replay_state.stop_reason, "completed")
+        self.assertEqual(runner.branch_record.fork_sequence, 2)
+        self.assertEqual(len(runner.branch_record.inherited_event_ids), 3)
+        self.assertEqual(
+            [event["type"] for event in result.events[-2:]],
+            ["session.replay", "session.branch"],
+        )
+        corrupted = [dict(event) for event in result.events[:3]]
+        corrupted[-1]["sequence"] = 4
+        with self.assertRaises(ValueError):
+            SessionJournal(corrupted)
+        self.assertEqual(len(trace.events), 7)
+
+    def test_s08_compacts_with_provenance(self):
+        runner, _ = build_s08()
+        result = runner.run("Compact it.")
+        compact = next(event for event in result.events if event["type"] == "context.compact")
+        self.assertLess(compact["payload"]["final_chars"], compact["payload"]["original_chars"])
+        self.assertEqual(len(compact["payload"]["source_sha256"]), 64)
+        second_request = runner.model.requests[1]
+        self.assertTrue(any("[compacted checkpoint]" in message.content for message in second_request))
+
+    def test_s09_retrieves_memory_and_loads_skill(self):
+        result = self.run_demo(build_s09, "Retrieve it.")
+        event_types = [event["type"] for event in result.events]
+        self.assertEqual(event_types.count("memory.read"), 1)
+        self.assertEqual(event_types.count("skill.load"), 1)
+        memory_event = next(event for event in result.events if event["type"] == "memory.read")
+        self.assertEqual(memory_event["payload"]["sources"], ["AGENTS.md#testing"])
+        with self.assertRaises(KeyError):
+            SkillCatalog().load("missing")
 
 
 if __name__ == "__main__":
