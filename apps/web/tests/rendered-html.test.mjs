@@ -64,6 +64,7 @@ test("renders every vertical-slice route", async () => {
       ),
     ]),
     "/lab",
+    "/reproduce",
     "/search",
     ...generated.experiments.map((experiment) => `/lab/experiments/${experiment.id}`),
     ...generated.traces.map((trace) => `/lab/traces/${trace.id}`),
@@ -186,6 +187,38 @@ test("renders a cross-entity bilingual search index", async () => {
   assert.match(html, /href="\/agents\/codex\/[^"#]+#codex-source-agent-loop"/);
   assert.match(html, /href="\/lab\/experiments\/reference-tool-roundtrip-v1"/);
   assert.match(html, /runToolLoop/);
+});
+
+test("renders the independent reproduction workflow from the experiment registry", async () => {
+  const generated = JSON.parse(
+    await readFile(new URL("../app/data/content.generated.json", import.meta.url), "utf8"),
+  );
+  const expectedExperiments = generated.experiments.filter(
+    (experiment) =>
+      experiment.mode === "controlled"
+      && experiment.status === "complete"
+      && experiment.subjects.length === 1
+      && experiment.subjects[0].agent_id === "reference-harness",
+  );
+  const response = await render("/reproduce");
+  assert.equal(response.status, 200);
+  const html = await response.text();
+
+  assert.equal(expectedExperiments.length, 10);
+  assert.match(html, /不要只相信结果/);
+  assert.match(html, /亲手重建一次/);
+  assert.match(html, /MODEL CALLS[\s\S]*>0</);
+  assert.match(html, /NETWORK[\s\S]*NOT REQUIRED/);
+  assert.match(html, /python3 labs\/reproduce\.py --verify-report reproduction-report\.json/);
+  assert.match(html, /does not reproduce Native behavior from Codex/);
+  assert.match(html, /reproduced/);
+  assert.match(html, /not-comparable/);
+  assert.match(html, /independent human attestation/i);
+  assert.match(html, /issues\/new\?template=experiment-reproduction\.yml/);
+  for (const experiment of expectedExperiments) {
+    assert.match(html, new RegExp(`python3 labs/reproduce\\.py ${experiment.id}`));
+    assert.match(html, new RegExp(`href="/lab/experiments/${experiment.id}"`));
+  }
 });
 
 test("generated content resolves the shared source graph", async () => {

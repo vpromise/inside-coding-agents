@@ -12,6 +12,7 @@ const navigation = [
   { href: "/agents", zh: "图谱", en: "Agents" },
   { href: "/evidence", zh: "证据", en: "Evidence" },
   { href: "/lab", zh: "实验", en: "Lab" },
+  { href: "/reproduce", zh: "复现", en: "Reproduce" },
   { href: "/search", zh: "搜索", en: "Search" },
 ];
 

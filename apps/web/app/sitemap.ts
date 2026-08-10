@@ -19,6 +19,7 @@ const sectionRoutes: SitemapRoute[] = [
   { path: "/compare", changeFrequency: "weekly", priority: 0.9 },
   { path: "/evidence", changeFrequency: "weekly", priority: 0.9 },
   { path: "/lab", changeFrequency: "weekly", priority: 0.8 },
+  { path: "/reproduce", changeFrequency: "weekly", priority: 0.8 },
   { path: "/search", changeFrequency: "weekly", priority: 0.7 },
 ];
 

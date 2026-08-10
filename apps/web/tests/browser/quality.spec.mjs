@@ -16,6 +16,7 @@ const accessibilityRoutes = [
   { name: "architecture compare", path: "/compare" },
   { name: "evidence explorer", path: "/evidence" },
   { name: "experiment lab", path: "/lab" },
+  { name: "independent reproduction", path: "/reproduce" },
   { name: "controlled experiment", path: "/lab/experiments/reference-tool-roundtrip-v1" },
   { name: "trace player", path: "/lab/traces/reference-tool-roundtrip-v1-run-001" },
   { name: "knowledge search", path: "/search" },
