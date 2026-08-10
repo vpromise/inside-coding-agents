@@ -119,6 +119,7 @@ const curriculumWithContent = {
   lessons: await Promise.all(
     curriculum.lessons.map(async (lesson) => ({
       ...lesson,
+      source_code: await readText(lesson.code_path),
       content: {
         "zh-CN": await readText(lesson.content_paths["zh-CN"]),
         en: await readText(lesson.content_paths.en),

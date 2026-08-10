@@ -44,7 +44,7 @@ The same material is useful as a beginner's coding-agent tutorial, an engineer's
 
 ### Included in the v0.1 public preview
 
-- 6 runnable bilingual lessons, from the agent loop through context budgeting;
+- 6 runnable bilingual long-form tutorials, each with mental models, guided implementation, failure modes, exercises, production boundaries, and complete source code;
 - 14 cross-agent mechanism records;
 - 5 Agent profiles, 9 immutable snapshots, and 30 reviewed claims;
 - pinned public-source maps for Codex, Pi, and Reasonix;

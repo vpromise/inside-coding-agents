@@ -14,6 +14,9 @@
       "summary": {"zh-CN": "把一次模型调用变成有明确终止条件的循环。", "en": "Turn one model call into a loop with an explicit stop condition."},
       "mechanism_ids": ["agent-loop"],
       "status": "implemented",
+      "estimated_minutes": 22,
+      "difficulty": "beginner",
+      "code_path": "curriculum/lessons/s01_agent_loop/demo.py",
       "content_paths": {"zh-CN": "curriculum/lessons/s01_agent_loop/lesson.zh.md", "en": "curriculum/lessons/s01_agent_loop/lesson.en.md"},
       "run": "python3 -m curriculum.lessons.s01_agent_loop.demo"
     },
@@ -25,6 +28,9 @@
       "summary": {"zh-CN": "把流式增量转换成可观察、可回放的事件。", "en": "Convert streaming deltas into observable, replayable events."},
       "mechanism_ids": ["agent-loop", "event-stream"],
       "status": "implemented",
+      "estimated_minutes": 24,
+      "difficulty": "beginner",
+      "code_path": "curriculum/lessons/s02_events_streaming/demo.py",
       "content_paths": {"zh-CN": "curriculum/lessons/s02_events_streaming/lesson.zh.md", "en": "curriculum/lessons/s02_events_streaming/lesson.en.md"},
       "run": "python3 -m curriculum.lessons.s02_events_streaming.demo"
     },
@@ -36,6 +42,9 @@
       "summary": {"zh-CN": "验证、执行并记录模型请求的工具调用。", "en": "Validate, execute, and record model-requested tool calls."},
       "mechanism_ids": ["agent-loop", "tool-dispatch"],
       "status": "implemented",
+      "estimated_minutes": 30,
+      "difficulty": "intermediate",
+      "code_path": "curriculum/lessons/s03_tool_dispatch/demo.py",
       "content_paths": {"zh-CN": "curriculum/lessons/s03_tool_dispatch/lesson.zh.md", "en": "curriculum/lessons/s03_tool_dispatch/lesson.en.md"},
       "run": "python3 -m curriculum.lessons.s03_tool_dispatch.demo"
     },
@@ -47,6 +56,9 @@
       "summary": {"zh-CN": "为副作用工具建立工作区路径边界和显式 allowlist。", "en": "Put workspace boundaries and explicit allowlists around side-effecting tools."},
       "mechanism_ids": ["workspace-tools", "path-boundary"],
       "status": "implemented",
+      "estimated_minutes": 34,
+      "difficulty": "intermediate",
+      "code_path": "curriculum/lessons/s04_workspace_tools/demo.py",
       "content_paths": {"zh-CN": "curriculum/lessons/s04_workspace_tools/lesson.zh.md", "en": "curriculum/lessons/s04_workspace_tools/lesson.en.md"},
       "run": "python3 -m curriculum.lessons.s04_workspace_tools.demo"
     },
@@ -58,6 +70,9 @@
       "summary": {"zh-CN": "从工作区根目录到当前目录组合分层指令。", "en": "Compose hierarchical instructions from the workspace root to the current directory."},
       "mechanism_ids": ["instruction-discovery"],
       "status": "implemented",
+      "estimated_minutes": 26,
+      "difficulty": "intermediate",
+      "code_path": "curriculum/lessons/s05_instructions/demo.py",
       "content_paths": {"zh-CN": "curriculum/lessons/s05_instructions/lesson.zh.md", "en": "curriculum/lessons/s05_instructions/lesson.en.md"},
       "run": "python3 -m curriculum.lessons.s05_instructions.demo"
     },
@@ -69,6 +84,9 @@
       "summary": {"zh-CN": "让输入裁剪和工具输出截断成为可见策略。", "en": "Make input pruning and tool-output truncation explicit policies."},
       "mechanism_ids": ["context-budget", "tool-output-truncation"],
       "status": "implemented",
+      "estimated_minutes": 36,
+      "difficulty": "intermediate",
+      "code_path": "curriculum/lessons/s06_context_budget/demo.py",
       "content_paths": {"zh-CN": "curriculum/lessons/s06_context_budget/lesson.zh.md", "en": "curriculum/lessons/s06_context_budget/lesson.en.md"},
       "run": "python3 -m curriculum.lessons.s06_context_budget.demo"
     }

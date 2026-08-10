@@ -3,6 +3,12 @@ import Link from "next/link";
 import { LocalizedText } from "../components/LocaleProvider";
 import { content } from "../lib/content";
 
+const difficultyLabels = {
+  beginner: "入门",
+  intermediate: "进阶",
+  advanced: "深入",
+} as const;
+
 export const metadata: Metadata = {
   title: "学习路线 / Learning Path",
   description: "无需 API Key，从最小循环逐步构建 Agent Harness。 Build an agent harness from the smallest loop.",
@@ -15,7 +21,7 @@ export default function LearnPage() {
       <header className="interior-hero">
         <span className="eyebrow">ACADEMY · FOUNDATIONS</span>
         <h1><LocalizedText zh="从 40 行循环，走到" en="From a 40-line loop to" /><br /><LocalizedText zh="可观察的工具型 Agent。" en="an observable tool-using agent." /></h1>
-        <p><LocalizedText zh="六章共用一个无依赖 Python reference harness。每章只增加一个机制，并保留失败路径、验收条件和规范化 Trace。" en="Six lessons share one dependency-free Python reference harness. Each adds one mechanism while preserving failure paths, acceptance criteria, and normalized traces." /></p>
+        <p><LocalizedText zh="六篇长文教程共用一个无依赖 Python reference harness。每章从问题、心智模型和逐步实现讲到失败路径、练习与生产边界。" en="Six long-form tutorials share one dependency-free Python reference harness. Each moves from the problem and mental model through implementation, failure paths, exercises, and production boundaries." /></p>
         <div className="metric-row">
           <span><strong>6</strong> <LocalizedText zh="课程" en="lessons" /></span>
           <span><strong>8</strong> <LocalizedText zh="测试" en="tests" /></span>
@@ -38,6 +44,11 @@ export default function LearnPage() {
               </div>
               <h2><LocalizedText zh={lesson.title["zh-CN"]} en={lesson.title.en} /></h2>
               <p><LocalizedText zh={lesson.summary["zh-CN"]} en={lesson.summary.en} /></p>
+              <div className="learning-card__meta">
+                <span>{lesson.estimated_minutes} MIN</span>
+                <span><LocalizedText zh={difficultyLabels[lesson.difficulty]} en={lesson.difficulty} /></span>
+                <span><LocalizedText zh="长文教程 · 完整源码" en="LONG-FORM · FULL SOURCE" /></span>
+              </div>
               <div className="tag-row">
                 {lesson.mechanism_ids.map((id) => <span key={id}>{id}</span>)}
               </div>

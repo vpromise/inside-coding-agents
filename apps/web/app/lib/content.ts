@@ -199,6 +199,10 @@ export interface Lesson {
   summary: LocalizedText;
   mechanism_ids: string[];
   status: string;
+  estimated_minutes: number;
+  difficulty: "beginner" | "intermediate" | "advanced";
+  code_path: string;
+  source_code: string;
   content_paths: LocalizedText;
   run: string;
   content: LocalizedText;

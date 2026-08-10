@@ -187,6 +187,9 @@ for lesson in lessons:
     for path_value in lesson.get("content_paths", {}).values():
         if not (ROOT / path_value).is_file():
             ERRORS.append(f"lesson {lesson_id} content path does not exist: {path_value}")
+    code_path = lesson.get("code_path")
+    if code_path and not (ROOT / code_path).is_file():
+        ERRORS.append(f"lesson {lesson_id} code path does not exist: {code_path}")
 
 snapshot_index: dict[str, tuple[str, dict[str, Any]]] = {}
 for agent_id, agent in agents.items():

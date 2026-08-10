@@ -44,7 +44,7 @@ Inside Coding Agents 是一个开源、双语的教程、架构图谱和实验�
 
 ### v0.1 公开预览已包含
 
-- 6 节可运行的双语课程，从 agent loop 一直到 context budget；
+- 6 篇可运行的双语长文教程，每篇都包含心智模型、逐步实现、失败模式、分级练习、生产边界与完整源码；
 - 14 个跨 Agent Mechanism；
 - 5 个 Agent Profile、9 个不可变 Snapshot 和 30 条已审查 Claim；
 - Codex、Pi、Reasonix 的固定 commit 源码地图；

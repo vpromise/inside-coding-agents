@@ -45,8 +45,7 @@ test("renders every vertical-slice route", async () => {
   );
   const routes = [
     "/learn",
-    "/learn/agent-loop",
-    "/learn/context-budget",
+    ...generated.curriculum.lessons.map((lesson) => `/learn/${lesson.slug}`),
     "/mechanisms",
     ...generated.mechanisms.map((mechanism) => `/mechanisms/${mechanism.id}`),
     "/agents",
@@ -66,6 +65,23 @@ test("renders every vertical-slice route", async () => {
     const html = await response.text();
     assert.match(html, /Inside Coding Agents/, route);
   }
+});
+
+test("renders a long-form lesson with rich reading primitives and runnable source", async () => {
+  const response = await render("/learn/agent-loop");
+  assert.equal(response.status, 200);
+  const html = await response.text();
+
+  assert.match(html, /href="#mental-model"/);
+  assert.match(html, /href="#deep-dive"/);
+  assert.match(html, /id="mental-model"/);
+  assert.match(html, /id="source"/);
+  assert.match(html, /<blockquote>/);
+  assert.match(html, /<table>/);
+  assert.match(html, /<ol>/);
+  assert.match(html, /data-language="python"/);
+  assert.match(html, /Not pseudocode/);
+  assert.match(html, /def build_demo/);
 });
 
 test("renders a cross-entity bilingual search index", async () => {
@@ -91,6 +107,13 @@ test("generated content resolves the shared source graph", async () => {
   assert.equal(generated.claims.length, 30);
   assert.equal(generated.experiments.length, 1);
   assert.equal(generated.traces.length, 3);
+
+  for (const lesson of generated.curriculum.lessons) {
+    assert.ok(lesson.estimated_minutes >= 20, `${lesson.id} reading time`);
+    assert.match(lesson.source_code, /def build_demo/);
+    assert.match(lesson.content.en, /\{#deep-dive\}/);
+    assert.match(lesson.content["zh-CN"], /\{#deep-dive\}/);
+  }
 
   const mechanism = generated.mechanisms.find((item) => item.id === "agent-loop");
   const agent = generated.agents.find((item) => item.id === "codex");

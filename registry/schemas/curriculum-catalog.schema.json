@@ -34,7 +34,7 @@
     "lesson": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "number", "slug", "title", "summary", "mechanism_ids", "status", "content_paths", "run"],
+      "required": ["id", "number", "slug", "title", "summary", "mechanism_ids", "status", "estimated_minutes", "difficulty", "code_path", "content_paths", "run"],
       "properties": {
         "id": {"$ref": "#/$defs/stableId"},
         "number": {"type": "string", "pattern": "^[0-9]{2}$"},
@@ -43,6 +43,9 @@
         "summary": {"$ref": "#/$defs/localizedText"},
         "mechanism_ids": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/stableId"}},
         "status": {"enum": ["planned", "implemented", "verified"]},
+        "estimated_minutes": {"type": "integer", "minimum": 5, "maximum": 300},
+        "difficulty": {"enum": ["beginner", "intermediate", "advanced"]},
+        "code_path": {"type": "string", "pattern": "^curriculum/.+\\.py$"},
         "content_paths": {"$ref": "#/$defs/contentPaths"},
         "run": {"type": "string", "minLength": 1}
       }
