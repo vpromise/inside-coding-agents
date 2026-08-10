@@ -27,6 +27,8 @@ Agent architecture changes over time, so statements about a product must be vers
 
 Never use leaked source code, hidden prompts, private repositories, credentials, or material you cannot redistribute. Closed-source observations must remain clean-room observations and must not be presented as internal implementation facts.
 
+Narrative pages use typed provenance. A sentence naming a vendor Agent or product surface must resolve to a reviewed Claim/Evidence record or state an explicit evidence gap. Reference Harness behavior resolves to a runnable Lesson, Golden Trace, or complete Controlled Experiment and must not be relabelled as vendor Native evidence. Engineering guidance, failure modes, and research proposals remain visibly normative rather than being fabricated as product facts. The bilingual narrative-provenance test enforces these boundaries.
+
 ## Adding an Agent or snapshot
 
 1. Add or update `registry/agents/<agent-id>.agent.json`.

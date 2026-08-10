@@ -49,6 +49,7 @@ The same material is useful as a beginner's coding-agent tutorial, an engineer's
 - 13 runnable bilingual long-form tutorials, progressing through agent loops, context, approval, sandbox and network policy, project trust, and scoped Git rollback;
 - 20 cross-agent mechanism records, with bilingual L0–L4 deep dives for context budget, compaction, memory, permissions, OS sandboxing, and checkpoint/rollback;
 - 7 Agent profiles, 11 immutable snapshots, and 49 reviewed claims;
+- a typed narrative-provenance gate: vendor architecture statements resolve to reviewed Claim/Evidence or an explicit gap, while Reference Harness behavior resolves to runnable traces and controlled experiments;
 - pinned public-source maps for Codex, OpenCode, Grok Build, Pi, and Reasonix;
 - a clean-room, official-document snapshot for Claude Code, including subagents and experimental Agent Teams;
 - 10 controlled experiments, 20 reproduced traces, structured results, and readable reports;
