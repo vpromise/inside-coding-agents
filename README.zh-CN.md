@@ -4,6 +4,8 @@
 
 [English](README.md) | **简体中文**
 
+[打开在线网站](https://vpromise.github.io/inside-coding-agents/)
+
 [![CI](https://github.com/vpromise/inside-coding-agents/actions/workflows/ci.yml/badge.svg)](https://github.com/vpromise/inside-coding-agents/actions/workflows/ci.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white)](curriculum/README.md)

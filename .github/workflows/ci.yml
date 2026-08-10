@@ -85,3 +85,6 @@ jobs:
 
       - name: Build and test every published route
         run: npm test
+
+      - name: Build and test the GitHub Pages export
+        run: npm run test:pages

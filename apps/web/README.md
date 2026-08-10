@@ -17,6 +17,16 @@ npm run dev
 
 The interface defaults to English, detects Chinese browser preferences, and supports an explicit English/中文 switch.
 
+## GitHub Pages export
+
+The public site is exported under the repository base path and contains no request-time server dependency:
+
+```bash
+npm run test:pages
+```
+
+The command writes the deployable site to `out/`, verifies every expected HTML route, and checks project-relative assets and Trace downloads. The pinned workflow in `.github/workflows/pages.yml` publishes that directory to GitHub Pages after a successful push to `main`.
+
 ## Validate
 
 ```bash

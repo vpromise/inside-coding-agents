@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { TraceEvent } from "../lib/content";
 import { eventFamily } from "../lib/content";
+import { withBasePath } from "../lib/paths";
 import { useLocale } from "./LocaleProvider";
 
 const familyLabel: Record<string, string> = {
@@ -148,7 +149,7 @@ export function TracePlayer({
 
       <div className="trace-player__foot">
         <p>{text(`${visible.length} 个事件已进入可见状态；隐藏 chain-of-thought 不属于 Trace。`, `${visible.length} events are visible; hidden chain-of-thought is not part of the trace.`)}</p>
-        <a href={downloadHref} download>{text("下载 JSONL", "Download JSONL")}</a>
+        <a href={withBasePath(downloadHref)} download>{text("下载 JSONL", "Download JSONL")}</a>
       </div>
     </section>
   );
