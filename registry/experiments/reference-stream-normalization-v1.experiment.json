@@ -1,0 +1,47 @@
+{
+  "schema_version": "0.1.0",
+  "id": "reference-stream-normalization-v1",
+  "title": "Reference Harness stream normalization probe",
+  "question": "Can the Reference Harness normalize a fragmented model stream into one deterministic event sequence without depending on hidden model state?",
+  "hypothesis": "Both repetitions will preserve stream order, mark the final model response, produce the expected answer, and share one normalized Trace fingerprint.",
+  "mode": "controlled",
+  "status": "complete",
+  "fixture": {
+    "path": "labs/fixtures/reference-mechanism-probes-v1",
+    "revision": "fixture-v1",
+    "sha256": "d369431d683da5c2cad36bb6dc6f76d429c2efbdc29171d5c8d9d4d7c3c575aa"
+  },
+  "scenario": {
+    "path": "labs/scenarios/reference-stream-normalization-v1.scenario.json",
+    "prompt_sha256": "51f9c1719823cfcedfe60c50fe59fefe0167e444b30430b9018d72468c931fb4"
+  },
+  "subjects": [
+    {
+      "agent_id": "reference-harness",
+      "snapshot_id": "reference-harness-2026-08-10-controlled",
+      "surface": "sdk",
+      "model": "scripted-model-v1",
+      "provider": "local-fixture",
+      "comparison_status": "not-comparable",
+      "configuration": {"lesson_id": "s02", "network": false, "writes": false},
+      "uncontrolled_variables": []
+    }
+  ],
+  "controls": {"network": false, "temperature": 0, "writes": false, "sandbox": "lesson-owned-temporary-fixture"},
+  "repetitions": 2,
+  "metrics": ["event-order-valid", "observations-match", "final-answer-match", "fixture-unchanged", "deterministic-replay"],
+  "success_criteria": [
+    "Both repetitions expose the declared final stream frame and completed stop reason.",
+    "Both repetitions return the exact expected answer and share one normalized Trace fingerprint."
+  ],
+  "limitations": [
+    "The Scripted Model and Reference Harness are deterministic teaching components, not Native vendor evidence.",
+    "The probe validates the declared normalization path only; it does not cover malformed or vendor-specific streams.",
+    "The experiment does not measure latency, token usage, cost, or model capability."
+  ],
+  "outputs": {
+    "traces_path": "labs/results/reference-stream-normalization-v1",
+    "results_path": "labs/results/reference-stream-normalization-v1/result.json",
+    "report_path": "labs/results/reference-stream-normalization-v1/report.md"
+  }
+}

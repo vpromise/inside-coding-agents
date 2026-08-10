@@ -1,0 +1,102 @@
+{
+  "schema_version": "0.1.0",
+  "experiment_id": "reference-context-budget-v1",
+  "generated_at": "2026-08-10T03:00:00Z",
+  "runner": {
+    "id": "reference-experiment-runner",
+    "version": "0.1.0",
+    "command": "python3 labs/runner.py reference-context-budget-v1 --check"
+  },
+  "status": "passed",
+  "summary": {
+    "total_runs": 2,
+    "successful_runs": 2,
+    "failed_runs": 0,
+    "criteria_passed": true
+  },
+  "criteria": [
+    {
+      "statement": "Both repetitions mark the oversized result as truncated and record final_chars as 300.",
+      "passed": true
+    },
+    {
+      "statement": "Both repetitions return the expected answer, preserve the fixture, and share one Trace fingerprint.",
+      "passed": true
+    }
+  ],
+  "fixture_sha256": "d369431d683da5c2cad36bb6dc6f76d429c2efbdc29171d5c8d9d4d7c3c575aa",
+  "prompt_sha256": "2036916cd8508348f408350ebf57017bd728cc0555ccdb7fcaa2d058b31e3edc",
+  "runs": [
+    {
+      "run_id": "reference-context-budget-v1-run-001",
+      "repetition": 1,
+      "status": "passed",
+      "trace_path": "labs/results/reference-context-budget-v1/run-001.trace.jsonl",
+      "event_count": 10,
+      "event_types": [
+        "session.start",
+        "user.message",
+        "model.request",
+        "model.response",
+        "tool.request",
+        "tool.result",
+        "context.prune",
+        "model.request",
+        "model.response",
+        "session.stop"
+      ],
+      "final_text": "The harness truncated the oversized result.",
+      "stop_reason": "completed",
+      "metrics": {
+        "event-order-valid": true,
+        "observations-match": true,
+        "final-answer-match": true,
+        "fixture-unchanged": true,
+        "deterministic-replay": true
+      },
+      "deterministic_fingerprint": "a4d37ac72603f338783f60c8e94968375235d29f2580015dc625fbb7a3305784",
+      "redaction": {
+        "status": "clean",
+        "fields": []
+      }
+    },
+    {
+      "run_id": "reference-context-budget-v1-run-002",
+      "repetition": 2,
+      "status": "passed",
+      "trace_path": "labs/results/reference-context-budget-v1/run-002.trace.jsonl",
+      "event_count": 10,
+      "event_types": [
+        "session.start",
+        "user.message",
+        "model.request",
+        "model.response",
+        "tool.request",
+        "tool.result",
+        "context.prune",
+        "model.request",
+        "model.response",
+        "session.stop"
+      ],
+      "final_text": "The harness truncated the oversized result.",
+      "stop_reason": "completed",
+      "metrics": {
+        "event-order-valid": true,
+        "observations-match": true,
+        "final-answer-match": true,
+        "fixture-unchanged": true,
+        "deterministic-replay": true
+      },
+      "deterministic_fingerprint": "a4d37ac72603f338783f60c8e94968375235d29f2580015dc625fbb7a3305784",
+      "redaction": {
+        "status": "clean",
+        "fields": []
+      }
+    }
+  ],
+  "limitations": [
+    "This is a character-budget teaching policy, not a measurement of any vendor Agent's token accounting.",
+    "The truncation strategy is deterministic and does not evaluate semantic information loss.",
+    "The experiment does not measure latency, cost, or model capability."
+  ]
+}

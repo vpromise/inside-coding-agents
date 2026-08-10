@@ -8,7 +8,7 @@
   "prerequisites": ["execution-policy", "os-sandbox"],
   "reference_lessons": ["s11-sandbox-network"],
   "agent_implementations": [],
-  "experiments": [],
+  "experiments": ["reference-sandbox-network-v1"],
   "open_questions": [
     "Should policy bind hostnames before or after DNS resolution and redirect handling?",
     "How can a harness expose proxied, tunneled, and child-process traffic in one trace?",

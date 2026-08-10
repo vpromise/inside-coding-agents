@@ -8,7 +8,7 @@
   "prerequisites": ["agent-loop"],
   "reference_lessons": ["s06-context-budget"],
   "agent_implementations": [],
-  "experiments": [],
+  "experiments": ["reference-context-budget-v1"],
   "open_questions": ["Which budget decisions should be replayable across tokenizers?"],
   "reader_layer_status": {"L0": "complete", "L1": "complete", "L2": "complete", "L3": "complete", "L4": "complete"}
 }

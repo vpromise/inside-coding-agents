@@ -1,0 +1,104 @@
+{
+  "schema_version": "0.1.0",
+  "experiment_id": "reference-approval-binding-v1",
+  "generated_at": "2026-08-10T03:00:00Z",
+  "runner": {
+    "id": "reference-experiment-runner",
+    "version": "0.1.0",
+    "command": "python3 labs/runner.py reference-approval-binding-v1 --check"
+  },
+  "status": "passed",
+  "summary": {
+    "total_runs": 2,
+    "successful_runs": 2,
+    "failed_runs": 0,
+    "criteria_passed": true
+  },
+  "criteria": [
+    {
+      "statement": "Both repetitions record allow, once, and the exact approved path before successful execution.",
+      "passed": true
+    },
+    {
+      "statement": "Both repetitions clean their temporary fixture and share one normalized Trace fingerprint.",
+      "passed": true
+    }
+  ],
+  "fixture_sha256": "d369431d683da5c2cad36bb6dc6f76d429c2efbdc29171d5c8d9d4d7c3c575aa",
+  "prompt_sha256": "d8080c12b23ec0e2f24890e57b20523f6474b7d674aeb67629dc359482414a3a",
+  "runs": [
+    {
+      "run_id": "reference-approval-binding-v1-run-001",
+      "repetition": 1,
+      "status": "passed",
+      "trace_path": "labs/results/reference-approval-binding-v1/run-001.trace.jsonl",
+      "event_count": 11,
+      "event_types": [
+        "session.start",
+        "user.message",
+        "model.request",
+        "model.response",
+        "tool.request",
+        "approval.request",
+        "approval.decision",
+        "tool.result",
+        "model.request",
+        "model.response",
+        "session.stop"
+      ],
+      "final_text": "The exact approved write completed.",
+      "stop_reason": "completed",
+      "metrics": {
+        "event-order-valid": true,
+        "observations-match": true,
+        "final-answer-match": true,
+        "fixture-unchanged": true,
+        "deterministic-replay": true
+      },
+      "deterministic_fingerprint": "080977d87e0c4d8c525fd64833a3f440d94c86437ea0b99f9a34659397d84d4f",
+      "redaction": {
+        "status": "clean",
+        "fields": []
+      }
+    },
+    {
+      "run_id": "reference-approval-binding-v1-run-002",
+      "repetition": 2,
+      "status": "passed",
+      "trace_path": "labs/results/reference-approval-binding-v1/run-002.trace.jsonl",
+      "event_count": 11,
+      "event_types": [
+        "session.start",
+        "user.message",
+        "model.request",
+        "model.response",
+        "tool.request",
+        "approval.request",
+        "approval.decision",
+        "tool.result",
+        "model.request",
+        "model.response",
+        "session.stop"
+      ],
+      "final_text": "The exact approved write completed.",
+      "stop_reason": "completed",
+      "metrics": {
+        "event-order-valid": true,
+        "observations-match": true,
+        "final-answer-match": true,
+        "fixture-unchanged": true,
+        "deterministic-replay": true
+      },
+      "deterministic_fingerprint": "080977d87e0c4d8c525fd64833a3f440d94c86437ea0b99f9a34659397d84d4f",
+      "redaction": {
+        "status": "clean",
+        "fields": []
+      }
+    }
+  ],
+  "limitations": [
+    "The policy engine is deterministic lesson code and the write occurs only in a disposable temporary directory.",
+    "This probe does not establish operating-system isolation or Native vendor approval behavior.",
+    "The experiment does not test races, symlinks, or approval reuse attacks."
+  ]
+}

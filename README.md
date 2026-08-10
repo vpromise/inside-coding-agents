@@ -38,7 +38,7 @@ The same material is useful as a beginner's coding-agent tutorial, an engineer's
 | Academy | How do I build a coding agent from zero? | [Run the thirteen lessons](curriculum/README.md) |
 | Mechanisms | What design problems do all agent harnesses share? | [Browse 20 mechanisms](content/mechanisms/README.md) |
 | Agent Atlas | How does a specific agent implement those mechanisms? | [Inspect versioned profiles](content/agents/README.md) |
-| Experiment Lab | Which observations can be reproduced under fixed conditions? | [Replay the controlled baseline](labs/README.md) |
+| Experiment Lab | Which observations can be reproduced under fixed conditions? | [Replay 10 controlled experiments](labs/README.md) |
 | Registry | Where are claims, evidence, schemas, and stable IDs stored? | [Read the data model](registry/README.md) |
 | Web | How does the shared graph become a bilingual, searchable site? | [Run the interface](apps/web/README.md) |
 
@@ -49,7 +49,7 @@ The same material is useful as a beginner's coding-agent tutorial, an engineer's
 - 5 Agent profiles, 9 immutable snapshots, and 30 reviewed claims;
 - pinned public-source maps for Codex, Pi, and Reasonix;
 - a clean-room, official-document snapshot for Claude Code;
-- 1 controlled experiment, 2 reproduced traces, and a structured result;
+- 10 controlled experiments, 20 reproduced traces, structured results, and readable reports;
 - a bilingual, searchable website with an interactive Architecture Atlas, dependency graphs, evidence-aware Agent matrices, and generic data-driven routes;
 - JSON Schema, graph, digest, trace, link, safety, and web-build validation.
 
@@ -160,7 +160,7 @@ Not currently. The reference harness is deliberately small and deterministic so 
 
 ### Is this a benchmark comparing Codex and Claude Code?
 
-No. The current lab validates the research pipeline with a controlled reference harness. Cross-product results are published only when subjects, versions, permissions, environments, and observability boundaries are genuinely comparable.
+No. The current lab validates ten mechanisms with a controlled reference harness. Cross-product results are published only when subjects, versions, permissions, environments, and observability boundaries are genuinely comparable.
 
 ### Can I add another coding agent?
 

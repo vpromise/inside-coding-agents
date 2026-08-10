@@ -1,0 +1,108 @@
+{
+  "schema_version": "0.1.0",
+  "experiment_id": "reference-memory-retrieval-v1",
+  "generated_at": "2026-08-10T03:00:00Z",
+  "runner": {
+    "id": "reference-experiment-runner",
+    "version": "0.1.0",
+    "command": "python3 labs/runner.py reference-memory-retrieval-v1 --check"
+  },
+  "status": "passed",
+  "summary": {
+    "total_runs": 2,
+    "successful_runs": 2,
+    "failed_runs": 0,
+    "criteria_passed": true
+  },
+  "criteria": [
+    {
+      "statement": "Both repetitions cite only the declared testing memory source and select the test-first skill.",
+      "passed": true
+    },
+    {
+      "statement": "Both repetitions return the expected plan and share one normalized Trace fingerprint.",
+      "passed": true
+    }
+  ],
+  "fixture_sha256": "d369431d683da5c2cad36bb6dc6f76d429c2efbdc29171d5c8d9d4d7c3c575aa",
+  "prompt_sha256": "bab97a48fbc064150c113df8551727c7dc93abec9288a673737a562660e39bf9",
+  "runs": [
+    {
+      "run_id": "reference-memory-retrieval-v1-run-001",
+      "repetition": 1,
+      "status": "passed",
+      "trace_path": "labs/results/reference-memory-retrieval-v1/run-001.trace.jsonl",
+      "event_count": 13,
+      "event_types": [
+        "session.start",
+        "user.message",
+        "model.request",
+        "model.response",
+        "tool.request",
+        "memory.read",
+        "tool.result",
+        "tool.request",
+        "skill.load",
+        "tool.result",
+        "model.request",
+        "model.response",
+        "session.stop"
+      ],
+      "final_text": "I will run the focused test first, then widen coverage.",
+      "stop_reason": "completed",
+      "metrics": {
+        "event-order-valid": true,
+        "observations-match": true,
+        "final-answer-match": true,
+        "fixture-unchanged": true,
+        "deterministic-replay": true
+      },
+      "deterministic_fingerprint": "7eaa2d164b456e7373c87905a4b1fe77bd96941c1240fc9da34d5df2711bf05c",
+      "redaction": {
+        "status": "clean",
+        "fields": []
+      }
+    },
+    {
+      "run_id": "reference-memory-retrieval-v1-run-002",
+      "repetition": 2,
+      "status": "passed",
+      "trace_path": "labs/results/reference-memory-retrieval-v1/run-002.trace.jsonl",
+      "event_count": 13,
+      "event_types": [
+        "session.start",
+        "user.message",
+        "model.request",
+        "model.response",
+        "tool.request",
+        "memory.read",
+        "tool.result",
+        "tool.request",
+        "skill.load",
+        "tool.result",
+        "model.request",
+        "model.response",
+        "session.stop"
+      ],
+      "final_text": "I will run the focused test first, then widen coverage.",
+      "stop_reason": "completed",
+      "metrics": {
+        "event-order-valid": true,
+        "observations-match": true,
+        "final-answer-match": true,
+        "fixture-unchanged": true,
+        "deterministic-replay": true
+      },
+      "deterministic_fingerprint": "7eaa2d164b456e7373c87905a4b1fe77bd96941c1240fc9da34d5df2711bf05c",
+      "redaction": {
+        "status": "clean",
+        "fields": []
+      }
+    }
+  ],
+  "limitations": [
+    "Retrieval uses a small deterministic teaching index, not embeddings or a production memory service.",
+    "The probe does not measure ranking quality on ambiguous or adversarial corpora.",
+    "The Reference Harness result is not Native vendor evidence."
+  ]
+}

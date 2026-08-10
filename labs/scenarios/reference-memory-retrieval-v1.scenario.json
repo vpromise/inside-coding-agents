@@ -1,0 +1,20 @@
+{
+  "schema_version": "0.1.0",
+  "kind": "controlled",
+  "id": "reference-memory-retrieval-v1",
+  "experiment_id": "reference-memory-retrieval-v1",
+  "prompt": "Recall the project testing rule and load the relevant skill.",
+  "lesson_id": "s09-memory-skills",
+  "run_started_at": "2026-08-10T00:00:00Z",
+  "result_generated_at": "2026-08-10T03:00:00Z",
+  "repetition_interval_seconds": 900,
+  "expected": {
+    "final_text": "I will run the focused test first, then widen coverage.",
+    "stop_reason": "completed",
+    "event_types": ["session.start", "user.message", "model.request", "model.response", "tool.request", "memory.read", "tool.result", "tool.request", "skill.load", "tool.result", "model.request", "model.response", "session.stop"],
+    "observations": [
+      {"event_type": "memory.read", "path": ["payload", "sources"], "equals": ["AGENTS.md#testing"]},
+      {"event_type": "skill.load", "path": ["payload", "skill_id"], "equals": "test-first"}
+    ]
+  }
+}

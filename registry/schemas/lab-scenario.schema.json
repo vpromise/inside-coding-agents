@@ -6,21 +6,22 @@
   "additionalProperties": false,
   "required": [
     "schema_version",
+    "kind",
     "id",
     "experiment_id",
     "prompt",
-    "system_prompt",
     "run_started_at",
     "result_generated_at",
     "repetition_interval_seconds",
-    "turns",
     "expected"
   ],
   "properties": {
     "schema_version": { "const": "0.1.0" },
+    "kind": { "const": "controlled" },
     "id": { "$ref": "#/$defs/stableId" },
     "experiment_id": { "$ref": "#/$defs/stableId" },
     "prompt": { "type": "string", "minLength": 1 },
+    "lesson_id": { "$ref": "#/$defs/stableId" },
     "system_prompt": { "type": "string" },
     "run_started_at": { "type": "string", "format": "date-time" },
     "result_generated_at": { "type": "string", "format": "date-time" },
@@ -54,7 +55,7 @@
     "expected": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["final_text", "stop_reason", "event_types", "tool_result"],
+      "required": ["final_text", "stop_reason", "event_types"],
       "properties": {
         "final_text": { "type": "string" },
         "stop_reason": { "type": "string", "minLength": 1 },
@@ -72,10 +73,48 @@
             "path": { "type": "string", "minLength": 1 },
             "content": { "type": "string" }
           }
+        },
+        "observations": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["event_type", "path", "equals"],
+            "properties": {
+              "event_type": { "type": "string", "minLength": 1 },
+              "occurrence": { "type": "integer", "minimum": 0 },
+              "path": {
+                "type": "array",
+                "minItems": 1,
+                "items": { "type": ["string", "integer"] }
+              },
+              "equals": true
+            }
+          }
         }
-      }
+      },
+      "oneOf": [
+        { "required": ["tool_result"], "not": { "required": ["observations"] } },
+        { "required": ["observations"], "not": { "required": ["tool_result"] } }
+      ]
     }
   },
+  "oneOf": [
+    {
+      "required": ["system_prompt", "turns"],
+      "not": { "required": ["lesson_id"] }
+    },
+    {
+      "required": ["lesson_id"],
+      "not": {
+        "anyOf": [
+          { "required": ["system_prompt"] },
+          { "required": ["turns"] }
+        ]
+      }
+    }
+  ],
   "$defs": {
     "stableId": {
       "type": "string",

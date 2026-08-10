@@ -1,0 +1,108 @@
+{
+  "schema_version": "0.1.0",
+  "experiment_id": "reference-sandbox-network-v1",
+  "generated_at": "2026-08-10T03:00:00Z",
+  "runner": {
+    "id": "reference-experiment-runner",
+    "version": "0.1.0",
+    "command": "python3 labs/runner.py reference-sandbox-network-v1 --check"
+  },
+  "status": "passed",
+  "summary": {
+    "total_runs": 2,
+    "successful_runs": 2,
+    "failed_runs": 0,
+    "criteria_passed": true
+  },
+  "criteria": [
+    {
+      "statement": "Both repetitions record the declared allowed destination and simulated-no-effects backend.",
+      "passed": true
+    },
+    {
+      "statement": "No real network request occurs; both repetitions share one normalized Trace fingerprint.",
+      "passed": true
+    }
+  ],
+  "fixture_sha256": "d369431d683da5c2cad36bb6dc6f76d429c2efbdc29171d5c8d9d4d7c3c575aa",
+  "prompt_sha256": "50231e5c01569ce28a885affae2d3ee57702efd1062bcb514f9238c142eb8554",
+  "runs": [
+    {
+      "run_id": "reference-sandbox-network-v1-run-001",
+      "repetition": 1,
+      "status": "passed",
+      "trace_path": "labs/results/reference-sandbox-network-v1/run-001.trace.jsonl",
+      "event_count": 13,
+      "event_types": [
+        "session.start",
+        "user.message",
+        "model.request",
+        "model.response",
+        "tool.request",
+        "approval.request",
+        "approval.decision",
+        "sandbox.configure",
+        "network.decision",
+        "tool.result",
+        "model.request",
+        "model.response",
+        "session.stop"
+      ],
+      "final_text": "The allowed destination returned simulated metadata.",
+      "stop_reason": "completed",
+      "metrics": {
+        "event-order-valid": true,
+        "observations-match": true,
+        "final-answer-match": true,
+        "fixture-unchanged": true,
+        "deterministic-replay": true
+      },
+      "deterministic_fingerprint": "ce801377d12b9d0eb13d616eeaccfe1db807deaeaee68396bad87001f8958911",
+      "redaction": {
+        "status": "clean",
+        "fields": []
+      }
+    },
+    {
+      "run_id": "reference-sandbox-network-v1-run-002",
+      "repetition": 2,
+      "status": "passed",
+      "trace_path": "labs/results/reference-sandbox-network-v1/run-002.trace.jsonl",
+      "event_count": 13,
+      "event_types": [
+        "session.start",
+        "user.message",
+        "model.request",
+        "model.response",
+        "tool.request",
+        "approval.request",
+        "approval.decision",
+        "sandbox.configure",
+        "network.decision",
+        "tool.result",
+        "model.request",
+        "model.response",
+        "session.stop"
+      ],
+      "final_text": "The allowed destination returned simulated metadata.",
+      "stop_reason": "completed",
+      "metrics": {
+        "event-order-valid": true,
+        "observations-match": true,
+        "final-answer-match": true,
+        "fixture-unchanged": true,
+        "deterministic-replay": true
+      },
+      "deterministic_fingerprint": "ce801377d12b9d0eb13d616eeaccfe1db807deaeaee68396bad87001f8958911",
+      "redaction": {
+        "status": "clean",
+        "fields": []
+      }
+    }
+  ],
+  "limitations": [
+    "This is a policy simulation and proves neither OS sandboxing nor firewall enforcement.",
+    "The invalid example destination is never contacted, so no real network stack behavior is measured.",
+    "The Reference Harness result is not Native vendor evidence."
+  ]
+}

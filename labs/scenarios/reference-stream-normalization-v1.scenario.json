@@ -1,0 +1,20 @@
+{
+  "schema_version": "0.1.0",
+  "kind": "controlled",
+  "id": "reference-stream-normalization-v1",
+  "experiment_id": "reference-stream-normalization-v1",
+  "prompt": "Stream one observability rule.",
+  "lesson_id": "s02-events-streaming",
+  "run_started_at": "2026-08-10T00:00:00Z",
+  "result_generated_at": "2026-08-10T03:00:00Z",
+  "repetition_interval_seconds": 900,
+  "expected": {
+    "final_text": "Observe events, not hidden state.",
+    "stop_reason": "completed",
+    "event_types": ["session.start", "user.message", "model.request", "model.response", "model.response", "model.response", "session.stop"],
+    "observations": [
+      {"event_type": "model.response", "occurrence": 2, "path": ["payload", "final"], "equals": true},
+      {"event_type": "session.stop", "path": ["payload", "reason"], "equals": "completed"}
+    ]
+  }
+}

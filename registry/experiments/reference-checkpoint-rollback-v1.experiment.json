@@ -1,0 +1,18 @@
+{
+  "schema_version": "0.1.0",
+  "id": "reference-checkpoint-rollback-v1",
+  "title": "Reference Harness checkpoint and rollback probe",
+  "question": "Can the Reference Harness restore the declared file to a clean checkpoint after a reviewed temporary change?",
+  "hypothesis": "Both repetitions will restore status.txt, report a clean workspace with pending content, clean temporary state, and share one normalized Trace fingerprint.",
+  "mode": "controlled",
+  "status": "complete",
+  "fixture": {"path": "labs/fixtures/reference-mechanism-probes-v1", "revision": "fixture-v1", "sha256": "d369431d683da5c2cad36bb6dc6f76d429c2efbdc29171d5c8d9d4d7c3c575aa"},
+  "scenario": {"path": "labs/scenarios/reference-checkpoint-rollback-v1.scenario.json", "prompt_sha256": "7a5bc10e132d7b5dfa623eb784340c0ffb1c3d9222c644abf94dc6220a761b9b"},
+  "subjects": [{"agent_id": "reference-harness", "snapshot_id": "reference-harness-2026-08-10-controlled", "surface": "sdk", "model": "scripted-model-v1", "provider": "local-fixture", "comparison_status": "not-comparable", "configuration": {"lesson_id": "s13", "network": false, "writes": "lesson-owned-temporary-only"}, "uncontrolled_variables": []}],
+  "controls": {"network": false, "temperature": 0, "writes": "lesson-owned-temporary-only", "sandbox": "lesson-owned-temporary-fixture"},
+  "repetitions": 2,
+  "metrics": ["event-order-valid", "observations-match", "final-answer-match", "fixture-unchanged", "deterministic-replay"],
+  "success_criteria": ["Both repetitions restore status.txt, report clean state, and recover the exact pending content.", "Both repetitions clean temporary state and share one normalized Trace fingerprint."],
+  "limitations": ["The checkpoint backend is deterministic lesson code over a disposable temporary directory.", "The probe does not test large repositories, untracked files, concurrent edits, or partial filesystem failure.", "The Reference Harness result is not Native vendor evidence."],
+  "outputs": {"traces_path": "labs/results/reference-checkpoint-rollback-v1", "results_path": "labs/results/reference-checkpoint-rollback-v1/result.json", "report_path": "labs/results/reference-checkpoint-rollback-v1/report.md"}
+}

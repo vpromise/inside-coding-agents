@@ -1,0 +1,18 @@
+{
+  "schema_version": "0.1.0",
+  "id": "reference-approval-binding-v1",
+  "title": "Reference Harness approval binding probe",
+  "question": "Does one approval grant authorize only the exact declared write and leave an auditable result?",
+  "hypothesis": "Both repetitions will bind an allow-once grant to the approved path, complete the write inside a temporary lesson fixture, and share one normalized Trace fingerprint.",
+  "mode": "controlled",
+  "status": "complete",
+  "fixture": {"path": "labs/fixtures/reference-mechanism-probes-v1", "revision": "fixture-v1", "sha256": "d369431d683da5c2cad36bb6dc6f76d429c2efbdc29171d5c8d9d4d7c3c575aa"},
+  "scenario": {"path": "labs/scenarios/reference-approval-binding-v1.scenario.json", "prompt_sha256": "d8080c12b23ec0e2f24890e57b20523f6474b7d674aeb67629dc359482414a3a"},
+  "subjects": [{"agent_id": "reference-harness", "snapshot_id": "reference-harness-2026-08-10-controlled", "surface": "sdk", "model": "scripted-model-v1", "provider": "local-fixture", "comparison_status": "not-comparable", "configuration": {"lesson_id": "s10", "network": false, "writes": "lesson-owned-temporary-only"}, "uncontrolled_variables": []}],
+  "controls": {"network": false, "temperature": 0, "writes": "lesson-owned-temporary-only", "sandbox": "lesson-owned-temporary-fixture"},
+  "repetitions": 2,
+  "metrics": ["event-order-valid", "observations-match", "final-answer-match", "fixture-unchanged", "deterministic-replay"],
+  "success_criteria": ["Both repetitions record allow, once, and the exact approved path before successful execution.", "Both repetitions clean their temporary fixture and share one normalized Trace fingerprint."],
+  "limitations": ["The policy engine is deterministic lesson code and the write occurs only in a disposable temporary directory.", "This probe does not establish operating-system isolation or Native vendor approval behavior.", "The experiment does not test races, symlinks, or approval reuse attacks."],
+  "outputs": {"traces_path": "labs/results/reference-approval-binding-v1", "results_path": "labs/results/reference-approval-binding-v1/result.json", "report_path": "labs/results/reference-approval-binding-v1/report.md"}
+}

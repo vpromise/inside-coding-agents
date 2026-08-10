@@ -1,0 +1,20 @@
+{
+  "schema_version": "0.1.0",
+  "kind": "controlled",
+  "id": "reference-context-budget-v1",
+  "experiment_id": "reference-context-budget-v1",
+  "prompt": "Fetch the large result, then explain the budget behavior.",
+  "lesson_id": "s06-context-budget",
+  "run_started_at": "2026-08-10T00:00:00Z",
+  "result_generated_at": "2026-08-10T03:00:00Z",
+  "repetition_interval_seconds": 900,
+  "expected": {
+    "final_text": "The harness truncated the oversized result.",
+    "stop_reason": "completed",
+    "event_types": ["session.start", "user.message", "model.request", "model.response", "tool.request", "tool.result", "context.prune", "model.request", "model.response", "session.stop"],
+    "observations": [
+      {"event_type": "tool.result", "path": ["payload", "truncated"], "equals": true},
+      {"event_type": "context.prune", "path": ["payload", "final_chars"], "equals": 300}
+    ]
+  }
+}

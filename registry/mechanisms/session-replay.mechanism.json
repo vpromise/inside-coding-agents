@@ -8,7 +8,7 @@
   "prerequisites": ["event-stream"],
   "reference_lessons": ["s07-session-replay"],
   "agent_implementations": [],
-  "experiments": [],
+  "experiments": ["reference-session-replay-v1"],
   "open_questions": [
     "Which derived views must be rebuildable after a schema migration?",
     "Where should a branch inherit artifacts by reference instead of copying them?",

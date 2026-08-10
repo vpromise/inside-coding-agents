@@ -34,7 +34,7 @@
       "claim_ids": ["claude-code-doc-execution-policy"]
     }
   ],
-  "experiments": [],
+  "experiments": ["reference-approval-binding-v1"],
   "open_questions": [
     "Which decisions belong to semantic permissions and which require OS enforcement?",
     "How should approval caches be scoped and revoked?",

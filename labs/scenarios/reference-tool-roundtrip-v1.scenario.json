@@ -1,5 +1,6 @@
 {
   "schema_version": "0.1.0",
+  "kind": "controlled",
   "id": "reference-tool-roundtrip-v1",
   "experiment_id": "reference-tool-roundtrip-v1",
   "prompt": "Read input.txt with the declared tool, then report the exact two values.",

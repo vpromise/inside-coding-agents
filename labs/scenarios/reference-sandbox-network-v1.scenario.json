@@ -1,0 +1,21 @@
+{
+  "schema_version": "0.1.0",
+  "kind": "controlled",
+  "id": "reference-sandbox-network-v1",
+  "experiment_id": "reference-sandbox-network-v1",
+  "prompt": "Inspect package metadata without contacting any other host.",
+  "lesson_id": "s11-sandbox-network",
+  "run_started_at": "2026-08-10T00:00:00Z",
+  "result_generated_at": "2026-08-10T03:00:00Z",
+  "repetition_interval_seconds": 900,
+  "expected": {
+    "final_text": "The allowed destination returned simulated metadata.",
+    "stop_reason": "completed",
+    "event_types": ["session.start", "user.message", "model.request", "model.response", "tool.request", "approval.request", "approval.decision", "sandbox.configure", "network.decision", "tool.result", "model.request", "model.response", "session.stop"],
+    "observations": [
+      {"event_type": "sandbox.configure", "path": ["payload", "backend"], "equals": "simulated-no-effects"},
+      {"event_type": "sandbox.configure", "path": ["payload", "allowed"], "equals": true},
+      {"event_type": "network.decision", "path": ["payload", "destinations"], "equals": ["packages.example.invalid:443"]}
+    ]
+  }
+}

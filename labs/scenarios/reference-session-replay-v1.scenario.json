@@ -1,0 +1,21 @@
+{
+  "schema_version": "0.1.0",
+  "kind": "controlled",
+  "id": "reference-session-replay-v1",
+  "experiment_id": "reference-session-replay-v1",
+  "prompt": "Explain replay and branch lineage in one sentence.",
+  "lesson_id": "s07-session-replay",
+  "run_started_at": "2026-08-10T00:00:00Z",
+  "result_generated_at": "2026-08-10T03:00:00Z",
+  "repetition_interval_seconds": 900,
+  "expected": {
+    "final_text": "Replay derives state; branching preserves its parent.",
+    "stop_reason": "completed",
+    "event_types": ["session.start", "user.message", "model.request", "model.response", "session.stop", "session.replay", "session.branch"],
+    "observations": [
+      {"event_type": "session.replay", "path": ["payload", "applied_events"], "equals": 5},
+      {"event_type": "session.branch", "path": ["payload", "fork_sequence"], "equals": 2},
+      {"event_type": "session.branch", "path": ["payload", "inherited_events"], "equals": 3}
+    ]
+  }
+}

@@ -8,7 +8,7 @@
   "prerequisites": ["instruction-discovery", "execution-policy"],
   "reference_lessons": ["s12-project-trust"],
   "agent_implementations": [],
-  "experiments": [],
+  "experiments": ["reference-project-trust-v1"],
   "open_questions": [
     "Which repository changes should invalidate an existing trust grant?",
     "How should nested projects and dependency worktrees compose instruction authority?",

@@ -1,0 +1,18 @@
+{
+  "schema_version": "0.1.0",
+  "id": "reference-session-replay-v1",
+  "title": "Reference Harness replay and branch probe",
+  "question": "Can append-only events deterministically rebuild session state and create a branch from an explicit sequence boundary?",
+  "hypothesis": "Both repetitions will replay five events, fork at sequence two with three inherited events, and share one normalized Trace fingerprint.",
+  "mode": "controlled",
+  "status": "complete",
+  "fixture": {"path": "labs/fixtures/reference-mechanism-probes-v1", "revision": "fixture-v1", "sha256": "d369431d683da5c2cad36bb6dc6f76d429c2efbdc29171d5c8d9d4d7c3c575aa"},
+  "scenario": {"path": "labs/scenarios/reference-session-replay-v1.scenario.json", "prompt_sha256": "bafdff395bb00b3027f78b9eec80b803a5e79513c618cfeae2a8373c32848b8e"},
+  "subjects": [{"agent_id": "reference-harness", "snapshot_id": "reference-harness-2026-08-10-controlled", "surface": "sdk", "model": "scripted-model-v1", "provider": "local-fixture", "comparison_status": "not-comparable", "configuration": {"lesson_id": "s07", "network": false, "writes": false}, "uncontrolled_variables": []}],
+  "controls": {"network": false, "temperature": 0, "writes": false, "sandbox": "lesson-owned-temporary-fixture"},
+  "repetitions": 2,
+  "metrics": ["event-order-valid", "observations-match", "final-answer-match", "fixture-unchanged", "deterministic-replay"],
+  "success_criteria": ["Both repetitions replay five events and record the declared fork and inherited-event counts.", "Both repetitions return the expected answer and share one normalized Trace fingerprint."],
+  "limitations": ["The event log is in-memory teaching data rather than a crash-tested production store.", "The probe does not cover schema migrations, concurrent writers, or corrupted logs.", "The Reference Harness result is not Native vendor evidence."],
+  "outputs": {"traces_path": "labs/results/reference-session-replay-v1", "results_path": "labs/results/reference-session-replay-v1/result.json", "report_path": "labs/results/reference-session-replay-v1/report.md"}
+}

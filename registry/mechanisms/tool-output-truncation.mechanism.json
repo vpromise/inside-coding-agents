@@ -8,7 +8,7 @@
   "prerequisites": ["tool-dispatch", "context-budget"],
   "reference_lessons": ["s06-context-budget"],
   "agent_implementations": [],
-  "experiments": [],
+  "experiments": ["reference-context-budget-v1"],
   "open_questions": ["When should output be truncated, summarized, indexed, or stored out of band?"],
   "reader_layer_status": {"L0": "partial", "L1": "complete", "L2": "partial", "L3": "missing", "L4": "missing"}
 }

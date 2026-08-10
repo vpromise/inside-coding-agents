@@ -1,0 +1,112 @@
+{
+  "schema_version": "0.1.0",
+  "experiment_id": "reference-checkpoint-rollback-v1",
+  "generated_at": "2026-08-10T03:00:00Z",
+  "runner": {
+    "id": "reference-experiment-runner",
+    "version": "0.1.0",
+    "command": "python3 labs/runner.py reference-checkpoint-rollback-v1 --check"
+  },
+  "status": "passed",
+  "summary": {
+    "total_runs": 2,
+    "successful_runs": 2,
+    "failed_runs": 0,
+    "criteria_passed": true
+  },
+  "criteria": [
+    {
+      "statement": "Both repetitions restore status.txt, report clean state, and recover the exact pending content.",
+      "passed": true
+    },
+    {
+      "statement": "Both repetitions clean temporary state and share one normalized Trace fingerprint.",
+      "passed": true
+    }
+  ],
+  "fixture_sha256": "d369431d683da5c2cad36bb6dc6f76d429c2efbdc29171d5c8d9d4d7c3c575aa",
+  "prompt_sha256": "7a5bc10e132d7b5dfa623eb784340c0ffb1c3d9222c644abf94dc6220a761b9b",
+  "runs": [
+    {
+      "run_id": "reference-checkpoint-rollback-v1-run-001",
+      "repetition": 1,
+      "status": "passed",
+      "trace_path": "labs/results/reference-checkpoint-rollback-v1/run-001.trace.jsonl",
+      "event_count": 15,
+      "event_types": [
+        "session.start",
+        "user.message",
+        "model.request",
+        "model.response",
+        "tool.request",
+        "approval.request",
+        "approval.decision",
+        "checkpoint.create",
+        "file.patch",
+        "checkpoint.diff",
+        "checkpoint.rollback",
+        "tool.result",
+        "model.request",
+        "model.response",
+        "session.stop"
+      ],
+      "final_text": "The reviewed change was rolled back to the clean checkpoint.",
+      "stop_reason": "completed",
+      "metrics": {
+        "event-order-valid": true,
+        "observations-match": true,
+        "final-answer-match": true,
+        "fixture-unchanged": true,
+        "deterministic-replay": true
+      },
+      "deterministic_fingerprint": "746ad39a0a83d20565a6f93ec13a70aa08dd75db6d08e56c24e478c881460b19",
+      "redaction": {
+        "status": "clean",
+        "fields": []
+      }
+    },
+    {
+      "run_id": "reference-checkpoint-rollback-v1-run-002",
+      "repetition": 2,
+      "status": "passed",
+      "trace_path": "labs/results/reference-checkpoint-rollback-v1/run-002.trace.jsonl",
+      "event_count": 15,
+      "event_types": [
+        "session.start",
+        "user.message",
+        "model.request",
+        "model.response",
+        "tool.request",
+        "approval.request",
+        "approval.decision",
+        "checkpoint.create",
+        "file.patch",
+        "checkpoint.diff",
+        "checkpoint.rollback",
+        "tool.result",
+        "model.request",
+        "model.response",
+        "session.stop"
+      ],
+      "final_text": "The reviewed change was rolled back to the clean checkpoint.",
+      "stop_reason": "completed",
+      "metrics": {
+        "event-order-valid": true,
+        "observations-match": true,
+        "final-answer-match": true,
+        "fixture-unchanged": true,
+        "deterministic-replay": true
+      },
+      "deterministic_fingerprint": "746ad39a0a83d20565a6f93ec13a70aa08dd75db6d08e56c24e478c881460b19",
+      "redaction": {
+        "status": "clean",
+        "fields": []
+      }
+    }
+  ],
+  "limitations": [
+    "The checkpoint backend is deterministic lesson code over a disposable temporary directory.",
+    "The probe does not test large repositories, untracked files, concurrent edits, or partial filesystem failure.",
+    "The Reference Harness result is not Native vendor evidence."
+  ]
+}

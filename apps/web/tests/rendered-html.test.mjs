@@ -110,7 +110,7 @@ test("renders an interactive Architecture Atlas and deep mechanism dossiers", as
   assert.match(gapHtml, /id="failure-modes"/);
   assert.match(gapHtml, /id="research"/);
   assert.match(gapHtml, /UNKNOWN · EVIDENCE GAP/);
-  assert.match(gapHtml, /Formal experiment · not registered/);
+  assert.match(gapHtml, /href="\/lab\/experiments\/reference-context-budget-v1"/);
   assert.match(gapHtml, /href="\/learn\/context-budget#source"/);
   assert.match(gapHtml, /href="\/lab\/traces\/run-s06-context-budget-golden"/);
 
@@ -154,8 +154,8 @@ test("generated content resolves the shared source graph", async () => {
   assert.equal(generated.mechanisms.length, 20);
   assert.equal(generated.agents.length, 5);
   assert.equal(generated.claims.length, 30);
-  assert.equal(generated.experiments.length, 1);
-  assert.equal(generated.traces.length, 16);
+  assert.equal(generated.experiments.length, 10);
+  assert.equal(generated.traces.length, 34);
 
   for (const lesson of generated.curriculum.lessons) {
     assert.ok(lesson.estimated_minutes >= 20, `${lesson.id} reading time`);
@@ -186,6 +186,10 @@ test("generated content resolves the shared source graph", async () => {
   assert.equal(experiment.result.summary.successful_runs, 2);
   assert.equal(experiment.trace_ids.length, 2);
   assert.equal(new Set(experiment.result.runs.map((run) => run.deterministic_fingerprint)).size, 1);
+  assert.ok(generated.experiments.every((item) => item.mode === "controlled"));
+  assert.ok(generated.experiments.every((item) => item.status === "complete"));
+  assert.ok(generated.experiments.every((item) => item.result?.status === "passed"));
+  assert.ok(generated.experiments.every((item) => item.trace_ids.length === 2));
   for (const traceId of experiment.trace_ids) {
     const reproducedTrace = generated.traces.find((item) => item.id === traceId);
     assert.equal(reproducedTrace.kind, "controlled");

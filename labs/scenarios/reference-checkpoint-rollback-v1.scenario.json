@@ -1,0 +1,21 @@
+{
+  "schema_version": "0.1.0",
+  "kind": "controlled",
+  "id": "reference-checkpoint-rollback-v1",
+  "experiment_id": "reference-checkpoint-rollback-v1",
+  "prompt": "Review the status edit, then return the fixture to baseline.",
+  "lesson_id": "s13-checkpoint-rollback",
+  "run_started_at": "2026-08-10T00:00:00Z",
+  "result_generated_at": "2026-08-10T03:00:00Z",
+  "repetition_interval_seconds": 900,
+  "expected": {
+    "final_text": "The reviewed change was rolled back to the clean checkpoint.",
+    "stop_reason": "completed",
+    "event_types": ["session.start", "user.message", "model.request", "model.response", "tool.request", "approval.request", "approval.decision", "checkpoint.create", "file.patch", "checkpoint.diff", "checkpoint.rollback", "tool.result", "model.request", "model.response", "session.stop"],
+    "observations": [
+      {"event_type": "checkpoint.rollback", "path": ["payload", "restored_paths"], "equals": ["status.txt"]},
+      {"event_type": "checkpoint.rollback", "path": ["payload", "clean"], "equals": true},
+      {"event_type": "tool.result", "path": ["payload", "result", "final_content"], "equals": "status: pending\n"}
+    ]
+  }
+}

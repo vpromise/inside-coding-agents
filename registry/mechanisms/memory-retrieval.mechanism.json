@@ -8,7 +8,7 @@
   "prerequisites": ["context-compaction"],
   "reference_lessons": ["s09-memory-skills"],
   "agent_implementations": [],
-  "experiments": [],
+  "experiments": ["reference-memory-retrieval-v1"],
   "open_questions": [
     "Which facts deserve durable memory instead of session-local state?",
     "How should stale or contradicted memories be invalidated?",

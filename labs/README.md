@@ -11,14 +11,14 @@ labs/
 └── runner.py      Registry-backed controlled-experiment runner
 ```
 
-## Published controlled baseline
+## Published controlled experiment pack
 
-`reference-tool-roundtrip-v1` runs the deterministic Reference Harness against a temporary read-only workspace. It verifies the complete fixture → runner → Result → Trace → web replay path.
+Ten deterministic experiments cover tool roundtrips, stream normalization, context budgets, session replay, context compaction, memory retrieval, approval binding, sandbox/network policy simulation, project trust, and checkpoint/rollback. Every experiment runs twice and publishes two normalized traces, a structured Result, and a readable report.
 
-This baseline is evidence about the Reference Harness only. It is not Native evidence about Codex, Claude Code, Pi, or Reasonix, and it is not a cross-product benchmark.
+The pack is evidence about the teaching Reference Harness only. It is not Native evidence about Codex, Claude Code, Pi, or Reasonix, and it is not a cross-product benchmark. The sandbox/network probe uses a `simulated-no-effects` backend; it does not establish OS isolation or firewall behavior.
 
 ```bash
-# Re-run and replace the four declared artifacts.
+# Re-run one experiment and replace its four declared artifacts.
 python3 labs/runner.py reference-tool-roundtrip-v1
 
 # Rebuild in memory and compare byte-for-byte without writing files.
@@ -26,6 +26,8 @@ python3 labs/runner.py reference-tool-roundtrip-v1 --check
 
 python3 -m unittest discover -s labs/tests -v
 ```
+
+`CONTROLLED_EXPERIMENT_IDS` in `labs/tests/test_runner.py` pins the complete ten-experiment set. The test suite rebuilds all 40 artifacts in memory and checks them byte-for-byte without a model or network call.
 
 ## Experiment rules
 

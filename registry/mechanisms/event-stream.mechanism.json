@@ -27,7 +27,7 @@
       "claim_ids": ["reasonix-source-event-log"]
     }
   ],
-  "experiments": [],
+  "experiments": ["reference-stream-normalization-v1"],
   "open_questions": ["Which streaming payload fields can be portable without erasing provider-specific semantics?"],
   "reader_layer_status": {"L0": "partial", "L1": "complete", "L2": "partial", "L3": "missing", "L4": "missing"}
 }

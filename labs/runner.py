@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib
 import json
 import re
 import shutil
@@ -39,6 +40,17 @@ from curriculum.harness import (  # noqa: E402
 RUNNER_ID = "reference-experiment-runner"
 RUNNER_VERSION = "0.1.0"
 STABLE_ID_PATTERN = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+LESSON_MODULES = {
+    "s02-events-streaming": "curriculum.lessons.s02_events_streaming.demo",
+    "s06-context-budget": "curriculum.lessons.s06_context_budget.demo",
+    "s07-session-replay": "curriculum.lessons.s07_session_replay.demo",
+    "s08-context-compaction": "curriculum.lessons.s08_context_compaction.demo",
+    "s09-memory-skills": "curriculum.lessons.s09_memory_skills.demo",
+    "s10-approval-policy": "curriculum.lessons.s10_approval_policy.demo",
+    "s11-sandbox-network": "curriculum.lessons.s11_sandbox_network.demo",
+    "s12-project-trust": "curriculum.lessons.s12_project_trust.demo",
+    "s13-checkpoint-rollback": "curriculum.lessons.s13_checkpoint_rollback.demo",
+}
 
 
 class ExperimentError(RuntimeError):
@@ -138,6 +150,133 @@ def render_trace(events: list[dict[str, Any]]) -> str:
         f"{json.dumps(event, ensure_ascii=False, separators=(',', ':'))}\n"
         for event in events
     )
+
+
+def nested_value(value: Any, path: list[str | int]) -> Any:
+    current = value
+    for part in path:
+        if isinstance(part, int) and isinstance(current, list):
+            current = current[part]
+        elif isinstance(part, str) and isinstance(current, dict) and part in current:
+            current = current[part]
+        else:
+            raise ExperimentError(f"observation path does not resolve: {path}")
+    return current
+
+
+def observations_match(
+    events: list[dict[str, Any]], observations: list[dict[str, Any]]
+) -> bool:
+    for observation in observations:
+        matches = [event for event in events if event["type"] == observation["event_type"]]
+        occurrence = observation.get("occurrence", 0)
+        if occurrence >= len(matches):
+            return False
+        if nested_value(matches[occurrence], observation["path"]) != observation["equals"]:
+            return False
+    return True
+
+
+def normalize_lesson_events(
+    source_events: tuple[dict[str, Any], ...],
+    *,
+    experiment: dict[str, Any],
+    run_id: str,
+    session_id: str,
+    start: datetime,
+) -> list[dict[str, Any]]:
+    subject = experiment["subjects"][0]
+    provenance = {
+        "agent_id": subject["agent_id"],
+        "snapshot_id": subject["snapshot_id"],
+        "surface": subject["surface"],
+        "harness_mode": experiment["mode"],
+        "run_id": run_id,
+        "experiment_id": experiment["id"],
+        "model": subject["model"],
+        "provider": subject.get("provider", "unknown"),
+    }
+    events: list[dict[str, Any]] = []
+    for sequence, source in enumerate(source_events):
+        event = deepcopy(source)
+        event["session_id"] = session_id
+        event["sequence"] = sequence
+        event["timestamp"] = (start + timedelta(seconds=sequence)).isoformat().replace(
+            "+00:00", "Z"
+        )
+        event["provenance"] = deepcopy(provenance)
+        if event["type"] == "session.branch":
+            event["payload"]["parent_run_id"] = f"{experiment['id']}-parent"
+        events.append(event)
+    return events
+
+
+def run_lesson_once(
+    *,
+    experiment: dict[str, Any],
+    scenario: dict[str, Any],
+    fixture_path: Path,
+    repetition: int,
+    fixture_sha256: str,
+    trace_output_directory: Path,
+) -> tuple[dict[str, Any], str]:
+    lesson_id = scenario["lesson_id"]
+    module_name = LESSON_MODULES.get(lesson_id)
+    if module_name is None:
+        raise ExperimentError(f"unsupported lesson probe: {lesson_id}")
+    run_id = f"{experiment['id']}-run-{repetition:03d}"
+    session_id = f"{experiment['id']}-session-{repetition:03d}"
+    start = parse_timestamp(scenario["run_started_at"]) + timedelta(
+        seconds=scenario["repetition_interval_seconds"] * (repetition - 1)
+    )
+
+    with TemporaryDirectory(prefix="lah-experiment-") as temporary:
+        workspace_path = Path(temporary) / "workspace"
+        shutil.copytree(fixture_path, workspace_path)
+        module = importlib.import_module(module_name)
+        runner, _ = module.build_demo()
+        try:
+            run_result = runner.run(scenario["prompt"])
+            events = normalize_lesson_events(
+                run_result.events,
+                experiment=experiment,
+                run_id=run_id,
+                session_id=session_id,
+                start=start,
+            )
+        finally:
+            owned_fixture = getattr(runner, "fixture", None)
+            cleanup = getattr(owned_fixture, "cleanup", None)
+            if callable(cleanup):
+                cleanup()
+        workspace_unchanged = sha256_directory(workspace_path) == fixture_sha256
+
+    event_types = [event["type"] for event in events]
+    metrics = {
+        "event-order-valid": event_types == scenario["expected"]["event_types"],
+        "observations-match": observations_match(
+            events, scenario["expected"]["observations"]
+        ),
+        "final-answer-match": run_result.final_text == scenario["expected"]["final_text"]
+        and run_result.stop_reason == scenario["expected"]["stop_reason"],
+        "fixture-unchanged": workspace_unchanged,
+        "deterministic-replay": False,
+    }
+    trace_path = trace_output_directory / f"run-{repetition:03d}.trace.jsonl"
+    record = {
+        "run_id": run_id,
+        "repetition": repetition,
+        "status": "failed",
+        "trace_path": trace_path.relative_to(ROOT).as_posix(),
+        "event_count": len(events),
+        "event_types": event_types,
+        "final_text": run_result.final_text,
+        "stop_reason": run_result.stop_reason,
+        "metrics": metrics,
+        "deterministic_fingerprint": normalized_trace_fingerprint(events),
+        "redaction": {"status": "clean", "fields": []},
+    }
+    return record, render_trace(events)
 
 
 def run_once(
@@ -283,7 +422,8 @@ def build_artifacts(experiment_id: str) -> dict[Path, str]:
     run_records: list[dict[str, Any]] = []
     artifacts: dict[Path, str] = {}
     for repetition in range(1, experiment["repetitions"] + 1):
-        record, trace_text = run_once(
+        run_function = run_lesson_once if scenario.get("lesson_id") else run_once
+        record, trace_text = run_function(
             experiment=experiment,
             scenario=scenario,
             fixture_path=fixture_path,

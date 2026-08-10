@@ -1,0 +1,102 @@
+{
+  "schema_version": "0.1.0",
+  "experiment_id": "reference-context-compaction-v1",
+  "generated_at": "2026-08-10T03:00:00Z",
+  "runner": {
+    "id": "reference-experiment-runner",
+    "version": "0.1.0",
+    "command": "python3 labs/runner.py reference-context-compaction-v1 --check"
+  },
+  "status": "passed",
+  "summary": {
+    "total_runs": 2,
+    "successful_runs": 2,
+    "failed_runs": 0,
+    "criteria_passed": true
+  },
+  "criteria": [
+    {
+      "statement": "Both repetitions record three dropped messages and a 232-character compacted checkpoint.",
+      "passed": true
+    },
+    {
+      "statement": "Both repetitions preserve the expected verified conclusion and share one Trace fingerprint.",
+      "passed": true
+    }
+  ],
+  "fixture_sha256": "d369431d683da5c2cad36bb6dc6f76d429c2efbdc29171d5c8d9d4d7c3c575aa",
+  "prompt_sha256": "d48225211fab69c822df8f219e4e6c33c5c724a097f36375c43727194566e6e2",
+  "runs": [
+    {
+      "run_id": "reference-context-compaction-v1-run-001",
+      "repetition": 1,
+      "status": "passed",
+      "trace_path": "labs/results/reference-context-compaction-v1/run-001.trace.jsonl",
+      "event_count": 10,
+      "event_types": [
+        "session.start",
+        "user.message",
+        "model.request",
+        "model.response",
+        "tool.request",
+        "tool.result",
+        "context.compact",
+        "model.request",
+        "model.response",
+        "session.stop"
+      ],
+      "final_text": "The compacted checkpoint preserves the verified conclusion.",
+      "stop_reason": "completed",
+      "metrics": {
+        "event-order-valid": true,
+        "observations-match": true,
+        "final-answer-match": true,
+        "fixture-unchanged": true,
+        "deterministic-replay": true
+      },
+      "deterministic_fingerprint": "d3e3171adaa9a3de960fc262798c5f56a65f7a634a63c44ccd7f38ea1fc45e59",
+      "redaction": {
+        "status": "clean",
+        "fields": []
+      }
+    },
+    {
+      "run_id": "reference-context-compaction-v1-run-002",
+      "repetition": 2,
+      "status": "passed",
+      "trace_path": "labs/results/reference-context-compaction-v1/run-002.trace.jsonl",
+      "event_count": 10,
+      "event_types": [
+        "session.start",
+        "user.message",
+        "model.request",
+        "model.response",
+        "tool.request",
+        "tool.result",
+        "context.compact",
+        "model.request",
+        "model.response",
+        "session.stop"
+      ],
+      "final_text": "The compacted checkpoint preserves the verified conclusion.",
+      "stop_reason": "completed",
+      "metrics": {
+        "event-order-valid": true,
+        "observations-match": true,
+        "final-answer-match": true,
+        "fixture-unchanged": true,
+        "deterministic-replay": true
+      },
+      "deterministic_fingerprint": "d3e3171adaa9a3de960fc262798c5f56a65f7a634a63c44ccd7f38ea1fc45e59",
+      "redaction": {
+        "status": "clean",
+        "fields": []
+      }
+    }
+  ],
+  "limitations": [
+    "The checkpoint text is produced by deterministic lesson code, not a generative summarizer.",
+    "The probe checks declared facts, not semantic recall across long real-world sessions.",
+    "The Reference Harness result is not Native vendor evidence."
+  ]
+}

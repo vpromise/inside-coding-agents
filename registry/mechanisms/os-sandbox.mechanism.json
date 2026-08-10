@@ -8,7 +8,7 @@
   "prerequisites": ["execution-policy", "path-boundary"],
   "reference_lessons": ["s11-sandbox-network"],
   "agent_implementations": [],
-  "experiments": [],
+  "experiments": ["reference-sandbox-network-v1"],
   "open_questions": [
     "Which backend attestations are strong enough to fail closed across operating systems?",
     "How should sandbox profiles represent child processes, IPC, devices, and inherited descriptors?",

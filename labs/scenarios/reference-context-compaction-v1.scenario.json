@@ -1,0 +1,20 @@
+{
+  "schema_version": "0.1.0",
+  "kind": "controlled",
+  "id": "reference-context-compaction-v1",
+  "experiment_id": "reference-context-compaction-v1",
+  "prompt": "Inspect the report, then continue from a compacted checkpoint.",
+  "lesson_id": "s08-context-compaction",
+  "run_started_at": "2026-08-10T00:00:00Z",
+  "result_generated_at": "2026-08-10T03:00:00Z",
+  "repetition_interval_seconds": 900,
+  "expected": {
+    "final_text": "The compacted checkpoint preserves the verified conclusion.",
+    "stop_reason": "completed",
+    "event_types": ["session.start", "user.message", "model.request", "model.response", "tool.request", "tool.result", "context.compact", "model.request", "model.response", "session.stop"],
+    "observations": [
+      {"event_type": "context.compact", "path": ["payload", "dropped_messages"], "equals": 3},
+      {"event_type": "context.compact", "path": ["payload", "final_chars"], "equals": 232}
+    ]
+  }
+}

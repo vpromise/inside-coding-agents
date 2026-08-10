@@ -1,0 +1,18 @@
+{
+  "schema_version": "0.1.0",
+  "id": "reference-context-budget-v1",
+  "title": "Reference Harness context budget and truncation probe",
+  "question": "Does the Reference Harness enforce a declared context budget and record deterministic tool-output truncation?",
+  "hypothesis": "Both repetitions will truncate the oversized tool result, record the 300-character final budget, preserve the fixture, and produce identical normalized traces.",
+  "mode": "controlled",
+  "status": "complete",
+  "fixture": {"path": "labs/fixtures/reference-mechanism-probes-v1", "revision": "fixture-v1", "sha256": "d369431d683da5c2cad36bb6dc6f76d429c2efbdc29171d5c8d9d4d7c3c575aa"},
+  "scenario": {"path": "labs/scenarios/reference-context-budget-v1.scenario.json", "prompt_sha256": "2036916cd8508348f408350ebf57017bd728cc0555ccdb7fcaa2d058b31e3edc"},
+  "subjects": [{"agent_id": "reference-harness", "snapshot_id": "reference-harness-2026-08-10-controlled", "surface": "sdk", "model": "scripted-model-v1", "provider": "local-fixture", "comparison_status": "not-comparable", "configuration": {"lesson_id": "s06", "network": false, "writes": false}, "uncontrolled_variables": []}],
+  "controls": {"network": false, "temperature": 0, "writes": false, "sandbox": "lesson-owned-temporary-fixture"},
+  "repetitions": 2,
+  "metrics": ["event-order-valid", "observations-match", "final-answer-match", "fixture-unchanged", "deterministic-replay"],
+  "success_criteria": ["Both repetitions mark the oversized result as truncated and record final_chars as 300.", "Both repetitions return the expected answer, preserve the fixture, and share one Trace fingerprint."],
+  "limitations": ["This is a character-budget teaching policy, not a measurement of any vendor Agent's token accounting.", "The truncation strategy is deterministic and does not evaluate semantic information loss.", "The experiment does not measure latency, cost, or model capability."],
+  "outputs": {"traces_path": "labs/results/reference-context-budget-v1", "results_path": "labs/results/reference-context-budget-v1/result.json", "report_path": "labs/results/reference-context-budget-v1/report.md"}
+}

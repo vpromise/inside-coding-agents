@@ -1,0 +1,18 @@
+{
+  "schema_version": "0.1.0",
+  "id": "reference-sandbox-network-v1",
+  "title": "Reference Harness sandbox and network policy probe",
+  "question": "Can the Reference Harness record a destination-scoped network decision while guaranteeing that the teaching backend performs no real network effect?",
+  "hypothesis": "Both repetitions will allow only packages.example.invalid:443, identify the simulated-no-effects backend, and share one normalized Trace fingerprint.",
+  "mode": "controlled",
+  "status": "complete",
+  "fixture": {"path": "labs/fixtures/reference-mechanism-probes-v1", "revision": "fixture-v1", "sha256": "d369431d683da5c2cad36bb6dc6f76d429c2efbdc29171d5c8d9d4d7c3c575aa"},
+  "scenario": {"path": "labs/scenarios/reference-sandbox-network-v1.scenario.json", "prompt_sha256": "50231e5c01569ce28a885affae2d3ee57702efd1062bcb514f9238c142eb8554"},
+  "subjects": [{"agent_id": "reference-harness", "snapshot_id": "reference-harness-2026-08-10-controlled", "surface": "sdk", "model": "scripted-model-v1", "provider": "local-fixture", "comparison_status": "not-comparable", "configuration": {"lesson_id": "s11", "network": "simulated-no-effects", "writes": false}, "uncontrolled_variables": []}],
+  "controls": {"network": "simulated-no-effects", "temperature": 0, "writes": false, "sandbox": "policy-simulation-only"},
+  "repetitions": 2,
+  "metrics": ["event-order-valid", "observations-match", "final-answer-match", "fixture-unchanged", "deterministic-replay"],
+  "success_criteria": ["Both repetitions record the declared allowed destination and simulated-no-effects backend.", "No real network request occurs; both repetitions share one normalized Trace fingerprint."],
+  "limitations": ["This is a policy simulation and proves neither OS sandboxing nor firewall enforcement.", "The invalid example destination is never contacted, so no real network stack behavior is measured.", "The Reference Harness result is not Native vendor evidence."],
+  "outputs": {"traces_path": "labs/results/reference-sandbox-network-v1", "results_path": "labs/results/reference-sandbox-network-v1/result.json", "report_path": "labs/results/reference-sandbox-network-v1/report.md"}
+}

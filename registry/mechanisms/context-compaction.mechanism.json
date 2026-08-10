@@ -27,7 +27,7 @@
       "claim_ids": ["reasonix-source-context-maintenance"]
     }
   ],
-  "experiments": [],
+  "experiments": ["reference-context-compaction-v1"],
   "open_questions": [
     "Which invariants must survive every compaction strategy?",
     "How should a harness expose information loss and compaction lineage to users?",

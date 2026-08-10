@@ -1,0 +1,21 @@
+{
+  "schema_version": "0.1.0",
+  "kind": "controlled",
+  "id": "reference-approval-binding-v1",
+  "experiment_id": "reference-approval-binding-v1",
+  "prompt": "Write only approved.txt with the proposed bounded content.",
+  "lesson_id": "s10-approval-policy",
+  "run_started_at": "2026-08-10T00:00:00Z",
+  "result_generated_at": "2026-08-10T03:00:00Z",
+  "repetition_interval_seconds": 900,
+  "expected": {
+    "final_text": "The exact approved write completed.",
+    "stop_reason": "completed",
+    "event_types": ["session.start", "user.message", "model.request", "model.response", "tool.request", "approval.request", "approval.decision", "tool.result", "model.request", "model.response", "session.stop"],
+    "observations": [
+      {"event_type": "approval.decision", "path": ["payload", "outcome"], "equals": "allow"},
+      {"event_type": "approval.decision", "path": ["payload", "grant_scope"], "equals": "once"},
+      {"event_type": "tool.result", "path": ["payload", "result", "path"], "equals": "approved.txt"}
+    ]
+  }
+}

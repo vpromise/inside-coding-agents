@@ -8,7 +8,7 @@
   "prerequisites": ["workspace-tools", "execution-policy", "event-stream"],
   "reference_lessons": ["s13-checkpoint-rollback"],
   "agent_implementations": [],
-  "experiments": [],
+  "experiments": ["reference-checkpoint-rollback-v1"],
   "open_questions": [
     "How should checkpoints preserve a user's pre-existing dirty work without absorbing it into agent ownership?",
     "Which non-filesystem effects need compensating actions rather than Git rollback?",

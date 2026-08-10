@@ -1,0 +1,96 @@
+{
+  "schema_version": "0.1.0",
+  "experiment_id": "reference-stream-normalization-v1",
+  "generated_at": "2026-08-10T03:00:00Z",
+  "runner": {
+    "id": "reference-experiment-runner",
+    "version": "0.1.0",
+    "command": "python3 labs/runner.py reference-stream-normalization-v1 --check"
+  },
+  "status": "passed",
+  "summary": {
+    "total_runs": 2,
+    "successful_runs": 2,
+    "failed_runs": 0,
+    "criteria_passed": true
+  },
+  "criteria": [
+    {
+      "statement": "Both repetitions expose the declared final stream frame and completed stop reason.",
+      "passed": true
+    },
+    {
+      "statement": "Both repetitions return the exact expected answer and share one normalized Trace fingerprint.",
+      "passed": true
+    }
+  ],
+  "fixture_sha256": "d369431d683da5c2cad36bb6dc6f76d429c2efbdc29171d5c8d9d4d7c3c575aa",
+  "prompt_sha256": "51f9c1719823cfcedfe60c50fe59fefe0167e444b30430b9018d72468c931fb4",
+  "runs": [
+    {
+      "run_id": "reference-stream-normalization-v1-run-001",
+      "repetition": 1,
+      "status": "passed",
+      "trace_path": "labs/results/reference-stream-normalization-v1/run-001.trace.jsonl",
+      "event_count": 7,
+      "event_types": [
+        "session.start",
+        "user.message",
+        "model.request",
+        "model.response",
+        "model.response",
+        "model.response",
+        "session.stop"
+      ],
+      "final_text": "Observe events, not hidden state.",
+      "stop_reason": "completed",
+      "metrics": {
+        "event-order-valid": true,
+        "observations-match": true,
+        "final-answer-match": true,
+        "fixture-unchanged": true,
+        "deterministic-replay": true
+      },
+      "deterministic_fingerprint": "3f234ce09a5c8cd997c743cb9f5459496a78de8f32b3524b5ff06cd912db9ef6",
+      "redaction": {
+        "status": "clean",
+        "fields": []
+      }
+    },
+    {
+      "run_id": "reference-stream-normalization-v1-run-002",
+      "repetition": 2,
+      "status": "passed",
+      "trace_path": "labs/results/reference-stream-normalization-v1/run-002.trace.jsonl",
+      "event_count": 7,
+      "event_types": [
+        "session.start",
+        "user.message",
+        "model.request",
+        "model.response",
+        "model.response",
+        "model.response",
+        "session.stop"
+      ],
+      "final_text": "Observe events, not hidden state.",
+      "stop_reason": "completed",
+      "metrics": {
+        "event-order-valid": true,
+        "observations-match": true,
+        "final-answer-match": true,
+        "fixture-unchanged": true,
+        "deterministic-replay": true
+      },
+      "deterministic_fingerprint": "3f234ce09a5c8cd997c743cb9f5459496a78de8f32b3524b5ff06cd912db9ef6",
+      "redaction": {
+        "status": "clean",
+        "fields": []
+      }
+    }
+  ],
+  "limitations": [
+    "The Scripted Model and Reference Harness are deterministic teaching components, not Native vendor evidence.",
+    "The probe validates the declared normalization path only; it does not cover malformed or vendor-specific streams.",
+    "The experiment does not measure latency, token usage, cost, or model capability."
+  ]
+}
