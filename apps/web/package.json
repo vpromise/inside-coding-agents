@@ -31,7 +31,7 @@
   "devDependencies": {
     "@axe-core/playwright": "4.12.1",
     "@cloudflare/vite-plugin": "1.51.1",
-    "@eslint/js": "9.39.4",
+    "@eslint/js": "10.0.1",
     "@lhci/cli": "0.15.1",
     "@next/eslint-plugin-next": "16.3.0",
     "@playwright/test": "1.62.1",
