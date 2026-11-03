@@ -59,7 +59,7 @@ Submit the unedited report through the Experiment reproduction issue form. State
 
 ## Development setup
 
-Python 3.12+ and Node.js 22.13+ match the continuous-integration environment.
+Use Python 3.12+ and Node.js 22.19+ (CI pins Node.js 22.23.2).
 
 ```bash
 python3 -m venv .venv

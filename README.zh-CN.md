@@ -61,7 +61,7 @@ Inside Coding Agents 是一个开源、双语的教程、架构图谱和实验�
 
 ## 快速开始
 
-课程与当前受控实验均为确定性实现，不需要模型账号或 API Key。Python 3.12+、Node.js 22.13+ 与 CI 环境一致。
+课程与当前受控实验均为确定性实现，不需要模型账号或 API Key。请使用 Python 3.12+、Node.js 22.19+（CI 固定使用 Node.js 22.23.2）。
 
 ```bash
 git clone https://github.com/vpromise/inside-coding-agents.git

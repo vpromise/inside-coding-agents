@@ -61,7 +61,7 @@ The same material is useful as a beginner's coding-agent tutorial, an engineer's
 
 ## Quick start
 
-The lessons and controlled experiment are deterministic and require no model account or API key. Python 3.12+ and Node.js 22.13+ match CI.
+The lessons and controlled experiment are deterministic and require no model account or API key. Use Python 3.12+ and Node.js 22.19+ (CI pins Node.js 22.23.2).
 
 ```bash
 git clone https://github.com/vpromise/inside-coding-agents.git
