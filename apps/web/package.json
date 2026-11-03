@@ -14,7 +14,7 @@
     "build:pages": "npm run sync:content && DEPLOY_TARGET=github-pages NEXT_PUBLIC_BASE_PATH=/inside-coding-agents NEXT_PUBLIC_SITE_URL=https://vpromise.github.io/inside-coding-agents NEXT_TELEMETRY_DISABLED=1 next build",
     "audit:ci": "node scripts/check-audit.mjs",
     "start": "WRANGLER_LOG_PATH=.wrangler/wrangler.log wrangler dev --config dist/server/wrangler.json --local",
-    "test": "npm run build && node --test tests/audit-policy.test.mjs tests/rendered-html.test.mjs",
+    "test": "npm run build && node --test tests/audit-policy.test.mjs tests/toolchain-compat.test.mjs tests/rendered-html.test.mjs",
     "test:pages": "npm run build:pages && node --test tests/static-export.test.mjs",
     "test:browser": "playwright test",
     "test:browser:update": "playwright test --update-snapshots",
@@ -46,6 +46,7 @@
     "eslint-plugin-react": "7.37.5",
     "eslint-plugin-react-hooks": "7.1.1",
     "globals": "16.4.0",
+    "minimatch": "11.0.4",
     "next": "16.4.4",
     "react-server-dom-webpack": "19.3.1",
     "tailwindcss": "4.3.3",
@@ -56,8 +57,13 @@
     "wrangler": "4.156.2"
   },
   "overrides": {
+    "@lhci/cli": {
+      "chrome-launcher": "1.2.2"
+    },
     "basic-ftp": "6.2.5",
     "fflate": "0.7.5",
+    "glob": "14.0.3",
+    "minimatch": "$minimatch",
     "tmp": "0.2.7"
   },
   "type": "module"

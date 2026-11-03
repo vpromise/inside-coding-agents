@@ -44,6 +44,16 @@ test("rejects a new high advisory", () => {
   assert.deepEqual(result.errors, ["unexpected high advisory GHSA-w3rx-r6r6-pgpr"]);
 });
 
+test("rejects a new moderate advisory", () => {
+  const result = assessAudit(
+    reportWith({ ...advisory, severity: "moderate" }),
+    { exceptions: [] },
+    "2026-08-10",
+  );
+  assert.deepEqual(result.errors, ["unexpected moderate advisory GHSA-w3rx-r6r6-pgpr"]);
+  assert.equal(result.moderateOrHigherAdvisories, 1);
+});
+
 test("rejects expired and stale exceptions", () => {
   const result = assessAudit(
     { vulnerabilities: {} },

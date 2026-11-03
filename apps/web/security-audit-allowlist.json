@@ -1,5 +1,5 @@
 {
   "schema_version": "0.1.0",
-  "policy": "Only high or critical advisories listed here may pass CI, and every exception must be current and still observed.",
+  "policy": "Only moderate, high, or critical advisories listed here may pass CI, and every exception must be current and still observed.",
   "exceptions": []
 }

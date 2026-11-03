@@ -1,3 +1,4 @@
+import "./scripts/eslint-minimatch-compat.cjs";
 import { defineConfig, globalIgnores } from "eslint/config";
 import eslint from "@eslint/js";
 import next from "@next/eslint-plugin-next";
@@ -40,7 +41,7 @@ const eslintConfig = defineConfig([
     },
   },
   {
-    files: ["lighthouserc.cjs"],
+    files: ["lighthouserc.cjs", "scripts/eslint-minimatch-compat.cjs"],
     rules: {
       "@typescript-eslint/no-require-imports": "off",
     },

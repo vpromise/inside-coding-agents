@@ -22,7 +22,7 @@ export function assessAudit(report, allowlist, today) {
   for (const vulnerability of Object.values(report.vulnerabilities ?? {})) {
     for (const via of vulnerability.via ?? []) {
       if (typeof via === "string") continue;
-      if ((severityRank[via.severity] ?? 0) < severityRank.high) continue;
+      if ((severityRank[via.severity] ?? 0) < severityRank.moderate) continue;
       advisories.set(advisoryId(via), via);
     }
   }
@@ -47,7 +47,7 @@ export function assessAudit(report, allowlist, today) {
 
   return {
     errors,
-    highOrCriticalAdvisories: advisories.size,
+    moderateOrHigherAdvisories: advisories.size,
     acceptedAdvisories: advisories.size - errors.filter((error) => error.startsWith("unexpected ")).length,
   };
 }
@@ -90,7 +90,7 @@ async function main() {
     return 1;
   }
   console.log(
-    `NPM_AUDIT_POLICY_OK high_or_critical=${assessment.highOrCriticalAdvisories} `
+    `NPM_AUDIT_POLICY_OK moderate_or_higher=${assessment.moderateOrHigherAdvisories} `
     + `accepted=${assessment.acceptedAdvisories}`,
   );
   return 0;
