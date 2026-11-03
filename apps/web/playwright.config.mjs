@@ -42,7 +42,7 @@ export default defineConfig({
   ],
   snapshotPathTemplate: "{testDir}/__screenshots__/{arg}{ext}",
   webServer: {
-    command: `npm run start -- --hostname ${host} --port ${port}`,
+    command: `npm run start -- --ip ${host} --port ${port}`,
     url: `http://${host}:${port}`,
     reuseExistingServer: false,
     timeout: 120_000,

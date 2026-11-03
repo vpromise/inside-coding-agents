@@ -9,7 +9,7 @@ module.exports = {
     collect: {
       chromePath: chromium.executablePath(),
       numberOfRuns: 2,
-      startServerCommand: `npm run start -- --hostname ${host} --port ${port}`,
+      startServerCommand: `npm run start -- --ip ${host} --port ${port}`,
       startServerReadyPattern: "http://|listening|ready",
       startServerReadyTimeout: 120_000,
       url: [

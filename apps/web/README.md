@@ -39,7 +39,7 @@ npm run test:browser
 npm run test:lighthouse
 ```
 
-`npm test` regenerates content, creates a production build, and renders every published route. The tests also verify course contracts, graph relationships, bilingual search, navigation, and downloadable Trace artifacts.
+`npm test` regenerates content, creates a production build, and renders every published route in Wrangler's local Workers runtime. `npm start` serves the same build locally. The tests also verify course contracts, graph relationships, bilingual search, navigation, and downloadable Trace artifacts.
 
 `test:browser` scans 14 representative route families with axe WCAG A/AA rules, exercises the mobile menu from the keyboard, and compares three reviewed desktop/mobile screenshots. `test:lighthouse` runs the homepage, a lesson, an Agent snapshot, and Compare twice; it enforces performance ≥ 0.80, accessibility = 1.00, best practices = 1.00, and SEO ≥ 0.95. Reports remain in ignored local `.artifacts/` directories and are never uploaded to a third party.
 

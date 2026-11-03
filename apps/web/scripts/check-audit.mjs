@@ -70,6 +70,15 @@ async function main() {
     console.error("NPM_AUDIT_POLICY_FAILED: npm audit returned invalid JSON");
     return 2;
   }
+  if (
+    audit.error || audit.status === null || report?.error
+    || !report?.metadata?.vulnerabilities
+    || !report?.vulnerabilities || typeof report.vulnerabilities !== "object"
+    || Array.isArray(report.vulnerabilities)
+  ) {
+    console.error("NPM_AUDIT_POLICY_FAILED: npm audit returned an invalid report");
+    return 2;
+  }
   const allowlist = JSON.parse(
     await readFile(new URL("../security-audit-allowlist.json", import.meta.url), "utf8"),
   );

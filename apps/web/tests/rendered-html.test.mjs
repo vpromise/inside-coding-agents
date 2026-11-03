@@ -1,26 +1,18 @@
 import assert from "node:assert/strict";
 import { access, readFile } from "node:fs/promises";
-import test from "node:test";
+import test, { after, before } from "node:test";
+import { createTestHarness } from "wrangler";
+
+const server = createTestHarness({
+  workers: [{ configPath: new URL("../dist/server/wrangler.json", import.meta.url) }],
+});
+before(async () => { await server.listen(); });
+after(async () => { await server.close(); });
 
 async function render(pathname = "/") {
-  const workerUrl = new URL("../dist/server/index.js", import.meta.url);
-  workerUrl.searchParams.set("test", `${process.pid}-${Date.now()}-${pathname}`);
-  const { default: worker } = await import(workerUrl.href);
-
-  return worker.fetch(
-    new Request(`http://localhost${pathname}`, {
-      headers: { accept: "text/html" },
-    }),
-    {
-      ASSETS: {
-        fetch: async () => new Response("Not found", { status: 404 }),
-      },
-    },
-    {
-      waitUntil() {},
-      passThroughOnException() {},
-    },
-  );
+  return server.fetch(`http://localhost${pathname}`, {
+    headers: { accept: "text/html" },
+  });
 }
 
 test("server-renders the product homepage", async () => {
